@@ -1,0 +1,30 @@
+# Build output
+bin/
+dist/
+build/
+
+# Not to be included in images
+keys/
+
+# Git and IDE
+.git
+.gitignore
+.idea
+.vscode
+*.swp
+*.swo
+
+# Spec and docs (not needed for build)
+spec/
+README.md
+*.md
+app.yaml
+
+# Environment and keys
+.env
+.env.*
+keys/
+
+# Test and coverage
+*.test
+coverage.*

@@ -1,0 +1,36 @@
+---
+description: "Contains rules for all Golang related output"
+globs: backend/**/*.go
+alwaysApply: true
+---
+
+# Go Backend Instructions
+
+You are an expert Go developer. Follow these standards for all code generation:
+
+## Tech Stack
+
+- **Language:** Go 1.22+
+- **Framework:** Use gin as the HTTP frameworks
+
+## Coding Standards
+
+1. **Error Handling:** Never ignore errors. Use `fmt.Errorf("context: %w", err)` for wrapping.
+2. **Concurrency:** Use channels and WaitGroups only when necessary; prefer simple synchronous code unless performance dictates otherwise.
+3. **Dependency Injection:** Pass dependencies (DB, Config) via struct constructors (e.g., `NewServer(db *sql.DB)`).
+4. **Context:** Always pass `context.Context` through to database and external API calls.
+5. **Type aliasing:** Never do type aliasing just to "import" a type from another package
+
+## Consistency
+
+- After making backend changes, always run the build so the binary ends up in `backend/bin`:
+  - From repo root: `go build -o backend/bin/backend ./backend/cmd/backend`
+  - Or from `backend/`: `go build -o bin/backend ./cmd/backend`
+- Ensure `go mod tidy` and this build succeed after changes.
+
+## Response Style
+
+- Provide concise, idiomatic Go code.
+- Include `go mod tidy` commands if new dependencies are added.
+- Never leave any unused dependencies in go.mod file.
+- Always run the build step and place the binary in `backend/bin` (see Consistency above).

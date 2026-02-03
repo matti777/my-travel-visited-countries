@@ -1,0 +1,17 @@
+runtime: go122
+
+env: standard
+
+instance_class: F1
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+env_variables:
+  GOOGLE_CLOUD_PROJECT: 'your-project-id'
+
+handlers:
+  - url: /.*
+    script: auto
