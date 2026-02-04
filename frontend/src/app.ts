@@ -1,7 +1,33 @@
 import { errorToast } from "Components/toast";
+import { renderAuthHeader } from "Components/auth";
+import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
+import { api } from "./api";
 
 // This is the entry point function
 export async function main() {
+  const authHeaderEl = document.getElementById("auth-header");
+  if (authHeaderEl) {
+    const unsubscribe = subscribeToAuthStateChanged(async (user) => {
+      if (user) {
+        const token = await user.getIdToken();
+        api.setAuthToken(token);
+      } else {
+        api.setAuthToken(null);
+      }
+      renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
+    });
+    function onLogin() {
+      signInWithGoogle().catch((err) => {
+        console.error("Sign in failed:", err);
+        errorToast(err instanceof Error ? err.message : "Sign in failed");
+      });
+    }
+    function onLogout() {
+      signOut().then(() => api.setAuthToken(null));
+    }
+    void unsubscribe;
+  }
+
   const appEl = document.getElementById("app");
   if (appEl) {
     appEl.replaceChildren();

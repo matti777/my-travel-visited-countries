@@ -15,6 +15,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      "Cross-Origin-Opener-Policy": "unsafe-none",
+    },
     proxy: {
       "/countries": { target: "http://localhost:8080", changeOrigin: true },
       "/visits": { target: "http://localhost:8080", changeOrigin: true },

@@ -17,10 +17,12 @@ export class ApiError extends Error {
 export default class Api {
   private static SESSION_KEY_AUTHTOKEN = "session:api:auth_token";
 
-  setAuthToken(token: string): void {
-    sessionStorage.setItem(Api.SESSION_KEY_AUTHTOKEN, token);
+  setAuthToken(token: string | null): void {
     if (token) {
+      sessionStorage.setItem(Api.SESSION_KEY_AUTHTOKEN, token);
       console.log("Auth token registered");
+    } else {
+      sessionStorage.removeItem(Api.SESSION_KEY_AUTHTOKEN);
     }
   }
 

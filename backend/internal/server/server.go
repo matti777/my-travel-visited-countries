@@ -31,6 +31,11 @@ func NewServer(ctx context.Context, db Database) *Server {
 		db:     db,
 	}
 
+	// COOP: allow Firebase Auth popup to check window.closed without console error
+	s.Router.Use(func(c *gin.Context) {
+		c.Header("Cross-Origin-Opener-Policy", "unsafe-none")
+		c.Next()
+	})
 	// Traceparent first so trace is in context before any logging
 	s.Router.Use(s.traceparentMiddleware())
 	// Then context: tracer and request-scoped logger (with trace from Traceparent)

@@ -22,3 +22,9 @@ Thumbnail sized (no more than a couple of kilobytes each) flags for all the sove
 - **Development server:** The development server shall redirect all REST calls to `localhost:8080` where it is assumed a local backend is being run.
 - **Formatting:** Standard formatting rules for Typescript should be applied. All lines should end with a semicolon.
 - **Components:** Frontend build shall be configured so that components in `src/components/xyz` can be imported with `import { foo } from Components/xyz`
+
+## User Authentication
+
+The application provides LOGIN (or LOG OUT, when logged in) buttons in the top right corner. Pressing LOGIN provides the user with a Firebase Authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the LOG OUT button. Pressing LOG OUT shall take the proper steps of logging the user out of Firebase Authentication.
+
+This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.

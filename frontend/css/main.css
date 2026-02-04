@@ -8,6 +8,17 @@ body {
   line-height: 1.5;
 }
 
+#auth-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 #app {
   padding: 1rem;
+  padding-top: 2.5rem;
 }
