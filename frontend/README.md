@@ -56,6 +56,21 @@ Pure TypeScript frontend, built with Vite. See [spec/frontend-module.md](spec/fr
 
 ---
 
+## Flag assets
+
+Thumbnail flag images (JPEG, one per sovereign country) are stored under `assets/images/` as `<country-code>.jpg` (lowercase ISO 3166-1 alpha-2). They are built into the app bundle so the client can load them without extra requests.
+
+To download or refresh the images (from [flagcdn.com](https://flagcdn.com/)):
+
+```bash
+cd frontend
+node scripts/download-flag-assets.mjs
+```
+
+The script reads the list of country codes from `scripts/country-codes.json`. That list is kept in sync with the backend’s sovereign country list.
+
+---
+
 ## Adding new dependencies
 
 To add a library (e.g. for toast notifications, UI, or utilities):

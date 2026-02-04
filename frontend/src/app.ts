@@ -4,7 +4,27 @@ import { errorToast } from "Components/toast";
 export async function main() {
   const appEl = document.getElementById("app");
   if (appEl) {
-    appEl.textContent = "Hello, world from TS";
+    appEl.replaceChildren();
+    const p = document.createElement("p");
+    p.textContent = "Hello, world from TS";
+    appEl.appendChild(p);
+    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
+    const flagPath = (code: string) => `${base}/assets/images/${code}.jpg`;
+    const fi = document.createElement("img");
+    fi.src = flagPath("fi");
+    fi.alt = "Finland";
+    fi.width = 40;
+    appEl.appendChild(fi);
+    const fr = document.createElement("img");
+    fr.src = flagPath("fr");
+    fr.alt = "France";
+    fr.width = 40;
+    appEl.appendChild(fr);
+    const de = document.createElement("img");
+    de.src = flagPath("de");
+    de.alt = "Germany";
+    de.width = 40;
+    appEl.appendChild(de);
   }
 
   // Global "catch-all" exception handler

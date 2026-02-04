@@ -11,6 +11,10 @@ The frontend application shall follow this structure:
 - `src/`: All source files go here.
 - `src/components/`: All 'component' source files go here, with a subdirectory + index.ts per component.
 
+## Additional static assets
+
+Thumbnail sized (no more than a couple of kilobytes each) flags for all the sovereign countries in the world are to be downloaded and stored as JPEG files under `frontend/assets/images/`. The files must be named <country-code>.jpg where `country-code` is the equivalent 2-letter ISO 3166-1 alpha-2 code for the corresponding country, in lower case. These images are to be built into the app bundle so that they can be readily accessed by the client without further download requests.
+
 ## Tech Stack
 
 - **Language and frameworks:** Pure Typescript is used to build the application, with no frameworks such as React or Vue. This is to keep app size to a minimum and readability to a maximum.
