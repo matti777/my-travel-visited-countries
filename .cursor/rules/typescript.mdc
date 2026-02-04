@@ -1,0 +1,13 @@
+---
+description: "Contains rules for all Typescript related output"
+globs: frontend/**/*.ts
+alwaysApply: true
+---
+
+# Typescript frontend
+
+Always stick to pure Typescript over frameworks. Also avoid external dependencies if possible.
+
+## Coding standards
+
+1. **Error handling**: Always log all errors to console.

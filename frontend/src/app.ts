@@ -2,6 +2,10 @@ import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api } from "./api";
+import type { Country } from "./types/country";
+
+/** Country list from GET /countries, filled after app start (from cache or backend). */
+export let countries: Country[] = [];
 
 // This is the entry point function
 export async function main() {
@@ -23,9 +27,20 @@ export async function main() {
       });
     }
     function onLogout() {
-      signOut().then(() => api.setAuthToken(null));
+      signOut().then(() => {
+        api.setAuthToken(null);
+        console.log("Signed out");
+      });
     }
     void unsubscribe;
+  }
+
+  try {
+    countries = await api.getCountries();
+    console.log("App initialized with", countries.length, "countries");
+  } catch (err) {
+    countries = [];
+    console.error("Countries load failed", err);
   }
 
   const appEl = document.getElementById("app");
@@ -72,7 +87,8 @@ export async function main() {
   });
 
   window.addEventListener("unhandledrejection", function (event) {
-    console.error("Unhandled promise rejection (EventListener):", event.reason);
+    console.error("Unhandled promise rejection:", event.reason);
+    errorToast("Something went wrong");
     event.preventDefault();
   });
 

@@ -28,3 +28,23 @@ Thumbnail sized (no more than a couple of kilobytes each) flags for all the sove
 The application provides LOGIN (or LOG OUT, when logged in) buttons in the top right corner. Pressing LOGIN provides the user with a Firebase Authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the LOG OUT button. Pressing LOG OUT shall take the proper steps of logging the user out of Firebase Authentication.
 
 This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.
+
+## Error handling
+
+All errors must be logged to console error log. All errors must by default show an errorToast() with a descriptive message.
+
+## App logging
+
+All major operations (network etc) should be logged to console log upon success (errors get logged via console errors) and a descriptive message should be displayed.
+
+## App initialization
+
+When the app starts, it checks the authentication status and then goes on to fetch a list of the countries from the backend (see @api.md). This list of countries shall be cached in the client for up to 7 days after which it will be invalidated from storage and refetched. This is to avoid unnecessary fetch operations for data that does not change often. Once the list of countries has been retrieved (from backend or local cache), it is stored in a variable held by `app.ts`.
+
+## Backend API
+
+For the backend API description, see @api.md.
+
+## Data models
+
+Implement Typescript types that adhere to the models defined in @data-models.md.
