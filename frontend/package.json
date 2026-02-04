@@ -1,0 +1,23 @@
+{
+  "name": "my-countries-frontend",
+  "private": true,
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:and-copy": "vite build && node scripts/copy-to-backend.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "notyf": "^3.10.0"
+  }
+}
