@@ -1,11 +1,15 @@
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
+import type { CountryVisit } from "./types/visit";
 
 /** Country list from GET /countries, filled after app start (from cache or backend). */
 export let countries: Country[] = [];
+
+/** Country visits from GET /visits, filled when user is authenticated (on load and on login). */
+export let visits: CountryVisit[] = [];
 
 // This is the entry point function
 export async function main() {
@@ -15,8 +19,21 @@ export async function main() {
       if (user) {
         const token = await user.getIdToken();
         api.setAuthToken(token);
+        try {
+          visits = await api.getVisits();
+        } catch (err) {
+          console.error("Failed to load visits", err);
+          visits = [];
+          if (err instanceof ApiError && err.responseCode === 401) {
+            signOut();
+            errorToast("Session expired");
+          } else {
+            errorToast("Failed to load visits");
+          }
+        }
       } else {
         api.setAuthToken(null);
+        visits = [];
       }
       renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
     });

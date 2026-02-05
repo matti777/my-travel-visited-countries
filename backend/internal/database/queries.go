@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/matti777/my-countries/backend/internal/models"
 )
@@ -33,4 +35,55 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 	}
 
 	return visits, nil
+}
+
+// EnsureUser creates the user document if it does not exist (get-or-create by ID).
+// Uses the users collection with document ID = user.ID; stores Name and Email.
+func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
+	if user == nil || user.ID == "" {
+		return fmt.Errorf("user ID is required")
+	}
+	ref := c.Collection("users").Doc(user.ID)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			// Document does not exist, create it below
+		} else {
+			return fmt.Errorf("failed to check user: %w", err)
+		}
+	} else if snap.Exists() {
+		// Document exists, nothing to do
+		return nil
+	}
+	// Create document with name and email (ID is the doc ID)
+	_, err = ref.Set(ctx, map[string]interface{}{
+		"name":  user.Name,
+		"email": user.Email,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	return nil
+}
+
+// CreateCountryVisit adds a new country visit document and returns the visit with its Firestore ID set.
+func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error) {
+	if visit == nil {
+		return nil, fmt.Errorf("visit is required")
+	}
+	if visit.UserID == "" || visit.CountryCode == "" {
+		return nil, fmt.Errorf("user_id and country_code are required")
+	}
+	ref := c.Collection("country_visits").NewDoc()
+	_, err := ref.Set(ctx, map[string]interface{}{
+		"country_code":  visit.CountryCode,
+		"visited_time":  visit.VisitedTime,
+		"user_id":       visit.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create country visit: %w", err)
+	}
+	out := *visit
+	out.ID = ref.ID
+	return &out, nil
 }

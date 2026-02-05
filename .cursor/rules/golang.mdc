@@ -20,6 +20,9 @@ You are an expert Go developer. Follow these standards for all code generation:
 3. **Dependency Injection:** Pass dependencies (DB, Config) via struct constructors (e.g., `NewServer(db *sql.DB)`).
 4. **Context:** Always pass `context.Context` through to database and external API calls.
 5. **Type aliasing:** Never do type aliasing just to "import" a type from another package
+6. **Linebreaks:** Insert a linebreak after a logical block of code; typically after a }
+7. **Line length:** Try to avoid code lines longer than 100 characters
+8. **Naming identifiers:** Use best practices for Typescript when naming identifiers
 
 ## Consistency
 

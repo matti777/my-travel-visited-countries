@@ -1,5 +1,6 @@
 import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
+import type { CountryVisit, VisitsResponse } from "./types/visit";
 
 const COUNTRIES_CACHE_KEY = "app:countries:cache";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -62,6 +63,18 @@ export default class Api {
     }
   }
 
+  async getVisits(): Promise<CountryVisit[]> {
+    const token = this.getAuthToken();
+    if (!token) {
+      return [];
+    }
+    const response = (await this.performRequest("/visits", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })) as VisitsResponse;
+    return response?.visits ?? [];
+  }
+
   private parseContentType(contentTypeHeader: string): string {
     const parts = contentTypeHeader.split(";");
     const contentType = parts[0].trim();
@@ -92,22 +105,14 @@ export default class Api {
       return data;
     } catch (error) {
       console.error("fetch failed with error: ", error);
-      errorToast(`${error}`);
       if (error instanceof ApiError) {
-        // If we get Not Authorized error this means that the login session has expired
-        // and we need to re-authenticate
-        if (error.responseCode === 401) {
-          console.error("Session expired, re-authenticating.", error);
-          errorToast("Session expired");
-          location.hash = "";
-          location.reload();
-          return;
+        if (error.responseCode !== 401) {
+          errorToast(error.message);
         }
-
         throw error;
-      } else {
-        throw new ApiError({ message: `${error}`, cause: error });
       }
+      errorToast(`${error}`);
+      throw new ApiError({ message: `${error}`, cause: error });
     }
   }
 }

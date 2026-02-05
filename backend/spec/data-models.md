@@ -8,6 +8,14 @@ Each subsection describes a single data model. Code for each model is to be put 
 
 For Firestore purposes, each model should have its Firestore ID stored in the object. This ID should not be sent over the REST interface.
 
+### User model
+
+Represents a system user. Data parsed from incoming authentication token. Only used in the backend.
+
+- `ID`: User ID from the token
+- `Name`: User name from the token
+- `Email`: User email from the token
+
 ### Country model
 
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.

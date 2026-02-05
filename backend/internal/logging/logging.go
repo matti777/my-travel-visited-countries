@@ -8,14 +8,16 @@ import (
 	"time"
 
 	"github.com/matti777/my-countries/backend/internal/ctxkeys"
+	"github.com/matti777/my-countries/backend/internal/models"
 )
 
 // Logger writes structured JSON logs to STDOUT, compatible with GCP structured log parser.
-// It can carry optional trace ID/span ID so logs are connected to the request trace (Traceparent).
+// It can carry optional trace ID/span ID and current_user_id so logs are connected to the request and user.
 type Logger struct {
-	projectID string
-	traceID   string
-	spanID    string
+	projectID    string
+	traceID      string
+	spanID       string
+	currentUserID string
 }
 
 // NewLogger creates a new logger instance that writes JSON to STDOUT
@@ -23,22 +25,30 @@ func NewLogger(ctx context.Context, projectID string) (*Logger, error) {
 	return &Logger{projectID: projectID}, nil
 }
 
-// WithTraceFromContext returns a logger that includes trace correlation from ctx when present.
-// Used to bind the logger to the current request's Traceparent so logs connect to the request trace.
-// If ctx has no trace context, returns a copy of the logger with no trace set.
+// WithTraceFromContext returns a logger that includes trace correlation and current_user_id from ctx when present.
+// Used by middleware to create the request-scoped logger to inject into context.
 func (l *Logger) WithTraceFromContext(ctx context.Context) *Logger {
 	if l == nil {
 		return nil
 	}
+	out := &Logger{projectID: l.projectID, currentUserID: currentUserIDFromContext(ctx)}
 	tc, _ := ctx.Value(ctxkeys.TraceContextKey).(*ctxkeys.TraceContext)
-	if tc == nil || tc.TraceID == "" {
-		return &Logger{projectID: l.projectID}
+	if tc != nil && tc.TraceID != "" {
+		out.traceID = tc.TraceID
+		out.spanID = tc.SpanID
 	}
-	return &Logger{
-		projectID: l.projectID,
-		traceID:   tc.TraceID,
-		spanID:    tc.SpanID,
+	return out
+}
+
+// WithCurrentUserID returns a copy of the logger with current_user_id set.
+// Used by auth middleware after the user is in context so handlers get a logger that already has user ID.
+func (l *Logger) WithCurrentUserID(id string) *Logger {
+	if l == nil {
+		return nil
 	}
+	out := *l
+	out.currentUserID = id
+	return &out
 }
 
 // logEntry represents a single log entry in GCP structured log format
@@ -51,24 +61,71 @@ type logEntry struct {
 	Fields    map[string]interface{} `json:",omitempty"`
 }
 
-// writeLog writes a single-line JSON log entry to STDOUT
-func (l *Logger) writeLog(severity, format string, args ...interface{}) {
+// currentUserIDFromContext returns the current user's ID from context when set by auth middleware.
+func currentUserIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	u, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if u == nil {
+		return ""
+	}
+	return u.ID
+}
+
+// buildFieldsFromKeyValues converts alternating key, value pairs into a map for structured logging.
+// keyValues must have even length; odd-indexed elements must be strings (keys).
+// Error types are stored as their string form (Error()) so they serialize as readable text in JSON.
+func buildFieldsFromKeyValues(keyValues ...interface{}) map[string]interface{} {
+	if len(keyValues)%2 != 0 {
+		return nil
+	}
+	fields := make(map[string]interface{}, len(keyValues)/2)
+	for i := 0; i < len(keyValues); i += 2 {
+		k, ok := keyValues[i].(string)
+		if !ok {
+			continue
+		}
+		v := keyValues[i+1]
+		if err, ok := v.(error); ok {
+			fields[k] = err.Error()
+		} else {
+			fields[k] = v
+		}
+	}
+	return fields
+}
+
+// writeLog writes a single-line JSON log entry to STDOUT with structured fields.
+// The logger's currentUserID is merged into fields as "current_user_id" when set.
+func (l *Logger) writeLog(severity, message string, fields map[string]interface{}) {
+	if l == nil {
+		return
+	}
 	entry := logEntry{
 		Severity:  severity,
-		Message:   fmt.Sprintf(format, args...),
+		Message:   message,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
-	if l != nil && l.traceID != "" {
+	if l.traceID != "" {
 		entry.SpanID = l.spanID
 		if l.projectID != "" {
 			entry.Trace = fmt.Sprintf("projects/%s/traces/%s", l.projectID, l.traceID)
 		}
 	}
+	if len(fields) > 0 || l.currentUserID != "" {
+		entry.Fields = make(map[string]interface{}, len(fields)+1)
+		for k, v := range fields {
+			entry.Fields[k] = v
+		}
+		if l.currentUserID != "" {
+			entry.Fields["current_user_id"] = l.currentUserID
+		}
+	}
 
 	jsonBytes, err := json.Marshal(entry)
 	if err != nil {
-		// Fallback: write plain text if JSON marshaling fails
-		fmt.Fprintf(os.Stdout, "%s: %s\n", severity, fmt.Sprintf(format, args...))
+		fmt.Fprintf(os.Stdout, "%s: %s\n", severity, message)
 		return
 	}
 
@@ -76,54 +133,36 @@ func (l *Logger) writeLog(severity, format string, args ...interface{}) {
 	os.Stdout.WriteString("\n")
 }
 
-// Debug logs a debug message
-func (l *Logger) Debug(format string, args ...interface{}) {
-	l.writeLog("DEBUG", format, args...)
+// Debug logs a message with optional structured key-value pairs (e.g. log.Debug("msg", logging.UserID, user.ID)).
+func (l *Logger) Debug(msg string, keyValues ...interface{}) {
+	if l == nil {
+		return
+	}
+	l.writeLog("DEBUG", msg, buildFieldsFromKeyValues(keyValues...))
 }
 
-// Debugf logs a formatted debug message (alias for Debug)
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.Debug(format, args...)
+// Info logs a message with optional structured key-value pairs.
+func (l *Logger) Info(msg string, keyValues ...interface{}) {
+	if l == nil {
+		return
+	}
+	l.writeLog("INFO", msg, buildFieldsFromKeyValues(keyValues...))
 }
 
-// Info logs an info message
-func (l *Logger) Info(format string, args ...interface{}) {
-	l.writeLog("INFO", format, args...)
+// Warn logs a message with optional structured key-value pairs.
+func (l *Logger) Warn(msg string, keyValues ...interface{}) {
+	if l == nil {
+		return
+	}
+	l.writeLog("WARNING", msg, buildFieldsFromKeyValues(keyValues...))
 }
 
-// Infof logs a formatted info message (alias for Info)
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.Info(format, args...)
-}
-
-// Warn logs a warning message
-func (l *Logger) Warn(format string, args ...interface{}) {
-	l.writeLog("WARNING", format, args...)
-}
-
-// Warnf logs a formatted warning message (alias for Warn)
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.Warn(format, args...)
-}
-
-// Warning logs a warning message (alias for Warn)
-func (l *Logger) Warning(format string, args ...interface{}) {
-	l.Warn(format, args...)
-}
-
-// Warningf logs a formatted warning message (alias for Warnf)
-func (l *Logger) Warningf(format string, args ...interface{}) {
-	l.Warnf(format, args...)
-}
-
-// Error logs an error message
-func (l *Logger) Error(format string, args ...interface{}) {
-	l.writeLog("ERROR", format, args...)
-}
-
-// Errorf logs a formatted error message (alias for Error)
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.Error(format, args...)
+// Error logs a message with optional structured key-value pairs.
+func (l *Logger) Error(msg string, keyValues ...interface{}) {
+	if l == nil {
+		return
+	}
+	l.writeLog("ERROR", msg, buildFieldsFromKeyValues(keyValues...))
 }
 
 // WithContext returns a context with the logger stored in it
@@ -137,34 +176,6 @@ func FromContext(ctx context.Context) *Logger {
 		return logger
 	}
 	return nil
-}
-
-// LogDebug logs a debug message using the logger from context
-func LogDebug(ctx context.Context, format string, args ...interface{}) {
-	if logger := FromContext(ctx); logger != nil {
-		logger.Debugf(format, args...)
-	}
-}
-
-// LogInfo logs an info message using the logger from context
-func LogInfo(ctx context.Context, format string, args ...interface{}) {
-	if logger := FromContext(ctx); logger != nil {
-		logger.Infof(format, args...)
-	}
-}
-
-// LogWarning logs a warning message using the logger from context
-func LogWarning(ctx context.Context, format string, args ...interface{}) {
-	if logger := FromContext(ctx); logger != nil {
-		logger.Warningf(format, args...)
-	}
-}
-
-// LogError logs an error message using the logger from context
-func LogError(ctx context.Context, format string, args ...interface{}) {
-	if logger := FromContext(ctx); logger != nil {
-		logger.Errorf(format, args...)
-	}
 }
 
 // Close closes the logger (no-op for STDOUT logger)

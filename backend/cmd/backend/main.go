@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/matti777/my-countries/backend/internal/auth"
 	"github.com/matti777/my-countries/backend/internal/config"
 	"github.com/matti777/my-countries/backend/internal/database"
 	"github.com/matti777/my-countries/backend/internal/logging"
@@ -50,7 +51,8 @@ func main() {
 		ctx = logging.WithContext(ctx, logger)
 	}
 
-	logging.LogInfo(ctx, "Starting application initialization")
+	slog := logging.FromContext(ctx)
+	slog.Info("Starting application initialization")
 
 	// Initialize Firestore client with trace span
 	var dbClient *database.Client
@@ -60,26 +62,38 @@ func main() {
 		return err
 	})
 	if err != nil {
-		logging.LogError(ctx, "Failed to initialize Firestore client: %v", err)
+		slog.Error("Failed to initialize Firestore client", logging.Error, err)
 		log.Fatalf("Failed to initialize Firestore client: %v", err)
 	}
 	defer dbClient.Close()
 
-	logging.LogInfo(ctx, "Firestore client initialized successfully")
+	slog.Info("Firestore client initialized successfully")
+
+	// Firebase ID token verification (JWKS cache 1h). Use FIREBASE_PROJECT_ID or FIREBASE_AUDIENCE when backend GCP project differs from frontend Firebase project.
+	authenticator, err := auth.NewAuthenticator(cfg.ProjectID, cfg.FirebaseProjectID)
+	if err != nil {
+		slog.Error("Failed to create authenticator", logging.Error, err)
+		log.Fatalf("Failed to create authenticator: %v", err)
+	}
+	effectiveFirebaseProject := cfg.ProjectID
+	if cfg.FirebaseProjectID != "" {
+		effectiveFirebaseProject = cfg.FirebaseProjectID
+	}
+	slog.Info("Firebase token verification configured", "firebase_project_id", effectiveFirebaseProject)
 
 	// Create server with trace span
 	var srv *server.Server
 	err = tracing.SafeSpan(ctx, nil, "server.NewServer", func(spanCtx context.Context) error {
-		srv = server.NewServer(spanCtx, dbClient)
+		srv = server.NewServer(spanCtx, dbClient, authenticator)
 		srv.RegisterRoutes()
 		return nil
 	})
 	if err != nil {
-		logging.LogError(ctx, "Failed to create server: %v", err)
+		slog.Error("Failed to create server", logging.Error, err)
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	logging.LogInfo(ctx, "Server created successfully")
+	slog.Info("Server created successfully")
 
 	// Create HTTP server
 	httpServer := &http.Server{
@@ -90,14 +104,14 @@ func main() {
 	// Start server in a goroutine with trace span
 	go func() {
 		err := tracing.SafeSpan(ctx, nil, "httpServer.ListenAndServe", func(spanCtx context.Context) error {
-			logging.LogInfo(spanCtx, "Server starting on port %s", cfg.Port)
+			slog.Info("Server starting on port", logging.Port, cfg.Port)
 			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				return err
 			}
 			return nil
 		})
 		if err != nil {
-			logging.LogError(ctx, "Server failed to start: %v", err)
+			slog.Error("Server failed to start", logging.Error, err)
 			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
@@ -107,7 +121,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logging.LogInfo(ctx, "Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	// Graceful shutdown with trace span
 	err = tracing.SafeSpan(ctx, nil, "httpServer.Shutdown", func(spanCtx context.Context) error {
@@ -120,9 +134,9 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		logging.LogError(ctx, "Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", logging.Error, err)
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	logging.LogInfo(ctx, "Server exited")
+	slog.Info("Server exited")
 }

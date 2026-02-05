@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/matti777/my-countries/backend/internal/ctxkeys"
 	"github.com/matti777/my-countries/backend/internal/data"
 	"github.com/matti777/my-countries/backend/internal/logging"
 	"github.com/matti777/my-countries/backend/internal/models"
@@ -25,27 +27,21 @@ func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
 
 // GetListHandler handles GET /visits.
 // Returns a list of country visits for the current user from the database.
+// Requires auth middleware (user in context).
 func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
-	// Use the spec's trace API: ctx, span := trace.New(ctx, "name")
 	ctx, span := tracing.New(ctx, "GetListHandler")
 	defer span.End()
 
-	// TODO: Extract user ID from authentication context
-	// For now, using a placeholder - in production, this should come from
-	// authenticated session/JWT token
-	userID := c.GetString("user_id")
-	if userID == "" {
-		// Temporary: use a query parameter for testing
-		// Remove this in production when auth is implemented
-		userID = c.Query("user_id")
-		if userID == "" {
-			logging.LogWarning(ctx, "user_id required but not provided")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
-			return
-		}
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
 	}
+	userID := user.ID
 
-	logging.LogInfo(ctx, "Fetching country visits for user: %s", userID)
+	log.Info("Fetching country visits for user", logging.UserID, userID)
 
 	// Create child span for database operation using spec's trace API
 	dbCtx, dbSpan := tracing.New(ctx, "database::GetCountryVisitsByUser")
@@ -53,15 +49,67 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 
 	visits, err := s.db.GetCountryVisitsByUser(dbCtx, userID)
 	if err != nil {
-		logging.LogError(dbCtx, "Failed to fetch country visits for user %s: %v", userID, err)
+		log.Error("Failed to fetch country visits for user", logging.UserID, userID, logging.Error, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to fetch country visits",
 		})
 		return
 	}
 
-	logging.LogInfo(dbCtx, "Successfully fetched %d country visits for user %s", len(visits), userID)
+	log.Info("Successfully fetched country visits for current user", logging.Count, len(visits))
 	c.JSON(http.StatusOK, models.CountryVisitResponse{
 		Visits: visits,
 	})
+}
+
+// PutVisitsHandler handles PUT /visits.
+// Creates a new country visit for the current user. Body: { "countryCode": "FI", "visitedTime": null (optional) }.
+// Requires auth middleware.
+func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PutVisitsHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+
+	var body struct {
+		CountryCode string `json:"countryCode"`
+		VisitedTime *int64 `json:"visitedTime,omitempty"` // Unix seconds; optional
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn("Invalid PUT /visits body", logging.Error, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if body.CountryCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "countryCode is required"})
+		return
+	}
+	if !models.ValidateCountryCode(body.CountryCode) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid countryCode"})
+		return
+	}
+
+	visit := &models.CountryVisit{
+		CountryCode: body.CountryCode,
+		UserID:      user.ID,
+	}
+	if body.VisitedTime != nil {
+		t := time.Unix(*body.VisitedTime, 0)
+		visit.VisitedTime = &t
+	}
+
+	created, err := s.db.CreateCountryVisit(ctx, visit)
+	if err != nil {
+		log.Error("CreateCountryVisit failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create visit"})
+		return
+	}
+	log.Info("Created country visit", logging.VisitID, created.ID, logging.UserID, user.ID)
+	c.JSON(http.StatusCreated, created)
 }
