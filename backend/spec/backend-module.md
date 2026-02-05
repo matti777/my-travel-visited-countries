@@ -63,6 +63,16 @@ The Logger must connect each logging message to the originating request trace sp
 
 Logger should check request context for `current_user` object and log its ID (as `current_user_id` logging param) in every logging call, if present.
 
+## Serving static frontend files
+
+The backend must also serve the frontend static files. The files are found in `backend/static/` directory. These files are to be included with the //go:embed mechanism. The files are to be served so that "/" points to index.html, other files are served with their relative paths.
+
+Caching rules:
+
+- **index.html**: should not be cached for obvious reasons
+- **frontend JS bundle files**: should be heavily cached as their filenames should change every time a new version is built.
+- **other static assets such as images**: should be heavily cached
+
 ## Database / API models
 
 Use model definitions in @data-models.md.

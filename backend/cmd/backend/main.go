@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	app "github.com/matti777/my-countries/backend"
 	"github.com/matti777/my-countries/backend/internal/auth"
 	"github.com/matti777/my-countries/backend/internal/config"
 	"github.com/matti777/my-countries/backend/internal/database"
@@ -84,7 +85,7 @@ func main() {
 	// Create server with trace span
 	var srv *server.Server
 	err = tracing.SafeSpan(ctx, nil, "server.NewServer", func(spanCtx context.Context) error {
-		srv = server.NewServer(spanCtx, dbClient, authenticator)
+		srv = server.NewServer(spanCtx, dbClient, authenticator, app.StaticFiles)
 		srv.RegisterRoutes()
 		return nil
 	})

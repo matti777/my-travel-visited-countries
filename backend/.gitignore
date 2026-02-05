@@ -1,5 +1,6 @@
 # Not to be version controlled
 keys/
+static/
 
 # Binaries
 *.exe

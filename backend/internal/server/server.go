@@ -2,7 +2,13 @@ package server
 
 import (
 	"context"
+	"embed"
+	"errors"
+	"io"
+	"io/fs"
 	"net/http"
+	"path"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -16,9 +22,10 @@ import (
 
 // Server wraps the Gin engine and dependencies
 type Server struct {
-	Router *gin.Engine
-	db     Database
-	auth   *auth.Authenticator
+	Router   *gin.Engine
+	db       Database
+	auth     *auth.Authenticator
+	StaticFS embed.FS
 }
 
 // Database interface for database operations
@@ -29,13 +36,14 @@ type Database interface {
 }
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, db Database, authenticator *auth.Authenticator) *Server {
+func NewServer(ctx context.Context, db Database, authenticator *auth.Authenticator, staticFS embed.FS) *Server {
 	router := gin.Default()
 
 	s := &Server{
-		Router: router,
-		db:     db,
-		auth:   authenticator,
+		Router:   router,
+		db:       db,
+		auth:     authenticator,
+		StaticFS: staticFS,
 	}
 
 	// COOP: allow Firebase Auth popup to check window.closed without console error
@@ -145,4 +153,110 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
+}
+
+// staticHandler serves embedded frontend files. "/" and missing paths serve index.html (SPA fallback).
+// Cache: index.html not cached; assets (JS, CSS, images) heavily cached.
+func (s *Server) staticHandler(c *gin.Context) {
+	if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	reqPath := strings.TrimPrefix(c.Request.URL.Path, "/")
+	if reqPath == "" {
+		reqPath = "index.html"
+	}
+	// Open from embedded FS (paths under static/)
+	fsPath := path.Join("static", reqPath)
+	f, err := s.StaticFS.Open(fsPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// SPA fallback: serve index.html
+			f, err = s.StaticFS.Open("static/index.html")
+			if err != nil {
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+			defer f.Close()
+			stat, _ := f.Stat()
+			c.Header("Cache-Control", "no-store")
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+			c.Status(http.StatusOK)
+			io.Copy(c.Writer, f)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	stat, err := f.Stat()
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if stat.IsDir() {
+		// Don't list directories; treat as not found and fallback to index.html
+		f.Close()
+		f, _ = s.StaticFS.Open("static/index.html")
+		if f == nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		defer f.Close()
+		stat, _ = f.Stat()
+		c.Header("Cache-Control", "no-store")
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+		c.Status(http.StatusOK)
+		io.Copy(c.Writer, f)
+		return
+	}
+	// Set cache headers: index.html no-store; assets heavy cache (reqPath is URL path, not fs path)
+	if reqPath == "index.html" {
+		c.Header("Cache-Control", "no-store")
+	} else if strings.HasPrefix(reqPath, "assets/") || isHeavyCacheExt(path.Ext(reqPath)) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	}
+	contentType := contentTypeByExt(path.Ext(reqPath))
+	if contentType != "" {
+		c.Header("Content-Type", contentType)
+	}
+	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Status(http.StatusOK)
+	io.Copy(c.Writer, f)
+}
+
+func isHeavyCacheExt(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".js", ".css", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico", ".woff", ".woff2":
+		return true
+	}
+	return false
+}
+
+func contentTypeByExt(ext string) string {
+	switch strings.ToLower(ext) {
+	case ".html":
+		return "text/html; charset=utf-8"
+	case ".js":
+		return "application/javascript; charset=utf-8"
+	case ".css":
+		return "text/css; charset=utf-8"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".ico":
+		return "image/x-icon"
+	case ".woff":
+		return "font/woff"
+	case ".woff2":
+		return "font/woff2"
+	}
+	return ""
 }

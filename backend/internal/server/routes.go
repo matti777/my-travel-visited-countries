@@ -6,6 +6,7 @@ import (
 
 // RegisterRoutes registers all HTTP routes.
 // GET /countries is public; GET /visits and PUT /visits require auth middleware.
+// Unmatched GET/HEAD requests are served from embedded static files (SPA fallback to index.html).
 func (s *Server) RegisterRoutes() {
 	s.Router.GET("/countries", func(c *gin.Context) {
 		s.GetCountriesHandler(c.Request.Context(), c)
@@ -22,4 +23,7 @@ func (s *Server) RegisterRoutes() {
 			s.PutVisitsHandler(c.Request.Context(), c)
 		})
 	}
+
+	// Static frontend: serve embedded files; unknown paths serve index.html (SPA fallback)
+	s.Router.NoRoute(s.staticHandler)
 }
