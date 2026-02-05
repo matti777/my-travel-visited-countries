@@ -2,10 +2,21 @@
   box-sizing: border-box;
 }
 
+:root {
+  --color-turquoise: #40e0d0;
+  --color-turquoise-light: #b8f0eb;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: "Roboto Condensed", system-ui, sans-serif;
   line-height: 1.5;
+  min-height: 100vh;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.75)),
+    url("/assets/images/background-travel.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 #auth-header {
@@ -18,7 +29,87 @@ body {
   gap: 0.5rem;
 }
 
+#auth-header button {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 #app {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 1rem;
   padding-top: 2.5rem;
+}
+
+.app-section {
+  margin-bottom: 2rem;
+}
+
+.app-section h2 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.country-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 56px;
+  min-width: 180px;
+  max-width: 220px;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.country-cell img {
+  width: 40px;
+  height: 28px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.country-cell span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.visited-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  max-width: 680px;
+}
+
+.visited-empty {
+  color: #888;
+  font-style: italic;
+}
+
+.add-visit-form button[type="submit"] {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.add-visit-form select,
+.add-visit-form input {
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  padding: 0.35rem;
+  font-family: inherit;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
 }

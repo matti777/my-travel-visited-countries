@@ -2,6 +2,7 @@ import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
 import type { CountryVisit, VisitsResponse } from "./types/visit";
 
+
 const COUNTRIES_CACHE_KEY = "app:countries:cache";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -73,6 +74,26 @@ export default class Api {
       headers: { Authorization: `Bearer ${token}` },
     })) as VisitsResponse;
     return response?.visits ?? [];
+  }
+
+  async putVisits(countryCode: string, visitedTime?: number): Promise<CountryVisit> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const body: { countryCode: string; visitedTime?: number } = { countryCode };
+    if (visitedTime != null) {
+      body.visitedTime = visitedTime;
+    }
+    const response = (await this.performRequest("/visits", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    })) as CountryVisit;
+    return response;
   }
 
   private parseContentType(contentTypeHeader: string): string {

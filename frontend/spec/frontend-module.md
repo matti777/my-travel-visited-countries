@@ -48,3 +48,7 @@ For the backend API description, see @api.md.
 ## Data models
 
 Implement Typescript types that adhere to the models defined in @data-models.md.
+
+## User interface
+
+The user interface for the application is defined in @user-interface.md.

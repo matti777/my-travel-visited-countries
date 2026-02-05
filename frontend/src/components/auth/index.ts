@@ -1,7 +1,7 @@
 import type { User } from "firebase/auth";
 
 /**
- * Renders the auth header content: either LOGIN or (name + avatar + LOG OUT).
+ * Renders the auth header content: either LOGIN or (name + avatar, if available, + LOG OUT).
  */
 export function renderAuthHeader(
   container: HTMLElement,
@@ -18,6 +18,7 @@ export function renderAuthHeader(
     avatar.width = 24;
     avatar.height = 24;
     avatar.style.borderRadius = "50%";
+    avatar.referrerPolicy = "no-referrer";
     if (user.photoURL) {
       avatar.src = user.photoURL;
     }
