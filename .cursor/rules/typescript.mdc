@@ -13,3 +13,7 @@ Always stick to pure Typescript over frameworks. Also avoid external dependencie
 1. **Error handling**: Always log all errors to console.
 2. **Line length:** Try to avoid code lines longer than 100 characters
 3. **Naming identifiers:** Use best practices for Typescript when naming identifiers
+
+## Minification
+
+The built JS bundle must be minified to reduce its size.

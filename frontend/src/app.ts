@@ -203,6 +203,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   dayInput.name = "day";
   dayInput.autocomplete = "off";
   dayInput.value = options.formDay ?? "";
+  dayInput.disabled = true;
   row.appendChild(dayInput);
 
   form.appendChild(row);
@@ -215,6 +216,11 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   function getDaysInMonth(year: number, month: number): number {
     return new Date(year, month, 0).getDate();
   }
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "submit";
+  addBtn.textContent = "Add";
+  addBtn.disabled = true;
 
   function validateVisitTime(): {
     valid: boolean;
@@ -244,16 +250,20 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     const v = validateVisitTime();
     yearInput.classList.toggle("invalid", !!v.yearInvalid);
     dayInput.classList.toggle("invalid", !!v.dayInvalid);
-    addBtn.disabled = !v.valid;
+    const hasYearAndMonth = !!yearInput.value.trim() && options.selectedMonth != null;
+    dayInput.disabled = !hasYearAndMonth;
+    const canSubmit = !!options.selectedCountryCode && v.valid;
+    addBtn.disabled = !canSubmit;
   }
 
-  yearInput.addEventListener("input", () => {
+  function onYearValueChange(): void {
     options.onFormYearChange(yearInput.value);
     updateValidationUI();
-  });
+  }
+  yearInput.addEventListener("input", onYearValueChange);
+  yearInput.addEventListener("keyup", onYearValueChange);
   yearInput.addEventListener("change", () => {
-    options.onFormYearChange(yearInput.value);
-    updateValidationUI();
+    onYearValueChange();
     const yStr = yearInput.value.trim();
     const y = yStr ? parseInt(yStr, 10) : NaN;
     if (!isNaN(y) && y >= 1900 && y <= currentYear) {
@@ -262,19 +272,15 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       options.setSelectedMonth(1);
     }
   });
-  dayInput.addEventListener("input", () => {
+  yearInput.addEventListener("blur", updateValidationUI);
+  function onDayValueChange(): void {
     options.onFormDayChange(dayInput.value);
     updateValidationUI();
-  });
-  dayInput.addEventListener("change", () => {
-    options.onFormDayChange(dayInput.value);
-    updateValidationUI();
-  });
+  }
+  dayInput.addEventListener("input", onDayValueChange);
+  dayInput.addEventListener("keyup", onDayValueChange);
+  dayInput.addEventListener("change", onDayValueChange);
 
-  const addBtn = document.createElement("button");
-  addBtn.type = "submit";
-  addBtn.textContent = "Add";
-  addBtn.disabled = false;
   addBtn.addEventListener("click", async () => {
     const countryCode = options.selectedCountryCode;
     if (!countryCode) {

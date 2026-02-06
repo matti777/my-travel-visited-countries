@@ -227,8 +227,17 @@ body {
 }
 
 .add-visit-form input.invalid,
-.add-visit-form select.invalid {
-  border-color: #c00;
+.add-visit-form select.invalid,
+.add-visit-form .add-visit-form__row input.invalid {
+  border: 1px solid #c00 !important;
+  border-radius: 4px;
+}
+
+.add-visit-form input.invalid:focus,
+.add-visit-form .add-visit-form__row input.invalid:focus {
+  outline: 2px solid #c00;
+  outline-offset: -2px;
+  border: 1px solid #c00 !important;
 }
 
 .add-visit-form__year {
@@ -282,12 +291,14 @@ body {
 .add-visit-form__visit-time-label {
   font-size: 0.95rem;
   color: #333;
-  margin-left: 1rem;
-  align-self: center;
+  margin: 0 0 0 1.5rem;
+  padding: 0;
+  align-self: stretch;
   height: 2.25rem;
+  min-height: 2.25rem;
   display: flex;
   align-items: center;
-  line-height: normal;
+  line-height: 1.25;
 }
 
 .add-visit-form__visit-time-hint {
