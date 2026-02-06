@@ -2,6 +2,7 @@
  * Types matching GET /visits API response (backend CountryVisit, data-models.md).
  */
 export interface CountryVisit {
+  id?: string;
   countryCode: string;
   visitedTime?: string;
   userId: string;

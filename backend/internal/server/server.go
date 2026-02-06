@@ -33,6 +33,7 @@ type Database interface {
 	GetCountryVisitsByUser(ctx context.Context, userID string) ([]models.CountryVisit, error)
 	EnsureUser(ctx context.Context, user *models.User) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
+	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error
 }
 
 // NewServer creates a new server instance

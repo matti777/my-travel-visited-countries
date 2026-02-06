@@ -26,6 +26,7 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 
 ### CountryVisit model
 
+- `ID`: Database object ID, populated automatically when loading object.
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.
 - `VisitedTime`: Time of the visit. Timestamp. Optional.
 - `UserID`: ID of the user who created this object.

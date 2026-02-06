@@ -22,6 +22,9 @@ func (s *Server) RegisterRoutes() {
 		protected.PUT("/visits", func(c *gin.Context) {
 			s.PutVisitsHandler(c.Request.Context(), c)
 		})
+		protected.DELETE("/visits/:id", func(c *gin.Context) {
+			s.DeleteVisitHandler(c.Request.Context(), c)
+		})
 	}
 
 	// Static frontend: serve embedded files; unknown paths serve index.html (SPA fallback)

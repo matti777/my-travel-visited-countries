@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/matti777/my-countries/backend/internal/ctxkeys"
 	"github.com/matti777/my-countries/backend/internal/data"
+	"github.com/matti777/my-countries/backend/internal/database"
 	"github.com/matti777/my-countries/backend/internal/logging"
 	"github.com/matti777/my-countries/backend/internal/models"
 	"github.com/matti777/my-countries/backend/internal/tracing"
@@ -112,4 +114,40 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 	log.Info("Created country visit", logging.VisitID, created.ID, logging.UserID, user.ID)
 	c.JSON(http.StatusCreated, created)
+}
+
+// DeleteVisitHandler handles DELETE /visits/:id.
+// Deletes the country visit if it belongs to the current user. Returns 204 on success.
+func (s *Server) DeleteVisitHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "DeleteVisitHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	visitID := c.Param("id")
+	if visitID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "visit id required"})
+		return
+	}
+
+	err := s.db.DeleteCountryVisit(ctx, visitID, user.ID)
+	if err != nil {
+		if errors.Is(err, database.ErrVisitNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, database.ErrVisitForbidden) {
+			c.Status(http.StatusForbidden)
+			return
+		}
+		log.Error("DeleteCountryVisit failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete visit"})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

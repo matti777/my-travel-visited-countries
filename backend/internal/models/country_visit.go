@@ -16,8 +16,8 @@ type CountryVisit struct {
 	// UserID is the ID of the user who created this object.
 	UserID string `firestore:"user_id" json:"userId"`
 
-	// ID is the Firestore document ID. Not sent over REST.
-	ID string `firestore:"-" json:"-"`
+	// ID is the Firestore document ID. Exposed in API for DELETE /visits/:id (see api.md).
+	ID string `firestore:"-" json:"id"`
 }
 
 // CountryVisitResponse is the response wrapper for GET /visits.

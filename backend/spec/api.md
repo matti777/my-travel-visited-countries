@@ -18,4 +18,8 @@ GET /visits: Returns all the CountryVisit objects for the current user. **Authen
 
 ### Create country visit for current user
 
-PUT /visits: Creates a new CountryVisit object for the current user. **Authenticated**.
+PUT /visits: Creates a new CountryVisit object for the current user. In this request the ID field is empty. If successful, the backend will respond with 201 Created and the response body shall contain the newly created CountryVisit, with its ID field populated. **Authenticated**.
+
+### Delete country visit
+
+DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to delete their own visits. **Authenticated**.

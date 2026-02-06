@@ -96,6 +96,17 @@ export default class Api {
     return response;
   }
 
+  async deleteVisit(visitId: string): Promise<void> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    await this.performRequest(`/visits/${encodeURIComponent(visitId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   private parseContentType(contentTypeHeader: string): string {
     const parts = contentTypeHeader.split(";");
     const contentType = parts[0].trim();
@@ -114,6 +125,11 @@ export default class Api {
           message: `Invalid status ${response.status}: ${response.statusText}`,
           responseCode: response.status,
         });
+      }
+
+      if (response.status === 204) {
+        console.log("Request succeeded:", (options as RequestInit).method ?? "GET", endpoint);
+        return undefined;
       }
 
       const contentType = this.parseContentType(response.headers.get("Content-Type") ?? "");

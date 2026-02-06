@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"google.golang.org/api/iterator"
@@ -9,6 +10,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/matti777/my-countries/backend/internal/models"
+)
+
+var (
+	ErrVisitNotFound  = errors.New("visit not found")
+	ErrVisitForbidden  = errors.New("visit belongs to another user")
 )
 
 // GetCountryVisitsByUser retrieves all country visits for a specific user.
@@ -86,4 +92,35 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	out := *visit
 	out.ID = ref.ID
 	return &out, nil
+}
+
+// DeleteCountryVisit deletes a country visit by ID. The visit must belong to userID.
+// Returns ErrVisitNotFound if the document does not exist, ErrVisitForbidden if user_id does not match.
+func (c *Client) DeleteCountryVisit(ctx context.Context, visitID string, userID string) error {
+	if visitID == "" || userID == "" {
+		return fmt.Errorf("visitID and userID are required")
+	}
+	ref := c.Collection("country_visits").Doc(visitID)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrVisitNotFound
+		}
+		return fmt.Errorf("failed to get country visit: %w", err)
+	}
+	if !snap.Exists() {
+		return ErrVisitNotFound
+	}
+	var visit models.CountryVisit
+	if err := snap.DataTo(&visit); err != nil {
+		return fmt.Errorf("failed to unmarshal country visit: %w", err)
+	}
+	if visit.UserID != userID {
+		return ErrVisitForbidden
+	}
+	_, err = ref.Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete country visit: %w", err)
+	}
+	return nil
 }
