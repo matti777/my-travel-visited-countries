@@ -22,6 +22,8 @@ All animations shall have a duration of 0.4 seconds.
 
 Any input validation errors should add a red border around the input component and disable the Add button until the errors have been resolved.
 
+Any tooltips should be represented as a custom component instead of any "alt" text etc. The component should mainly be placed on top of the component that the tooltip belongs to, but if it wont fit, it should be placed on the side where there is room. The color theme of the tooltip component must match the look and feel of the rest of the application.
+
 ## Page structure
 
 Top bar: name of logged in user + avatar image, if available. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
@@ -36,12 +38,13 @@ This list of countries will be unique by country code, ie. it will show no dupli
 
 After the section title there will be a button called "Edit" which, when pressed, will:
 
-- Turn into "Done" button
-- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped.
+- Turn into "Done" button. Tooltip for Done button should say "Click to complete editing".
+- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
 - When "Done" button is pressed, it turns back into "Edit" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
 - The transformation between an unique / non-unique lists shall be animated as well.
+- In "Edit" state the button's tooltip should say "Click to edit the visits list".
 
 ---
 

@@ -3,6 +3,7 @@ import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createMonthDropdown } from "Components/month-dropdown";
+import { attachTooltip } from "Components/tooltip";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
@@ -113,6 +114,10 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
   editDoneBtn.className = "edit-done-btn";
   editDoneBtn.addEventListener("click", onEditModeToggle);
+  attachTooltip(
+    editDoneBtn,
+    isEditMode ? "Click to complete editing" : "Click to edit the visits list"
+  );
   titleRow.appendChild(editDoneBtn);
   visitedSection.appendChild(titleRow);
 

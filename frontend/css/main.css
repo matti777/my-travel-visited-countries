@@ -454,3 +454,109 @@ body {
 .month-dropdown__item:hover {
   background: rgba(64, 224, 208, 0.15);
 }
+
+/* Tooltip (custom component) - border is drawn by SVG so it includes the beak */
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  font-family: "Roboto Condensed", system-ui, sans-serif;
+  font-size: 0.9rem;
+  background: #fafbfc;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  max-width: 16rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--animation-duration) ease-out;
+}
+
+.tooltip.tooltip--visible {
+  opacity: 1;
+}
+
+.tooltip__content {
+  position: relative;
+  z-index: 1;
+}
+
+.tooltip__border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tooltip[data-placement="above"] .tooltip__border {
+  height: calc(100% + 6px);
+}
+
+.tooltip[data-placement="below"] .tooltip__border {
+  top: -6px;
+  height: calc(100% + 6px);
+}
+
+.tooltip[data-placement="left"] .tooltip__border {
+  width: calc(100% + 6px);
+}
+
+.tooltip[data-placement="right"] .tooltip__border {
+  left: -6px;
+  width: calc(100% + 6px);
+}
+
+.tooltip__border path {
+  stroke: var(--color-turquoise);
+  stroke-width: 1;
+  fill: none;
+}
+
+/* Beak fill (triangle in background color) - border is drawn by SVG path */
+.tooltip::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  z-index: 0;
+}
+
+.tooltip[data-placement="above"]::after {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: #fafbfc;
+  border-bottom: none;
+}
+
+.tooltip[data-placement="below"]::after {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: #fafbfc;
+  border-top: none;
+}
+
+.tooltip[data-placement="left"]::after {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: #fafbfc;
+  border-left: none;
+}
+
+.tooltip[data-placement="right"]::after {
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: #fafbfc;
+  border-right: none;
+}
+
+.tooltip[hidden] {
+  display: none !important;
+}

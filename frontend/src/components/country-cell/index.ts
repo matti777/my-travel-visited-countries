@@ -1,3 +1,5 @@
+import { attachTooltip } from "Components/tooltip";
+
 export type CountryCellVariant = "default" | "compact";
 
 export interface CountryCellOptions {
@@ -59,6 +61,7 @@ export function createCountryCell(
     xBtn.textContent = "X";
     xBtn.setAttribute("aria-label", "Delete visit");
     xBtn.addEventListener("click", () => options.onDelete!());
+    attachTooltip(xBtn, "Click to delete this visit");
     cell.appendChild(xBtn);
   }
 
