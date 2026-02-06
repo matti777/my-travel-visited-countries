@@ -2,6 +2,7 @@ import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
+import { createMonthDropdown } from "Components/month-dropdown";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
@@ -47,6 +48,12 @@ export interface RenderOptions {
   onRefresh: () => void;
   selectedCountryCode: string;
   onSelectCountry: (code: string) => void;
+  selectedMonth: number | null;
+  setSelectedMonth: (month: number | null) => void;
+  formYear: string;
+  formDay: string;
+  onFormYearChange: (value: string) => void;
+  onFormDayChange: (value: string) => void;
 }
 
 async function handleDeleteVisit(
@@ -103,7 +110,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   titleRow.appendChild(visitedTitle);
   const editDoneBtn = document.createElement("button");
   editDoneBtn.type = "button";
-  editDoneBtn.textContent = isEditMode ? "DONE" : "EDIT";
+  editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
   editDoneBtn.className = "edit-done-btn";
   editDoneBtn.addEventListener("click", onEditModeToggle);
   titleRow.appendChild(editDoneBtn);
@@ -170,27 +177,34 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   visitTimeLabel.className = "add-visit-form__visit-time-label";
   visitTimeLabel.textContent = "Visit time";
   row.appendChild(visitTimeLabel);
+  const currentYear = new Date().getFullYear();
   const yearInput = document.createElement("input");
   yearInput.type = "number";
-  yearInput.placeholder = "Year (optional)";
+  yearInput.placeholder = "Year";
   yearInput.min = "1900";
-  yearInput.max = "2100";
+  yearInput.max = String(currentYear);
   yearInput.name = "year";
+  yearInput.className = "add-visit-form__year";
+  yearInput.autocomplete = "off";
+  yearInput.value = options.formYear ?? "";
   row.appendChild(yearInput);
-  const monthInput = document.createElement("input");
-  monthInput.type = "number";
-  monthInput.placeholder = "Month 1-12 (optional)";
-  monthInput.min = "1";
-  monthInput.max = "12";
-  monthInput.name = "month";
-  row.appendChild(monthInput);
+
+  const monthDropdown = createMonthDropdown({
+    selectedMonth: options.selectedMonth,
+    onSelect: (month) => options.setSelectedMonth(month),
+  });
+  row.appendChild(monthDropdown);
+
   const dayInput = document.createElement("input");
   dayInput.type = "number";
-  dayInput.placeholder = "Day 1-31 (optional)";
+  dayInput.placeholder = "Day";
   dayInput.min = "1";
   dayInput.max = "31";
   dayInput.name = "day";
+  dayInput.autocomplete = "off";
+  dayInput.value = options.formDay ?? "";
   row.appendChild(dayInput);
+
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
@@ -198,20 +212,85 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     "Visit time is optional. You can enter only a year (we'll use January 1st), year and month (we'll use the 1st of that month), or a full date.";
   form.appendChild(visitTimeHint);
 
+  function getDaysInMonth(year: number, month: number): number {
+    return new Date(year, month, 0).getDate();
+  }
+
+  function validateVisitTime(): {
+    valid: boolean;
+    yearInvalid?: boolean;
+    dayInvalid?: boolean;
+  } {
+    const yStr = yearInput.value.trim();
+    const dayStr = dayInput.value.trim();
+    const y = yStr ? parseInt(yStr, 10) : NaN;
+    const day = dayStr ? parseInt(dayStr, 10) : NaN;
+
+    if (yStr && (isNaN(y) || y < 1900 || y > currentYear)) {
+      return { valid: false, yearInvalid: true };
+    }
+    if (dayStr) {
+      if (!yStr || isNaN(y)) return { valid: false, dayInvalid: true };
+      const monthVal = options.selectedMonth ?? 1;
+      const maxDay = getDaysInMonth(y, monthVal);
+      if (isNaN(day) || day < 1 || day > maxDay) {
+        return { valid: false, dayInvalid: true };
+      }
+    }
+    return { valid: true };
+  }
+
+  function updateValidationUI(): void {
+    const v = validateVisitTime();
+    yearInput.classList.toggle("invalid", !!v.yearInvalid);
+    dayInput.classList.toggle("invalid", !!v.dayInvalid);
+    addBtn.disabled = !v.valid;
+  }
+
+  yearInput.addEventListener("input", () => {
+    options.onFormYearChange(yearInput.value);
+    updateValidationUI();
+  });
+  yearInput.addEventListener("change", () => {
+    options.onFormYearChange(yearInput.value);
+    updateValidationUI();
+    const yStr = yearInput.value.trim();
+    const y = yStr ? parseInt(yStr, 10) : NaN;
+    if (!isNaN(y) && y >= 1900 && y <= currentYear) {
+      options.onFormDayChange("1");
+      dayInput.value = "1";
+      options.setSelectedMonth(1);
+    }
+  });
+  dayInput.addEventListener("input", () => {
+    options.onFormDayChange(dayInput.value);
+    updateValidationUI();
+  });
+  dayInput.addEventListener("change", () => {
+    options.onFormDayChange(dayInput.value);
+    updateValidationUI();
+  });
+
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
   addBtn.textContent = "Add";
+  addBtn.disabled = false;
   addBtn.addEventListener("click", async () => {
     const countryCode = options.selectedCountryCode;
     if (!countryCode) {
       errorToast("Please select a country");
       return;
     }
+    const v = validateVisitTime();
+    if (!v.valid) return;
+
     let visitedTime: number | undefined;
-    const y = yearInput.value ? parseInt(yearInput.value, 10) : NaN;
+    const yStr = yearInput.value.trim();
+    const y = yStr ? parseInt(yStr, 10) : NaN;
     if (!isNaN(y)) {
-      const month = monthInput.value ? parseInt(monthInput.value, 10) : 1;
-      const day = dayInput.value ? parseInt(dayInput.value, 10) : 1;
+      const month = options.selectedMonth ?? 1;
+      const dayStr = dayInput.value.trim();
+      const day = dayStr ? parseInt(dayStr, 10) : 1;
       const d = new Date(Date.UTC(y, month - 1, day));
       visitedTime = Math.floor(d.getTime() / 1000);
     }
@@ -220,10 +299,13 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       visits = [...visits, created];
       if (created.id) newVisitIds.add(created.id);
       options.onSelectCountry("");
+      options.setSelectedMonth(null);
+      options.onFormYearChange("");
+      options.onFormDayChange("");
       options.onRefresh();
       yearInput.value = "";
-      monthInput.value = "";
       dayInput.value = "";
+      updateValidationUI();
     } catch (err) {
       if (err instanceof ApiError && err.responseCode === 401) {
         signOut();
@@ -234,6 +316,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     }
   });
   form.appendChild(addBtn);
+  updateValidationUI();
 
   addSection.appendChild(form);
   container.appendChild(addSection);
@@ -247,6 +330,9 @@ export async function main(): Promise<void> {
   let currentUser: User | null = null;
   let isEditMode = false;
   let selectedCountryCode = "";
+  let selectedMonth: number | null = null;
+  let formYear = "";
+  let formDay = "";
 
   function refreshAppContent(): void {
     if (appEl)
@@ -264,6 +350,19 @@ export async function main(): Promise<void> {
         onSelectCountry: (code: string) => {
           selectedCountryCode = code;
           refreshAppContent();
+        },
+        selectedMonth,
+        setSelectedMonth: (month: number | null) => {
+          selectedMonth = month;
+          refreshAppContent();
+        },
+        formYear,
+        formDay,
+        onFormYearChange: (value: string) => {
+          formYear = value;
+        },
+        onFormDayChange: (value: string) => {
+          formDay = value;
         },
       });
   }

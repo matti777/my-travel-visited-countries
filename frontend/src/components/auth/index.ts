@@ -1,7 +1,7 @@
 import type { User } from "firebase/auth";
 
 /**
- * Renders the auth header content: either LOGIN or (name + avatar, if available, + LOG OUT).
+ * Renders the auth header content: either Login or (name + avatar, if available, + Log out).
  */
 export function renderAuthHeader(
   container: HTMLElement,
@@ -23,7 +23,7 @@ export function renderAuthHeader(
       avatar.src = user.photoURL;
     }
     const logoutBtn = document.createElement("button");
-    logoutBtn.textContent = "LOG OUT";
+    logoutBtn.textContent = "Log out";
     logoutBtn.type = "button";
     logoutBtn.addEventListener("click", onLogout);
     container.appendChild(name);
@@ -31,7 +31,7 @@ export function renderAuthHeader(
     container.appendChild(logoutBtn);
   } else {
     const loginBtn = document.createElement("button");
-    loginBtn.textContent = "LOGIN";
+    loginBtn.textContent = "Login";
     loginBtn.type = "button";
     loginBtn.addEventListener("click", onLogin);
     container.appendChild(loginBtn);

@@ -20,21 +20,25 @@ Besides the top bar, the page content should be centered.
 
 All animations shall have a duration of 0.4 seconds.
 
+Any input validation errors should add a red border around the input component and disable the Add button until the errors have been resolved.
+
 ## Page structure
 
-Top bar: name of logged in user + avatar image, if available. LOGIN / LOG OUT buttons. The top bar shall have some padding on its right side to separate it from the page edge.
+Top bar: name of logged in user + avatar image, if available. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
 
 ---
 
-If logged in, list of visited your countries with section title "Your visited countries". Below, a flowing grid of "country cells", maximum 3 cells per row. When not enough horizontal space, the layout should show only 1 or 2 cells in a row. If no visited countries are added yet, the placeholder text saying "No visited countries yet" should be shown with a slight grayed out tint.
+If not logged in, this section is not visible.
+
+This section shows a list of visited countries with section title "Your visited countries". Below, a flowing grid of "country cells", maximum 3 cells per row. When not enough horizontal space, the layout should show only 1 or 2 cells in a row. If no visited countries are added yet, the placeholder text saying "No visited countries yet" should be shown with a slight grayed out tint.
 
 This list of countries will be unique by country code, ie. it will show no duplicates.
 
-After the section title there will be a button called "EDIT" which, when pressed, will:
+After the section title there will be a button called "Edit" which, when pressed, will:
 
-- Turn into "DONE" button
-- While it is in edit state (DONE button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thing font. It should fit comfortably in the cell and not get clipped.
-- When "DONE" button is pressed, it turns back into "EDIT" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
+- Turn into "Done" button
+- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped.
+- When "Done" button is pressed, it turns back into "Edit" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
 - The transformation between an unique / non-unique lists shall be animated as well.
@@ -47,6 +51,6 @@ This section holds the controls to add a new visited country.
 
 - A drop-down list of all available countries. This drop-down list shall be a custom component; the items in the list shall be similar country cells as in the above list but thinner so that they wont take up space too much in the list. The list must be searchable; the search box will filter the list when characters are typed in it. The filtering of this list will be animated. When "closed", this component is a text input with placeholder text "Select country". When the text input is clicked, the list of countries opens underneath it and the input box becomes selected and can be used as the filter for country names. When ESC is pressed or the page is clicked outside of the selection box, the selection box will become "closed" again.
 
-- "Visit time" input - a data input system. It must be possible to only input a year (in which case month = 1, day = 1), or year + month (in which case day = 1), or the entire date. Visit time is optional; if year is not specified, VisitTime shall be set to nil.
+- "Visit time" input - a data input system. It must be possible to only input a year (in which case month = 1, day = 1), or year + month (in which case day = 1), or the entire date. Visit time is optional; if year is not specified, VisitTime shall be set to nil. These controls are located to the right of the country selection drop-down, vertically aligned so that everything is perfectly centered at the same level. There must be reasonable padding between the drop-down and the inputs. The year box shall be wide enough to comfortably contain 4 digits and placeholder text "Year". There shall be nothing extra in the box; no add/substract controls. Input must be validated; only values between 1900 and the current year may be entered. The month box should be a dropdown with month names; initial value shall be "Select month..". The day box shall be like year box but with placeholder text "Day". Day input must be validated to be a valid day number within the selected year/month. If the year value is given and the values for month / day have not been set, set them to their default values of January and 1.
 
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.

@@ -25,7 +25,7 @@ Thumbnail sized (no more than a couple of kilobytes each) flags for all the sove
 
 ## User Authentication
 
-The application provides LOGIN (or LOG OUT, when logged in) buttons in the top right corner. Pressing LOGIN provides the user with a Firebase Authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the LOG OUT button. Pressing LOG OUT shall take the proper steps of logging the user out of Firebase Authentication.
+The application provides Login (or Log out, when logged in) buttons in the top right corner. Pressing Login provides the user with a Firebase Authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the Log out button. Pressing Log out shall take the proper steps of logging the user out of Firebase Authentication.
 
 This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.
 
