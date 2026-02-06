@@ -1,7 +1,11 @@
+export type CountryCellVariant = "default" | "compact";
+
 export interface CountryCellOptions {
-  /** When set, show visit time and delete button (edit mode). */
+  /** When set, show visit time and delete button (edit mode). Ignored when variant is "compact". */
   visitTimeLabel?: string;
   onDelete?: () => void;
+  /** "compact" for dropdown list items (thinner, flag + name only). */
+  variant?: CountryCellVariant;
 }
 
 /**
@@ -17,7 +21,10 @@ export function createCountryCell(
 ): HTMLElement {
   const cell = document.createElement("div");
   cell.className = "country-cell";
-  if (options?.onDelete != null) {
+  const isCompact = options?.variant === "compact";
+  if (isCompact) {
+    cell.classList.add("country-cell--compact");
+  } else if (options?.onDelete != null) {
     cell.classList.add("country-cell--edit");
   }
 
@@ -26,7 +33,7 @@ export function createCountryCell(
   img.alt = countryName;
   cell.appendChild(img);
 
-  if (options?.visitTimeLabel != null) {
+  if (!isCompact && options?.visitTimeLabel != null) {
     const main = document.createElement("div");
     main.className = "country-cell__main";
     const textWrap = document.createElement("span");
@@ -45,7 +52,7 @@ export function createCountryCell(
     cell.appendChild(textWrap);
   }
 
-  if (options?.onDelete != null) {
+  if (!isCompact && options?.onDelete != null) {
     const xBtn = document.createElement("button");
     xBtn.type = "button";
     xBtn.className = "country-cell__delete";

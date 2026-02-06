@@ -1,6 +1,7 @@
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
+import { createCountryDropdown } from "Components/country-dropdown";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
@@ -44,6 +45,8 @@ export interface RenderOptions {
   isEditMode: boolean;
   onEditModeToggle: () => void;
   onRefresh: () => void;
+  selectedCountryCode: string;
+  onSelectCountry: (code: string) => void;
 }
 
 async function handleDeleteVisit(
@@ -154,49 +157,52 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   form.className = "add-visit-form";
   form.addEventListener("submit", (e) => e.preventDefault());
 
-  const select = document.createElement("select");
-  select.name = "country";
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Select a country";
-  select.appendChild(placeholder);
-  for (const c of countriesList) {
-    const opt = document.createElement("option");
-    opt.value = c.countryCode;
-    opt.textContent = c.name;
-    select.appendChild(opt);
-  }
-  form.appendChild(select);
-
+  const row = document.createElement("div");
+  row.className = "add-visit-form__row";
+  const dropdown = createCountryDropdown({
+    countries: countriesList,
+    baseUrl,
+    selectedCountryCode: options.selectedCountryCode,
+    onSelect: options.onSelectCountry,
+  });
+  row.appendChild(dropdown);
+  const visitTimeLabel = document.createElement("span");
+  visitTimeLabel.className = "add-visit-form__visit-time-label";
+  visitTimeLabel.textContent = "Visit time";
+  row.appendChild(visitTimeLabel);
   const yearInput = document.createElement("input");
   yearInput.type = "number";
   yearInput.placeholder = "Year (optional)";
   yearInput.min = "1900";
   yearInput.max = "2100";
   yearInput.name = "year";
-  form.appendChild(yearInput);
-
+  row.appendChild(yearInput);
   const monthInput = document.createElement("input");
   monthInput.type = "number";
   monthInput.placeholder = "Month 1-12 (optional)";
   monthInput.min = "1";
   monthInput.max = "12";
   monthInput.name = "month";
-  form.appendChild(monthInput);
-
+  row.appendChild(monthInput);
   const dayInput = document.createElement("input");
   dayInput.type = "number";
   dayInput.placeholder = "Day 1-31 (optional)";
   dayInput.min = "1";
   dayInput.max = "31";
   dayInput.name = "day";
-  form.appendChild(dayInput);
+  row.appendChild(dayInput);
+  form.appendChild(row);
+  const visitTimeHint = document.createElement("p");
+  visitTimeHint.className = "add-visit-form__visit-time-hint";
+  visitTimeHint.textContent =
+    "Visit time is optional. You can enter only a year (we'll use January 1st), year and month (we'll use the 1st of that month), or a full date.";
+  form.appendChild(visitTimeHint);
 
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
   addBtn.textContent = "Add";
   addBtn.addEventListener("click", async () => {
-    const countryCode = select.value;
+    const countryCode = options.selectedCountryCode;
     if (!countryCode) {
       errorToast("Please select a country");
       return;
@@ -213,6 +219,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       const created = await api.putVisits(countryCode, visitedTime);
       visits = [...visits, created];
       if (created.id) newVisitIds.add(created.id);
+      options.onSelectCountry("");
       options.onRefresh();
       yearInput.value = "";
       monthInput.value = "";
@@ -239,6 +246,7 @@ export async function main(): Promise<void> {
 
   let currentUser: User | null = null;
   let isEditMode = false;
+  let selectedCountryCode = "";
 
   function refreshAppContent(): void {
     if (appEl)
@@ -252,6 +260,11 @@ export async function main(): Promise<void> {
           refreshAppContent();
         },
         onRefresh: refreshAppContent,
+        selectedCountryCode,
+        onSelectCountry: (code: string) => {
+          selectedCountryCode = code;
+          refreshAppContent();
+        },
       });
   }
 

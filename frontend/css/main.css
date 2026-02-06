@@ -154,6 +154,22 @@ body {
   background: #f5f5f5;
 }
 
+.country-cell--compact {
+  height: 38px;
+  min-width: 0;
+  max-width: none;
+  padding: 0 0.4rem;
+}
+
+.country-cell--compact img {
+  width: 28px;
+  height: 20px;
+}
+
+.country-cell--compact .country-cell__name {
+  font-size: 0.9rem;
+}
+
 .visited-grid .country-cell {
   transition: opacity var(--animation-duration) ease-out;
 }
@@ -208,4 +224,96 @@ body {
   font-family: inherit;
   margin-right: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.add-visit-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.add-visit-form__visit-time-label {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.add-visit-form__visit-time-hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Country dropdown (custom component) */
+.country-dropdown {
+  position: relative;
+  max-width: 320px;
+  margin-bottom: 0.5rem;
+}
+
+.country-dropdown__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  padding: 0.35rem 0.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  background: #fff;
+  color: #333;
+}
+
+.country-dropdown__input:focus {
+  outline: 2px solid var(--color-turquoise);
+  outline-offset: -2px;
+  border-color: var(--color-turquoise);
+}
+
+.country-dropdown__panel[hidden] {
+  display: none !important;
+}
+
+.country-dropdown__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.country-dropdown__list {
+  overflow-y: auto;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.country-dropdown__item {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity var(--animation-duration) ease-out;
+}
+
+.country-dropdown__item:hover {
+  background: rgba(64, 224, 208, 0.15);
+}
+
+.country-dropdown__item.country-dropdown__item--enter {
+  opacity: 0;
+}
+
+.country-dropdown__item.country-dropdown__item--enter.visible {
+  opacity: 1;
 }
