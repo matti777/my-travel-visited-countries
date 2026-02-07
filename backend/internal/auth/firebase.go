@@ -122,8 +122,9 @@ func UserFromClaims(claims *Claims) *models.User {
 		return nil
 	}
 	return &models.User{
-		ID:    claims.Sub,
-		Name:  claims.Name,
-		Email: claims.Email,
+		ID:     claims.Sub,
+		UserID: claims.Sub,
+		Name:   claims.Name,
+		Email:  claims.Email,
 	}
 }

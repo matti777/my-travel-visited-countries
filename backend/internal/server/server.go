@@ -31,6 +31,7 @@ type Server struct {
 // Database interface for database operations
 type Database interface {
 	GetCountryVisitsByUser(ctx context.Context, userID string) ([]models.CountryVisit, error)
+	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	EnsureUser(ctx context.Context, user *models.User) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
 	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error
@@ -116,7 +117,8 @@ func (s *Server) tracingMiddleware() gin.HandlerFunc {
 }
 
 // authMiddleware requires a valid Firebase ID token in Authorization: Bearer <token>.
-// On success it ensures the user exists in the DB and injects *models.User into request context.
+// On success it injects *models.User (from token claims only; no DB lookup) into request context.
+// User document in DB is created by POST /login (EnsureUser), not by this middleware.
 // On failure it returns 401 and does not call next.
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -144,13 +146,8 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 			return
 		}
 		user := auth.UserFromClaims(claims)
-		if err := s.db.EnsureUser(ctx, user); err != nil {
-			log.Error("EnsureUser failed", logging.Error, err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication failed"})
-			return
-		}
 		ctx = context.WithValue(ctx, ctxkeys.CurrentUserKey, user)
-		ctx = logging.WithContext(ctx, log.WithCurrentUserID(user.ID))
+		ctx = logging.WithContext(ctx, log.WithCurrentUserID(user.UserID))
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}

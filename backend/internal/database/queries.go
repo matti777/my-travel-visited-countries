@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,13 +14,12 @@ import (
 )
 
 var (
-	ErrVisitNotFound  = errors.New("visit not found")
-	ErrVisitForbidden  = errors.New("visit belongs to another user")
+	ErrVisitNotFound = errors.New("visit not found")
 )
 
-// GetCountryVisitsByUser retrieves all country visits for a specific user.
+// GetCountryVisitsByUser retrieves all country visits for a user. userID is the auth User ID (Firestore document ID).
 func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]models.CountryVisit, error) {
-	iter := c.Collection("country_visits").Where("user_id", "==", userID).Documents(ctx)
+	iter := c.Collection("users").Doc(userID).Collection("country_visits").Documents(ctx)
 	defer iter.Stop()
 
 	var visits []models.CountryVisit
@@ -37,42 +37,67 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 			return nil, fmt.Errorf("failed to unmarshal country visit: %w", err)
 		}
 		visit.ID = doc.Ref.ID
+		visit.UserID = userID
 		visits = append(visits, visit)
 	}
 
 	return visits, nil
 }
 
-// EnsureUser creates the user document if it does not exist (get-or-create by ID).
-// Uses the users collection with document ID = user.ID; stores Name and Email.
+// EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email.
+// Only POST /login should call this; auth middleware does not.
 func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	if user == nil || user.ID == "" {
 		return fmt.Errorf("user ID is required")
 	}
 	ref := c.Collection("users").Doc(user.ID)
-	snap, err := ref.Get(ctx)
+	_, err := ref.Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			// Document does not exist, create it below
-		} else {
-			return fmt.Errorf("failed to check user: %w", err)
+			shareToken := uuid.New().String()
+			_, err = ref.Set(ctx, map[string]interface{}{
+				"ShareToken": shareToken,
+				"Name":       user.Name,
+				"Email":      user.Email,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create user: %w", err)
+			}
+			return nil
 		}
-	} else if snap.Exists() {
-		// Document exists, nothing to do
-		return nil
+		return fmt.Errorf("failed to check user: %w", err)
 	}
-	// Create document with name and email (ID is the doc ID)
-	_, err = ref.Set(ctx, map[string]interface{}{
-		"name":  user.Name,
-		"email": user.Email,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create user: %w", err)
-	}
+	// Doc exists
 	return nil
 }
 
-// CreateCountryVisit adds a new country visit document and returns the visit with its Firestore ID set.
+// GetUserByID looks up the User document by ID (auth token UserID). Returns (nil, nil) if not found.
+func (c *Client) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("userID is required")
+	}
+	ref := c.Collection("users").Doc(userID)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	if !snap.Exists() {
+		return nil, nil
+	}
+	var u models.User
+	if err := snap.DataTo(&u); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal user: %w", err)
+	}
+	u.ID = snap.Ref.ID
+	u.UserID = u.ID
+	return &u, nil
+}
+
+// CreateCountryVisit adds a new country visit document under users/{userID}/country_visits.
+// Document contains only CountryCode and VisitTime (user is implied by path).
 func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error) {
 	if visit == nil {
 		return nil, fmt.Errorf("visit is required")
@@ -80,11 +105,10 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	if visit.UserID == "" || visit.CountryCode == "" {
 		return nil, fmt.Errorf("user_id and country_code are required")
 	}
-	ref := c.Collection("country_visits").NewDoc()
+	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").NewDoc()
 	_, err := ref.Set(ctx, map[string]interface{}{
-		"country_code":  visit.CountryCode,
-		"visited_time":  visit.VisitedTime,
-		"user_id":       visit.UserID,
+		"CountryCode": visit.CountryCode,
+		"VisitTime":   visit.VisitedTime,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create country visit: %w", err)
@@ -94,13 +118,13 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	return &out, nil
 }
 
-// DeleteCountryVisit deletes a country visit by ID. The visit must belong to userID.
-// Returns ErrVisitNotFound if the document does not exist, ErrVisitForbidden if user_id does not match.
+// DeleteCountryVisit deletes a country visit by ID from users/{userID}/country_visits.
+// Returns ErrVisitNotFound if the document does not exist.
 func (c *Client) DeleteCountryVisit(ctx context.Context, visitID string, userID string) error {
 	if visitID == "" || userID == "" {
 		return fmt.Errorf("visitID and userID are required")
 	}
-	ref := c.Collection("country_visits").Doc(visitID)
+	ref := c.Collection("users").Doc(userID).Collection("country_visits").Doc(visitID)
 	snap, err := ref.Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
@@ -110,13 +134,6 @@ func (c *Client) DeleteCountryVisit(ctx context.Context, visitID string, userID 
 	}
 	if !snap.Exists() {
 		return ErrVisitNotFound
-	}
-	var visit models.CountryVisit
-	if err := snap.DataTo(&visit); err != nil {
-		return fmt.Errorf("failed to unmarshal country visit: %w", err)
-	}
-	if visit.UserID != userID {
-		return ErrVisitForbidden
 	}
 	_, err = ref.Delete(ctx)
 	if err != nil {

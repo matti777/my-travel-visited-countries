@@ -64,6 +64,17 @@ export default class Api {
     }
   }
 
+  async postLogin(): Promise<void> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    await this.performRequest("/login", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   async getVisits(): Promise<CountryVisit[]> {
     const token = this.getAuthToken();
     if (!token) {

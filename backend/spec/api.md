@@ -6,15 +6,19 @@ All routes are currently **unauthenticated** (see @backend-module.md). Authentic
 
 ## API routes
 
-Each subsection describes a single API route.
+Each subsection describes a single API route. When an API route is added, a corresponding Vite proxy config must be added to facilitate local testing.
 
 ### List countries
 
 GET /countries: Returns all the available countries as a list of Country objects. **Unauthenticated**.
 
+### Login
+
+POST /login: Frontend calls this right after login actions complete. Only called when user has initiated login by pressing the "Login" button and the login sequence towards Firebase Authentication has completed. The backend checks for existing user by that `UserID` and creates one if not found, allocating the `ShareToken` at the same time. No other request shall read/write to User model to avoid unnecessary database access unless otherwise stated. **Authenticated**
+
 ### List country visits for current user
 
-GET /visits: Returns all the CountryVisit objects for the current user. **Authenticated**.
+GET /visits: Returns all the CountryVisit objects for the current user. The response shall contain the list of country visits as well as the user's `ShareToken` which is retrieved by reading the User object by the `UserID` from the auth token. **Authenticated**.
 
 ### Create country visit for current user
 

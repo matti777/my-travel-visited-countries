@@ -2,6 +2,14 @@
 
 This document describes our data models, used for both the backend and the frontend as well as the API.
 
+## Field naming
+
+For database (Firestore), all field names should read as stated in this document, eg. `UserID`. For REST API, the field names should be in camelCase, eg. `userId`.
+
+## ID fields
+
+Any `ID` fields in Firestore models are allocated by the database unless stated otherwise.
+
 ## List of data models
 
 Each subsection describes a single data model. Code for each model is to be put to a separate source code file.
@@ -12,9 +20,10 @@ For Firestore purposes, each model should have its Firestore ID stored in the ob
 
 Represents a system user. Data parsed from incoming authentication token. Only used in the backend.
 
-- `ID`: User ID from the token
-- `Name`: User name from the token
-- `Email`: User email from the token
+- `ID`: Use the User ID from the authentication token for this value for faster access.
+- `ShareToken`: A random UUID string generated at user creation
+- `Name`: User name from the auth token
+- `Email`: User email from the auth token
 
 ### Country model
 
@@ -28,7 +37,8 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 
 - `ID`: Database object ID, populated automatically when loading object.
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.
-- `VisitedTime`: Time of the visit. Timestamp. Optional.
-- `UserID`: ID of the user who created this object.
+- `VisitTime`: Time of the visit. Timestamp. Optional.
+
+The CountryVisit collection in Firestore shall be nested under the corresponding User object.
 
 **Validation:** CountryCode should be a valid ISO 3166-1 alpha-2 code.

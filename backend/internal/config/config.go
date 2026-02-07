@@ -21,7 +21,7 @@ func Load(ctx context.Context) (*Config, error) {
 		projectID = os.Getenv("GCP_PROJECT_ID")
 	}
 	if projectID == "" {
-		return nil, fmt.Errorf("GOOGLE_CLOUD_PROJECT or GCP_PROJECT_ID environment variable must be set")
+		return nil, fmt.Errorf("environment variable GOOGLE_CLOUD_PROJECT or GCP_PROJECT_ID must be set")
 	}
 
 	port := os.Getenv("PORT")

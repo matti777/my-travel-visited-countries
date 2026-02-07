@@ -133,7 +133,7 @@ func (l *Logger) writeLog(severity, message string, fields map[string]interface{
 	os.Stdout.WriteString("\n")
 }
 
-// Debug logs a message with optional structured key-value pairs (e.g. log.Debug("msg", logging.UserID, user.ID)).
+// Debug logs a message with optional structured key-value pairs (e.g. log.Debug("msg", logging.UserID, user.UserID)).
 func (l *Logger) Debug(msg string, keyValues ...interface{}) {
 	if l == nil {
 		return

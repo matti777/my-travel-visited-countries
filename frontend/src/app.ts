@@ -384,6 +384,26 @@ export async function main(): Promise<void> {
       if (user) {
         const token = await user.getIdToken();
         api.setAuthToken(token);
+        // POST /login only when user just completed the Login button flow (ensures user in DB before GET /visits).
+        const loginInitiated = sessionStorage.getItem("login:initiated");
+        if (loginInitiated) {
+          try {
+            await api.postLogin();
+          } catch (err) {
+            console.error("Post-login failed", err);
+            if (err instanceof ApiError && err.responseCode === 401) {
+              signOut();
+              errorToast("Session expired");
+            } else {
+              errorToast("Failed to complete login");
+            }
+            sessionStorage.removeItem("login:initiated");
+            renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
+            refreshAppContent();
+            return;
+          }
+          sessionStorage.removeItem("login:initiated");
+        }
         try {
           visits = await api.getVisits();
         } catch (err) {
@@ -404,7 +424,9 @@ export async function main(): Promise<void> {
       refreshAppContent();
     });
     function onLogin(): void {
+      sessionStorage.setItem("login:initiated", "1");
       signInWithGoogle().catch((err) => {
+        sessionStorage.removeItem("login:initiated");
         console.error("Sign in failed:", err);
         errorToast(err instanceof Error ? err.message : "Sign in failed");
       });

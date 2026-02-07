@@ -16,6 +16,9 @@ func (s *Server) RegisterRoutes() {
 	protected := s.Router.Group("")
 	protected.Use(s.authMiddleware())
 	{
+		protected.POST("/login", func(c *gin.Context) {
+			s.PostLoginHandler(c.Request.Context(), c)
+		})
 		protected.GET("/visits", func(c *gin.Context) {
 			s.GetListHandler(c.Request.Context(), c)
 		})

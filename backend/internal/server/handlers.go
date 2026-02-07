@@ -16,6 +16,29 @@ import (
 	"github.com/matti777/my-countries/backend/internal/tracing"
 )
 
+// PostLoginHandler handles POST /login.
+// Ensures the user exists in the DB (creates with ShareToken if not). Called by frontend after Firebase login.
+func (s *Server) PostLoginHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PostLoginHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	log.Info("POST /login received")
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("POST /login: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	if err := s.db.EnsureUser(ctx, user); err != nil {
+		log.Error("POST /login: EnsureUser failed", logging.UserID, user.UserID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		return
+	}
+	log.Info("POST /login succeeded", logging.UserID, user.UserID)
+	c.JSON(http.StatusOK, gin.H{})
+}
+
 // GetCountriesHandler handles GET /countries.
 // Returns the bundled list of all sovereign countries (in-memory Go slice).
 func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
@@ -28,8 +51,8 @@ func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
 }
 
 // GetListHandler handles GET /visits.
-// Returns a list of country visits for the current user from the database.
-// Requires auth middleware (user in context).
+// Returns a list of country visits for the current user and the user's ShareToken.
+// Requires auth middleware (user in context). Reads User from DB for ShareToken.
 func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 	ctx, span := tracing.New(ctx, "GetListHandler")
 	defer span.End()
@@ -43,13 +66,24 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 	}
 	userID := user.ID
 
+	dbCtx, dbSpan := tracing.New(ctx, "database::GetUserByID")
+	dbUser, err := s.db.GetUserByID(dbCtx, userID)
+	dbSpan.End()
+	if err != nil {
+		log.Error("Failed to get user", logging.UserID, userID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user"})
+		return
+	}
+	if dbUser == nil {
+		log.Warn("user not found in database; call POST /login first", logging.UserID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+		return
+	}
+
 	log.Info("Fetching country visits for user", logging.UserID, userID)
-
-	// Create child span for database operation using spec's trace API
-	dbCtx, dbSpan := tracing.New(ctx, "database::GetCountryVisitsByUser")
-	defer dbSpan.End()
-
-	visits, err := s.db.GetCountryVisitsByUser(dbCtx, userID)
+	dbCtx2, dbSpan2 := tracing.New(ctx, "database::GetCountryVisitsByUser")
+	visits, err := s.db.GetCountryVisitsByUser(dbCtx2, userID)
+	dbSpan2.End()
 	if err != nil {
 		log.Error("Failed to fetch country visits for user", logging.UserID, userID, logging.Error, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -60,7 +94,8 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 
 	log.Info("Successfully fetched country visits for current user", logging.Count, len(visits))
 	c.JSON(http.StatusOK, models.CountryVisitResponse{
-		Visits: visits,
+		Visits:     visits,
+		ShareToken: dbUser.ShareToken,
 	})
 }
 
@@ -139,10 +174,6 @@ func (s *Server) DeleteVisitHandler(ctx context.Context, c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, database.ErrVisitNotFound) {
 			c.Status(http.StatusNotFound)
-			return
-		}
-		if errors.Is(err, database.ErrVisitForbidden) {
-			c.Status(http.StatusForbidden)
 			return
 		}
 		log.Error("DeleteCountryVisit failed", logging.Error, err)

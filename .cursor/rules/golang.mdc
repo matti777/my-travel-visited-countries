@@ -23,6 +23,7 @@ You are an expert Go developer. Follow these standards for all code generation:
 6. **Linebreaks:** Insert a linebreak after a logical block of code; typically after a }
 7. **Line length:** Try to avoid code lines longer than 100 characters
 8. **Naming identifiers:** Use best practices for Typescript when naming identifiers
+9. **Error messages:** All error messages shall begin with a lowercase letter as per Go standards
 
 ## Consistency
 
