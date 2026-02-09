@@ -225,11 +225,13 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* Content: border on left, top, right only; no border between content and tab row. */
 .visit-list-content {
   margin: 0;
   padding: 0.75rem;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
 }
 
 .visit-list-tabs {
@@ -237,8 +239,40 @@ body {
   flex-direction: row;
   align-items: stretch;
   width: 100%;
-  padding-top: 0.5rem;
+  padding-top: 0;
   gap: 0;
+  position: relative;
+}
+
+/* Horizontal connector lines from content edge to active tab (no border between content and selected tab). */
+.visit-list-tabs::before,
+.visit-list-tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  background: #ddd;
+}
+.visit-list-tabs::before {
+  width: 0;
+}
+.visit-list-tabs::after {
+  left: auto;
+  right: 0;
+  width: 66.666%;
+}
+.visit-list-frame--tab-1 .visit-list-tabs::before {
+  width: 33.333%;
+}
+.visit-list-frame--tab-1 .visit-list-tabs::after {
+  width: 33.333%;
+}
+.visit-list-frame--tab-2 .visit-list-tabs::before {
+  width: 66.666%;
+}
+.visit-list-frame--tab-2 .visit-list-tabs::after {
+  width: 0;
 }
 
 .visit-list-tabs__tab {
@@ -248,8 +282,8 @@ body {
   font-size: 1rem;
   font-weight: 400;
   cursor: pointer;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border: none;
+  border-radius: 0;
   background: transparent;
   color: #333;
   transition: background-color var(--animation-duration) ease-out;
@@ -259,13 +293,24 @@ body {
   background: rgba(0, 0, 0, 0.04);
 }
 
+/* Selected tab: border only on left, right, bottom; continuous with content. No top border = no line between tab and content. */
 .visit-list-tabs__tab--active {
   font-weight: 600;
   background: var(--color-turquoise-light);
   color: #333;
-  border-color: #ddd;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
 }
-
+.visit-list-tabs__tab--active:first-child {
+  border-radius: 0 0 0 6px;
+}
+.visit-list-tabs__tab--active:last-child {
+  border-radius: 0 0 6px 0;
+}
+.visit-list-tabs__tab--active:only-child {
+  border-radius: 0 0 6px 6px;
+}
 .visit-list-tabs__tab--active:hover {
   background: #8ee6df;
 }

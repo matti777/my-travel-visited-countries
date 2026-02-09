@@ -300,7 +300,9 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   });
   const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
   const listFrame = document.createElement("div");
-  listFrame.className = "visit-list-frame";
+  listFrame.className =
+    "visit-list-frame visit-list-frame--tab-" +
+    (options.visitListTab === "alphabetical" ? "0" : options.visitListTab === "byContinent" ? "1" : "2");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
@@ -358,7 +360,9 @@ function renderNormalVisitedSection(
   });
   const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
   const listFrame = document.createElement("div");
-  listFrame.className = "visit-list-frame";
+  listFrame.className =
+    "visit-list-frame visit-list-frame--tab-" +
+    (options.visitListTab === "alphabetical" ? "0" : options.visitListTab === "byContinent" ? "1" : "2");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
