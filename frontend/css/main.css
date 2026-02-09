@@ -81,6 +81,11 @@ body {
   justify-content: center;
 }
 
+.edit-done-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .app-section h2 {
   margin-top: 0;
   margin-bottom: 0.75rem;
@@ -263,6 +268,18 @@ body {
 
 .visit-list-tabs__tab--active:hover {
   background: #8ee6df;
+}
+
+.visit-list-map {
+  min-height: 350px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Ocean: transparent so page background shows (override svgMap default #d9ecff). */
+.visit-list-map .svgMap-map-wrapper {
+  background-color: transparent;
 }
 
 .visit-list-by-continent {

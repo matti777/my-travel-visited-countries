@@ -4,6 +4,7 @@ import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createMonthDropdown } from "Components/month-dropdown";
 import { createShareSection } from "Components/share-section";
+import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
@@ -72,15 +73,9 @@ function uniqueVisitsByCountry(list: CountryVisit[]): CountryVisit[] {
 /**
  * Returns visits sorted alphabetically by country name (using countries to resolve name).
  */
-function sortedVisitsAlphabetically(
-  list: CountryVisit[],
-  countriesList: Country[]
-): CountryVisit[] {
-  const nameFor = (code: string) =>
-    countriesList.find((c) => c.countryCode === code)?.name ?? code;
-  return [...list].sort((a, b) =>
-    nameFor(a.countryCode).localeCompare(nameFor(b.countryCode))
-  );
+function sortedVisitsAlphabetically(list: CountryVisit[], countriesList: Country[]): CountryVisit[] {
+  const nameFor = (code: string) => countriesList.find((c) => c.countryCode === code)?.name ?? code;
+  return [...list].sort((a, b) => nameFor(a.countryCode).localeCompare(nameFor(b.countryCode)));
 }
 
 /**
@@ -88,11 +83,10 @@ function sortedVisitsAlphabetically(
  */
 function groupVisitsByContinent(
   list: CountryVisit[],
-  countriesList: Country[]
+  countriesList: Country[],
 ): { regionCode: string; regionName: string; visits: CountryVisit[] }[] {
   const byRegion = new Map<string, CountryVisit[]>();
-  const nameFor = (code: string) =>
-    countriesList.find((c) => c.countryCode === code)?.name ?? code;
+  const nameFor = (code: string) => countriesList.find((c) => c.countryCode === code)?.name ?? code;
   for (const v of list) {
     const country = countriesList.find((c) => c.countryCode === v.countryCode);
     const regionCode = country?.regionCode ?? "ZZ";
@@ -103,15 +97,13 @@ function groupVisitsByContinent(
   byRegion.forEach((_, code) => {
     regionNames.set(code, getRegionName(code));
   });
-  const sortedRegions = [...byRegion.entries()].sort(
-    (a, b) => regionNames.get(a[0])!.localeCompare(regionNames.get(b[0])!)
+  const sortedRegions = [...byRegion.entries()].sort((a, b) =>
+    regionNames.get(a[0])!.localeCompare(regionNames.get(b[0])!),
   );
   return sortedRegions.map(([regionCode, visits]) => ({
     regionCode,
     regionName: getRegionName(regionCode),
-    visits: [...visits].sort((a, b) =>
-      nameFor(a.countryCode).localeCompare(nameFor(b.countryCode))
-    ),
+    visits: [...visits].sort((a, b) => nameFor(a.countryCode).localeCompare(nameFor(b.countryCode))),
   }));
 }
 
@@ -135,15 +127,11 @@ export interface RenderOptions {
   sharedVisits: CountryVisit[];
   sharedUserName: string | null;
   onGoHome: () => void;
-  visitListTab: "alphabetical" | "byContinent";
-  onVisitListTabChange: (tab: "alphabetical" | "byContinent") => void;
+  visitListTab: "alphabetical" | "byContinent" | "map";
+  onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => void;
 }
 
-async function handleDeleteVisit(
-  visit: CountryVisit,
-  cell: HTMLElement,
-  onRefresh: () => void
-): Promise<void> {
+async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
   if (!visit.id) return;
   try {
     await api.deleteVisit(visit.id);
@@ -154,7 +142,7 @@ async function handleDeleteVisit(
         visits = visits.filter((v) => v.id !== visit.id);
         onRefresh();
       },
-      { once: true }
+      { once: true },
     );
   } catch (err) {
     if (err instanceof ApiError && err.responseCode === 401) {
@@ -189,13 +177,18 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     const title = document.createElement("h2");
     title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
     visitedSection.appendChild(title);
-    const displayList = sortedVisitsAlphabetically(
-      uniqueVisitsByCountry(sharedVisitsList),
-      countriesList
-    );
+    const displayList = sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
     const contentArea = document.createElement("div");
     contentArea.className = "visit-list-content";
-    if (displayList.length === 0) {
+    if (options.visitListTab === "map") {
+      const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
+      createVisitMap(contentArea, {
+        countryCodes: uniqueCodes,
+        countries: countriesList,
+        visits: sharedVisitsList,
+        baseUrl,
+      });
+    } else if (displayList.length === 0) {
       const empty = document.createElement("p");
       empty.textContent = "No visited countries yet";
       empty.className = "visited-empty";
@@ -248,8 +241,15 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     if (options.visitListTab === "byContinent") tabByContinent.classList.add("visit-list-tabs__tab--active");
     tabByContinent.textContent = "By continent";
     tabByContinent.addEventListener("click", () => options.onVisitListTabChange("byContinent"));
+    const tabMap = document.createElement("button");
+    tabMap.type = "button";
+    tabMap.className = "visit-list-tabs__tab";
+    if (options.visitListTab === "map") tabMap.classList.add("visit-list-tabs__tab--active");
+    tabMap.textContent = "Map";
+    tabMap.addEventListener("click", () => options.onVisitListTabChange("map"));
     tabRow.appendChild(tabAlphabetical);
     tabRow.appendChild(tabByContinent);
+    tabRow.appendChild(tabMap);
     const listFrame = document.createElement("div");
     listFrame.className = "visit-list-frame";
     listFrame.appendChild(contentArea);
@@ -291,17 +291,30 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   editDoneBtn.type = "button";
   editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
   editDoneBtn.className = "edit-done-btn";
+  editDoneBtn.disabled = options.visitListTab === "map";
   editDoneBtn.addEventListener("click", onEditModeToggle);
   attachTooltip(
     editDoneBtn,
-    isEditMode ? "Click to complete editing" : "Click to edit the visits list"
+    options.visitListTab === "map"
+      ? "Edit is not available in Map view"
+      : isEditMode
+        ? "Click to complete editing"
+        : "Click to edit the visits list",
   );
   titleRow.appendChild(editDoneBtn);
   visitedSection.appendChild(titleRow);
 
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
-  if (displayList.length === 0) {
+  if (options.visitListTab === "map") {
+    const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
+    createVisitMap(contentArea, {
+      countryCodes: uniqueCodes,
+      countries: countriesList,
+      visits: visitsList,
+      baseUrl,
+    });
+  } else if (displayList.length === 0) {
     const empty = document.createElement("p");
     empty.textContent = "No visited countries yet";
     empty.className = "visited-empty";
@@ -393,8 +406,15 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   if (options.visitListTab === "byContinent") tabByContinent.classList.add("visit-list-tabs__tab--active");
   tabByContinent.textContent = "By continent";
   tabByContinent.addEventListener("click", () => options.onVisitListTabChange("byContinent"));
+  const tabMap = document.createElement("button");
+  tabMap.type = "button";
+  tabMap.className = "visit-list-tabs__tab";
+  if (options.visitListTab === "map") tabMap.classList.add("visit-list-tabs__tab--active");
+  tabMap.textContent = "Map";
+  tabMap.addEventListener("click", () => options.onVisitListTabChange("map"));
   tabRow.appendChild(tabAlphabetical);
   tabRow.appendChild(tabByContinent);
+  tabRow.appendChild(tabMap);
   const listFrame = document.createElement("div");
   listFrame.className = "visit-list-frame";
   listFrame.appendChild(contentArea);
@@ -406,7 +426,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   const addSection = document.createElement("section");
   addSection.className = "app-section";
   const addTitle = document.createElement("h2");
-  addTitle.textContent = "Add visited country";
+  addTitle.textContent = "Add a visited country";
   addSection.appendChild(addTitle);
 
   const form = document.createElement("form");
@@ -589,7 +609,7 @@ export async function main(): Promise<void> {
 
   let currentUser: User | null = null;
   let isEditMode = false;
-  let visitListTab: "alphabetical" | "byContinent" = "alphabetical";
+  let visitListTab: "alphabetical" | "byContinent" | "map" = "alphabetical";
   let selectedCountryCode = "";
   let selectedMonth: number | null = null;
   let formYear = "";
@@ -654,7 +674,7 @@ export async function main(): Promise<void> {
           refreshAppContent();
         },
         visitListTab,
-        onVisitListTabChange: (tab: "alphabetical" | "byContinent") => {
+        onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => {
           visitListTab = tab;
           refreshAppContent();
         },
@@ -764,7 +784,7 @@ export async function main(): Promise<void> {
       "column",
       event.colno,
       "error object:",
-      event.error
+      event.error,
     );
     errorToast(`Error occurred: ${event.message}`);
     event.preventDefault();

@@ -19,6 +19,8 @@
     "vite-plugin-static-copy": "^3.2.0"
   },
   "dependencies": {
-    "notyf": "^3.10.0"
+    "firebase": "^11.0.0",
+    "notyf": "^3.10.0",
+    "svgmap": "^2.19.2"
   }
 }

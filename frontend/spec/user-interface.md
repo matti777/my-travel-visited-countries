@@ -64,12 +64,19 @@ Edit mode will not be available when in shared visit list routing mode; instead,
 
 Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding.
 
+**Tab 3:** Countries plotted on map
+
+Displays a world map with the visited countries highlighted. The world map should be a free, ready made 3rd party eg from Google which provides this functionality.
+
+In this mode the Edit button is disabled.
+
 ---
 
 Tabbed control (with Tab 1 being the default selection) which lists the selectable tabs by their names:
 
 - "Alphabetical"
 - "By continent"
+- "Map"
 
 Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it.
 
