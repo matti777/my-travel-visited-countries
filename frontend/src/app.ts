@@ -154,138 +154,180 @@ async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefre
   }
 }
 
-/**
- * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when #s=token.
- */
-function renderAppContent(container: HTMLElement, options: RenderOptions): void {
+function createVisitListTabRow(
+  visitListTab: RenderOptions["visitListTab"],
+  onVisitListTabChange: RenderOptions["onVisitListTabChange"]
+): HTMLElement {
+  const tabRow = document.createElement("div");
+  tabRow.className = "visit-list-tabs";
+  const tabs: { tab: "alphabetical" | "byContinent" | "map"; label: string }[] = [
+    { tab: "alphabetical", label: "Alphabetical" },
+    { tab: "byContinent", label: "By continent" },
+    { tab: "map", label: "Map" },
+  ];
+  for (const { tab, label } of tabs) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "visit-list-tabs__tab";
+    if (visitListTab === tab) btn.classList.add("visit-list-tabs__tab--active");
+    btn.textContent = label;
+    btn.addEventListener("click", () => onVisitListTabChange(tab));
+    tabRow.appendChild(btn);
+  }
+  return tabRow;
+}
+
+interface FillVisitListContentParams {
+  contentArea: HTMLElement;
+  displayList: CountryVisit[];
+  countriesList: Country[];
+  visitListTab: RenderOptions["visitListTab"];
+  visitsForMap: CountryVisit[];
+  isEditMode?: boolean;
+  onRefresh?: () => void;
+}
+
+function fillVisitListContent(params: FillVisitListContentParams): void {
   const {
-    countries: countriesList,
-    visits: visitsList,
-    user,
-    isEditMode,
-    onEditModeToggle,
-    isSharedMode,
-    sharedVisits: sharedVisitsList,
-    sharedUserName: sharedUserNameVal,
-    onGoHome,
-  } = options;
-  container.replaceChildren();
+    contentArea,
+    displayList,
+    countriesList,
+    visitListTab,
+    visitsForMap,
+    isEditMode = false,
+    onRefresh,
+  } = params;
 
-  if (isSharedMode) {
-    const visitedSection = document.createElement("section");
-    visitedSection.className = "app-section";
-    const title = document.createElement("h2");
-    title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
-    visitedSection.appendChild(title);
-    const displayList = sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
-    const contentArea = document.createElement("div");
-    contentArea.className = "visit-list-content";
-    if (options.visitListTab === "map") {
-      const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
-      createVisitMap(contentArea, {
-        countryCodes: uniqueCodes,
-        countries: countriesList,
-        visits: sharedVisitsList,
-        baseUrl,
+  if (visitListTab === "map") {
+    const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
+    createVisitMap(contentArea, {
+      countryCodes: uniqueCodes,
+      countries: countriesList,
+      visits: visitsForMap,
+      baseUrl,
+    });
+    return;
+  }
+  if (displayList.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No visited countries yet";
+    empty.className = "visited-empty";
+    contentArea.appendChild(empty);
+    return;
+  }
+
+  function addCellToGrid(
+    grid: HTMLElement,
+    visit: CountryVisit,
+    name: string,
+    withEdit: boolean
+  ): void {
+    const cellRef: { current: HTMLElement | null } = { current: null };
+    const cellOptions =
+      withEdit && visit.id && onRefresh
+        ? {
+            visitTimeLabel: formatVisitTime(visit.visitedTime),
+            onDelete: () => {
+              if (cellRef.current) handleDeleteVisit(visit, cellRef.current, onRefresh);
+            },
+          }
+        : undefined;
+    const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
+    cellRef.current = cell;
+    const isNew = visit.id != null && newVisitIds.has(visit.id);
+    if (isNew) {
+      cell.classList.add("cell-fade-in");
+      requestAnimationFrame(() => {
+        cell.classList.add("visible");
+        if (visit.id) newVisitIds.delete(visit.id);
       });
-    } else if (displayList.length === 0) {
-      const empty = document.createElement("p");
-      empty.textContent = "No visited countries yet";
-      empty.className = "visited-empty";
-      contentArea.appendChild(empty);
-    } else if (options.visitListTab === "alphabetical") {
-      const grid = document.createElement("div");
-      grid.className = "visited-grid visited-grid--enter";
-      requestAnimationFrame(() => grid.classList.add("visible"));
-      for (const visit of displayList) {
-        const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-        const cell = createCountryCell(visit.countryCode, name, baseUrl, undefined);
-        grid.appendChild(cell);
-      }
-      contentArea.appendChild(grid);
-    } else {
-      const groups = groupVisitsByContinent(displayList, countriesList);
-      const wrapper = document.createElement("div");
-      wrapper.className = "visit-list-by-continent";
-      for (const { regionName, visits: groupVisits } of groups) {
-        const section = document.createElement("div");
-        section.className = "visit-list-by-continent__section";
-        const subTitle = document.createElement("h3");
-        subTitle.className = "visit-list-by-continent__title";
-        subTitle.textContent = `${regionName} (${groupVisits.length})`;
-        section.appendChild(subTitle);
-        const grid = document.createElement("div");
-        grid.className = "visited-grid visited-grid--enter";
-        requestAnimationFrame(() => grid.classList.add("visible"));
-        for (const visit of groupVisits) {
-          const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-          const cell = createCountryCell(visit.countryCode, name, baseUrl, undefined);
-          grid.appendChild(cell);
-        }
-        section.appendChild(grid);
-        wrapper.appendChild(section);
-      }
-      contentArea.appendChild(wrapper);
     }
-    const tabRow = document.createElement("div");
-    tabRow.className = "visit-list-tabs";
-    const tabAlphabetical = document.createElement("button");
-    tabAlphabetical.type = "button";
-    tabAlphabetical.className = "visit-list-tabs__tab";
-    if (options.visitListTab === "alphabetical") tabAlphabetical.classList.add("visit-list-tabs__tab--active");
-    tabAlphabetical.textContent = "Alphabetical";
-    tabAlphabetical.addEventListener("click", () => options.onVisitListTabChange("alphabetical"));
-    const tabByContinent = document.createElement("button");
-    tabByContinent.type = "button";
-    tabByContinent.className = "visit-list-tabs__tab";
-    if (options.visitListTab === "byContinent") tabByContinent.classList.add("visit-list-tabs__tab--active");
-    tabByContinent.textContent = "By continent";
-    tabByContinent.addEventListener("click", () => options.onVisitListTabChange("byContinent"));
-    const tabMap = document.createElement("button");
-    tabMap.type = "button";
-    tabMap.className = "visit-list-tabs__tab";
-    if (options.visitListTab === "map") tabMap.classList.add("visit-list-tabs__tab--active");
-    tabMap.textContent = "Map";
-    tabMap.addEventListener("click", () => options.onVisitListTabChange("map"));
-    tabRow.appendChild(tabAlphabetical);
-    tabRow.appendChild(tabByContinent);
-    tabRow.appendChild(tabMap);
-    const listFrame = document.createElement("div");
-    listFrame.className = "visit-list-frame";
-    listFrame.appendChild(contentArea);
-    listFrame.appendChild(tabRow);
-    visitedSection.appendChild(listFrame);
-    const homeWrap = document.createElement("div");
-    homeWrap.className = "share-home-wrap";
-    const homeBtn = document.createElement("button");
-    homeBtn.type = "button";
-    homeBtn.textContent = "Home";
-    homeBtn.className = "share-home-btn";
-    homeBtn.addEventListener("click", onGoHome);
-    homeWrap.appendChild(homeBtn);
-    visitedSection.appendChild(homeWrap);
-    container.appendChild(visitedSection);
+    grid.appendChild(cell);
+  }
+
+  if (visitListTab === "alphabetical") {
+    const sortedList = sortedVisitsAlphabetically(displayList, countriesList);
+    const grid = document.createElement("div");
+    grid.className = "visited-grid visited-grid--enter";
+    requestAnimationFrame(() => grid.classList.add("visible"));
+    for (const visit of sortedList) {
+      const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
+      addCellToGrid(grid, visit, name, isEditMode);
+    }
+    contentArea.appendChild(grid);
     return;
   }
 
-  if (!user) {
-    const p = document.createElement("p");
-    p.textContent = "Sign in to see and add your visited countries.";
-    p.className = "visited-empty";
-    container.appendChild(p);
-    return;
+  const groups = groupVisitsByContinent(displayList, countriesList);
+  const wrapper = document.createElement("div");
+  wrapper.className = "visit-list-by-continent";
+  for (const { regionName, visits: groupVisits } of groups) {
+    const section = document.createElement("div");
+    section.className = "visit-list-by-continent__section";
+    const subTitle = document.createElement("h3");
+    subTitle.className = "visit-list-by-continent__title";
+    subTitle.textContent = `${regionName} (${groupVisits.length})`;
+    section.appendChild(subTitle);
+    const grid = document.createElement("div");
+    grid.className = "visited-grid visited-grid--enter";
+    requestAnimationFrame(() => grid.classList.add("visible"));
+    for (const visit of groupVisits) {
+      const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
+      addCellToGrid(grid, visit, name, isEditMode);
+    }
+    section.appendChild(grid);
+    wrapper.appendChild(section);
   }
+  contentArea.appendChild(wrapper);
+}
 
-  const displayList = isEditMode ? visitsList : uniqueVisitsByCountry(visitsList);
+function renderSharedVisitSection(container: HTMLElement, options: RenderOptions): void {
+  const { countries: countriesList, sharedVisits: sharedVisitsList, sharedUserName: sharedUserNameVal, onGoHome } = options;
+  const visitedSection = document.createElement("section");
+  visitedSection.className = "app-section";
+  const title = document.createElement("h2");
+  title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
+  visitedSection.appendChild(title);
+  const displayList = sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
+  const contentArea = document.createElement("div");
+  contentArea.className = "visit-list-content";
+  fillVisitListContent({
+    contentArea,
+    displayList,
+    countriesList,
+    visitListTab: options.visitListTab,
+    visitsForMap: sharedVisitsList,
+  });
+  const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
+  const listFrame = document.createElement("div");
+  listFrame.className = "visit-list-frame";
+  listFrame.appendChild(contentArea);
+  listFrame.appendChild(tabRow);
+  visitedSection.appendChild(listFrame);
+  const homeWrap = document.createElement("div");
+  homeWrap.className = "share-home-wrap";
+  const homeBtn = document.createElement("button");
+  homeBtn.type = "button";
+  homeBtn.textContent = "Home";
+  homeBtn.className = "share-home-btn";
+  homeBtn.addEventListener("click", onGoHome);
+  homeWrap.appendChild(homeBtn);
+  visitedSection.appendChild(homeWrap);
+  container.appendChild(visitedSection);
+}
 
-  // Section: Your Visited Countries
+function renderNormalVisitedSection(
+  container: HTMLElement,
+  options: RenderOptions,
+  displayList: CountryVisit[]
+): void {
+  const { countries: countriesList, visits: visitsList, isEditMode, onEditModeToggle } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
   const titleRow = document.createElement("div");
   titleRow.className = "app-section__title-row";
   const visitedTitle = document.createElement("h2");
-  const uniqueCount = uniqueVisitsByCountry(visitsList).length;
-  visitedTitle.textContent = `Your visited countries (${uniqueCount})`;
+  visitedTitle.textContent = `Your visited countries (${uniqueVisitsByCountry(visitsList).length})`;
   titleRow.appendChild(visitedTitle);
   const editDoneBtn = document.createElement("button");
   editDoneBtn.type = "button";
@@ -303,126 +345,30 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   );
   titleRow.appendChild(editDoneBtn);
   visitedSection.appendChild(titleRow);
-
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
-  if (options.visitListTab === "map") {
-    const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
-    createVisitMap(contentArea, {
-      countryCodes: uniqueCodes,
-      countries: countriesList,
-      visits: visitsList,
-      baseUrl,
-    });
-  } else if (displayList.length === 0) {
-    const empty = document.createElement("p");
-    empty.textContent = "No visited countries yet";
-    empty.className = "visited-empty";
-    contentArea.appendChild(empty);
-  } else if (options.visitListTab === "alphabetical") {
-    const sortedList = sortedVisitsAlphabetically(displayList, countriesList);
-    const grid = document.createElement("div");
-    grid.className = "visited-grid visited-grid--enter";
-    requestAnimationFrame(() => grid.classList.add("visible"));
-    for (const visit of sortedList) {
-      const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-      const isNew = visit.id != null && newVisitIds.has(visit.id);
-      const cellRef: { current: HTMLElement | null } = { current: null };
-      const cellOptions =
-        isEditMode && visit.id
-          ? {
-              visitTimeLabel: formatVisitTime(visit.visitedTime),
-              onDelete: () => {
-                if (cellRef.current) handleDeleteVisit(visit, cellRef.current, options.onRefresh);
-              },
-            }
-          : undefined;
-      const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
-      cellRef.current = cell;
-      if (isNew) {
-        cell.classList.add("cell-fade-in");
-        requestAnimationFrame(() => {
-          cell.classList.add("visible");
-          if (visit.id) newVisitIds.delete(visit.id);
-        });
-      }
-      grid.appendChild(cell);
-    }
-    contentArea.appendChild(grid);
-  } else {
-    const groups = groupVisitsByContinent(displayList, countriesList);
-    const wrapper = document.createElement("div");
-    wrapper.className = "visit-list-by-continent";
-    for (const { regionName, visits: groupVisits } of groups) {
-      const section = document.createElement("div");
-      section.className = "visit-list-by-continent__section";
-      const subTitle = document.createElement("h3");
-      subTitle.className = "visit-list-by-continent__title";
-      subTitle.textContent = `${regionName} (${groupVisits.length})`;
-      section.appendChild(subTitle);
-      const grid = document.createElement("div");
-      grid.className = "visited-grid visited-grid--enter";
-      requestAnimationFrame(() => grid.classList.add("visible"));
-      for (const visit of groupVisits) {
-        const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-        const isNew = visit.id != null && newVisitIds.has(visit.id);
-        const cellRef: { current: HTMLElement | null } = { current: null };
-        const cellOptions =
-          isEditMode && visit.id
-            ? {
-                visitTimeLabel: formatVisitTime(visit.visitedTime),
-                onDelete: () => {
-                  if (cellRef.current) handleDeleteVisit(visit, cellRef.current, options.onRefresh);
-                },
-              }
-            : undefined;
-        const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
-        cellRef.current = cell;
-        if (isNew) {
-          cell.classList.add("cell-fade-in");
-          requestAnimationFrame(() => {
-            cell.classList.add("visible");
-            if (visit.id) newVisitIds.delete(visit.id);
-          });
-        }
-        grid.appendChild(cell);
-      }
-      section.appendChild(grid);
-      wrapper.appendChild(section);
-    }
-    contentArea.appendChild(wrapper);
-  }
-  const tabRow = document.createElement("div");
-  tabRow.className = "visit-list-tabs";
-  const tabAlphabetical = document.createElement("button");
-  tabAlphabetical.type = "button";
-  tabAlphabetical.className = "visit-list-tabs__tab";
-  if (options.visitListTab === "alphabetical") tabAlphabetical.classList.add("visit-list-tabs__tab--active");
-  tabAlphabetical.textContent = "Alphabetical";
-  tabAlphabetical.addEventListener("click", () => options.onVisitListTabChange("alphabetical"));
-  const tabByContinent = document.createElement("button");
-  tabByContinent.type = "button";
-  tabByContinent.className = "visit-list-tabs__tab";
-  if (options.visitListTab === "byContinent") tabByContinent.classList.add("visit-list-tabs__tab--active");
-  tabByContinent.textContent = "By continent";
-  tabByContinent.addEventListener("click", () => options.onVisitListTabChange("byContinent"));
-  const tabMap = document.createElement("button");
-  tabMap.type = "button";
-  tabMap.className = "visit-list-tabs__tab";
-  if (options.visitListTab === "map") tabMap.classList.add("visit-list-tabs__tab--active");
-  tabMap.textContent = "Map";
-  tabMap.addEventListener("click", () => options.onVisitListTabChange("map"));
-  tabRow.appendChild(tabAlphabetical);
-  tabRow.appendChild(tabByContinent);
-  tabRow.appendChild(tabMap);
+  fillVisitListContent({
+    contentArea,
+    displayList,
+    countriesList,
+    visitListTab: options.visitListTab,
+    visitsForMap: visitsList,
+    isEditMode,
+    onRefresh: options.onRefresh,
+  });
+  const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
   const listFrame = document.createElement("div");
   listFrame.className = "visit-list-frame";
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
   container.appendChild(visitedSection);
+}
 
-  // Section: Add visited country
+function renderAddVisitSection(container: HTMLElement, options: RenderOptions): void {
+  const { countries: countriesList } = options;
+  const currentYear = new Date().getFullYear();
+
   const addSection = document.createElement("section");
   addSection.className = "app-section";
   const addTitle = document.createElement("h2");
@@ -435,18 +381,18 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
 
   const row = document.createElement("div");
   row.className = "add-visit-form__row";
-  const dropdown = createCountryDropdown({
-    countries: countriesList,
-    baseUrl,
-    selectedCountryCode: options.selectedCountryCode,
-    onSelect: options.onSelectCountry,
-  });
-  row.appendChild(dropdown);
+  row.appendChild(
+    createCountryDropdown({
+      countries: countriesList,
+      baseUrl,
+      selectedCountryCode: options.selectedCountryCode,
+      onSelect: options.onSelectCountry,
+    })
+  );
   const visitTimeLabel = document.createElement("span");
   visitTimeLabel.className = "add-visit-form__visit-time-label";
   visitTimeLabel.textContent = "Visit time";
   row.appendChild(visitTimeLabel);
-  const currentYear = new Date().getFullYear();
   const yearInput = document.createElement("input");
   yearInput.type = "number";
   yearInput.placeholder = "Year";
@@ -457,13 +403,12 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   yearInput.autocomplete = "off";
   yearInput.value = options.formYear ?? "";
   row.appendChild(yearInput);
-
-  const monthDropdown = createMonthDropdown({
-    selectedMonth: options.selectedMonth,
-    onSelect: (month) => options.setSelectedMonth(month),
-  });
-  row.appendChild(monthDropdown);
-
+  row.appendChild(
+    createMonthDropdown({
+      selectedMonth: options.selectedMonth,
+      onSelect: (month) => options.setSelectedMonth(month),
+    })
+  );
   const dayInput = document.createElement("input");
   dayInput.type = "number";
   dayInput.placeholder = "Day";
@@ -474,14 +419,12 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   dayInput.value = options.formDay ?? "";
   dayInput.disabled = true;
   row.appendChild(dayInput);
-
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
   addBtn.textContent = "Add";
   addBtn.className = "add-visit-form__add-btn";
   addBtn.disabled = true;
   row.appendChild(addBtn);
-
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
@@ -493,24 +436,18 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     return new Date(year, month, 0).getDate();
   }
 
-  function validateVisitTime(): {
-    valid: boolean;
-    yearInvalid?: boolean;
-    dayInvalid?: boolean;
-  } {
+  function validateVisitTime(): { valid: boolean; yearInvalid?: boolean; dayInvalid?: boolean } {
     const yStr = yearInput.value.trim();
     const dayStr = dayInput.value.trim();
     const y = yStr ? parseInt(yStr, 10) : NaN;
     const day = dayStr ? parseInt(dayStr, 10) : NaN;
-
     if (yStr && (isNaN(y) || y < 1900 || y > currentYear)) {
       return { valid: false, yearInvalid: true };
     }
     if (dayStr) {
       if (!yStr || isNaN(y)) return { valid: false, dayInvalid: true };
       const monthVal = options.selectedMonth ?? 1;
-      const maxDay = getDaysInMonth(y, monthVal);
-      if (isNaN(day) || day < 1 || day > maxDay) {
+      if (isNaN(day) || day < 1 || day > getDaysInMonth(y, monthVal)) {
         return { valid: false, dayInvalid: true };
       }
     }
@@ -521,36 +458,42 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     const v = validateVisitTime();
     yearInput.classList.toggle("invalid", !!v.yearInvalid);
     dayInput.classList.toggle("invalid", !!v.dayInvalid);
-    const hasYearAndMonth = !!yearInput.value.trim() && options.selectedMonth != null;
-    dayInput.disabled = !hasYearAndMonth;
-    const canSubmit = !!options.selectedCountryCode && v.valid;
-    addBtn.disabled = !canSubmit;
+    dayInput.disabled = !(yearInput.value.trim() && options.selectedMonth != null);
+    addBtn.disabled = !(options.selectedCountryCode && v.valid);
   }
 
-  function onYearValueChange(): void {
+  yearInput.addEventListener("input", () => {
     options.onFormYearChange(yearInput.value);
     updateValidationUI();
-  }
-  yearInput.addEventListener("input", onYearValueChange);
-  yearInput.addEventListener("keyup", onYearValueChange);
+  });
+  yearInput.addEventListener("keyup", () => {
+    options.onFormYearChange(yearInput.value);
+    updateValidationUI();
+  });
   yearInput.addEventListener("change", () => {
-    onYearValueChange();
-    const yStr = yearInput.value.trim();
-    const y = yStr ? parseInt(yStr, 10) : NaN;
-    if (!isNaN(y) && y >= 1900 && y <= currentYear) {
+    options.onFormYearChange(yearInput.value);
+    updateValidationUI();
+    const y = parseInt(yearInput.value.trim(), 10);
+    if (!Number.isNaN(y) && y >= 1900 && y <= currentYear) {
       options.onFormDayChange("1");
       dayInput.value = "1";
       options.setSelectedMonth(1);
     }
   });
   yearInput.addEventListener("blur", updateValidationUI);
-  function onDayValueChange(): void {
+
+  dayInput.addEventListener("input", () => {
     options.onFormDayChange(dayInput.value);
     updateValidationUI();
-  }
-  dayInput.addEventListener("input", onDayValueChange);
-  dayInput.addEventListener("keyup", onDayValueChange);
-  dayInput.addEventListener("change", onDayValueChange);
+  });
+  dayInput.addEventListener("keyup", () => {
+    options.onFormDayChange(dayInput.value);
+    updateValidationUI();
+  });
+  dayInput.addEventListener("change", () => {
+    options.onFormDayChange(dayInput.value);
+    updateValidationUI();
+  });
 
   addBtn.addEventListener("click", async () => {
     const countryCode = options.selectedCountryCode;
@@ -558,18 +501,13 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       errorToast("Please select a country");
       return;
     }
-    const v = validateVisitTime();
-    if (!v.valid) return;
-
+    if (!validateVisitTime().valid) return;
     let visitedTime: number | undefined;
-    const yStr = yearInput.value.trim();
-    const y = yStr ? parseInt(yStr, 10) : NaN;
-    if (!isNaN(y)) {
+    const y = parseInt(yearInput.value.trim(), 10);
+    if (!Number.isNaN(y)) {
       const month = options.selectedMonth ?? 1;
-      const dayStr = dayInput.value.trim();
-      const day = dayStr ? parseInt(dayStr, 10) : 1;
-      const d = new Date(Date.UTC(y, month - 1, day));
-      visitedTime = Math.floor(d.getTime() / 1000);
+      const day = parseInt(dayInput.value.trim(), 10) || 1;
+      visitedTime = Math.floor(new Date(Date.UTC(y, month - 1, day)).getTime() / 1000);
     }
     try {
       const created = await api.putVisits(countryCode, visitedTime);
@@ -593,13 +531,33 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     }
   });
   updateValidationUI();
-
   addSection.appendChild(form);
   container.appendChild(addSection);
+}
 
-  // Section: Sharing
-  const shareSection = createShareSection(options.shareToken);
-  container.appendChild(shareSection);
+/**
+ * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when #s=token.
+ */
+function renderAppContent(container: HTMLElement, options: RenderOptions): void {
+  const { user, isEditMode, visits: visitsList, isSharedMode } = options;
+  container.replaceChildren();
+
+  if (isSharedMode) {
+    renderSharedVisitSection(container, options);
+    return;
+  }
+  if (!user) {
+    const p = document.createElement("p");
+    p.textContent = "Sign in to see and add your visited countries.";
+    p.className = "visited-empty";
+    container.appendChild(p);
+    return;
+  }
+
+  const displayList = isEditMode ? visitsList : uniqueVisitsByCountry(visitsList);
+  renderNormalVisitedSection(container, options, displayList);
+  renderAddVisitSection(container, options);
+  container.appendChild(createShareSection(options.shareToken));
 }
 
 export async function main(): Promise<void> {
