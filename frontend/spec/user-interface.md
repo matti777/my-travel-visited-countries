@@ -40,9 +40,13 @@ If showing a shared visits list, a "Home" button is displayed to the left of oth
 
 If not logged in, this section is not visible.
 
+This section has several possible representation modes, each a "tab" which - depending on the selection in the tab control mentioned below - uses up the entire space of the section, ie. only one representation mode (or "tab") is visible at any given time.
+
+**Tab 1:** Alphabetical list
+
 This section shows a list of visited countries with section title "Your visited countries". Below, a flowing grid of "country cells", maximum 3 cells per row. When not enough horizontal space, the layout should show only 1 or 2 cells in a row. If no visited countries are added yet, the placeholder text saying "No visited countries yet" should be shown with a slight grayed out tint.
 
-This list of countries will be unique by country code, ie. it will show no duplicates.
+This list of countries will be unique by country code, ie. it will show no duplicates. The countries will be sorted to alphabetical order.
 
 After the section title there will be a button called "Edit" which, when pressed, will:
 
@@ -55,6 +59,19 @@ After the section title there will be a button called "Edit" which, when pressed
 - In "Edit" state the button's tooltip should say "Click to edit the visits list".
 
 Edit mode will not be available when in shared visit list routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
+
+**Tab 2:** Country lists by continent
+
+Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding.
+
+---
+
+Tabbed control (with Tab 1 being the default selection) which lists the selectable tabs by their names:
+
+- "Alphabetical"
+- "By continent"
+
+Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it.
 
 ---
 
