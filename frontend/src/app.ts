@@ -3,6 +3,7 @@ import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createMonthDropdown } from "Components/month-dropdown";
+import { createShareSection } from "Components/share-section";
 import { attachTooltip } from "Components/tooltip";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
@@ -15,6 +16,9 @@ export let countries: Country[] = [];
 
 /** Country visits from GET /visits, filled when user is authenticated (on load and on login). */
 export let visits: CountryVisit[] = [];
+
+/** Share token from GET /visits response; used for Share URL when logged in. */
+let shareToken: string | null = null;
 
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
 const newVisitIds = new Set<string>();
@@ -55,6 +59,7 @@ export interface RenderOptions {
   formDay: string;
   onFormYearChange: (value: string) => void;
   onFormDayChange: (value: string) => void;
+  shareToken: string | null;
 }
 
 async function handleDeleteVisit(
@@ -331,6 +336,10 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
 
   addSection.appendChild(form);
   container.appendChild(addSection);
+
+  // Section: Sharing
+  const shareSection = createShareSection(options.shareToken);
+  container.appendChild(shareSection);
 }
 
 export async function main(): Promise<void> {
@@ -375,6 +384,7 @@ export async function main(): Promise<void> {
         onFormDayChange: (value: string) => {
           formDay = value;
         },
+        shareToken,
       });
   }
 
@@ -405,10 +415,13 @@ export async function main(): Promise<void> {
           sessionStorage.removeItem("login:initiated");
         }
         try {
-          visits = await api.getVisits();
+          const result = await api.getVisits();
+          visits = result.visits;
+          shareToken = result.shareToken ?? null;
         } catch (err) {
           console.error("Failed to load visits", err);
           visits = [];
+          shareToken = null;
           if (err instanceof ApiError && err.responseCode === 401) {
             signOut();
             errorToast("Session expired");
@@ -419,6 +432,7 @@ export async function main(): Promise<void> {
       } else {
         api.setAuthToken(null);
         visits = [];
+        shareToken = null;
       }
       renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
       refreshAppContent();

@@ -56,4 +56,12 @@ This section holds the controls to add a new visited country.
 
 - "Visit time" input - a data input system. It must be possible to only input a year (in which case month = 1, day = 1), or year + month (in which case day = 1), or the entire date. Visit time is optional; if year is not specified, VisitTime shall be set to nil. These controls are located to the right of the country selection drop-down, vertically aligned so that everything is perfectly centered at the same level. There must be reasonable padding between the drop-down and the inputs. The year box shall be wide enough to comfortably contain 4 digits and placeholder text "Year". There shall be nothing extra in the box; no add/substract controls. Input must be validated; only values between 1900 and the current year may be entered. The month box should be a dropdown with month names; initial value shall be "Select month..". The day box shall be like year box but with placeholder text "Day". Day input must be validated to be a valid day number within the selected year/month. If the year value is given and the values for month / day have not been set, set them to their default values of January and 1.
 
+- Add button which shall be inline with all the other controls in this section, as the rightmost one.
+
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.
+
+---
+
+If not logged in, this section is not visible.
+
+This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site address + HTML fragment value of "#s=<share-token>" where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.

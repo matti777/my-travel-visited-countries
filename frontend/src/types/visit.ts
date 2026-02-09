@@ -10,4 +10,5 @@ export interface CountryVisit {
 
 export interface VisitsResponse {
   visits: CountryVisit[];
+  shareToken?: string;
 }

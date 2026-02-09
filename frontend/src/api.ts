@@ -75,16 +75,19 @@ export default class Api {
     });
   }
 
-  async getVisits(): Promise<CountryVisit[]> {
+  async getVisits(): Promise<{ visits: CountryVisit[]; shareToken?: string }> {
     const token = this.getAuthToken();
     if (!token) {
-      return [];
+      return { visits: [] };
     }
     const response = (await this.performRequest("/visits", {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     })) as VisitsResponse;
-    return response?.visits ?? [];
+    return {
+      visits: response?.visits ?? [],
+      shareToken: response?.shareToken,
+    };
   }
 
   async putVisits(countryCode: string, visitedTime?: number): Promise<CountryVisit> {
