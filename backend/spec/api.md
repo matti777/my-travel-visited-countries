@@ -27,3 +27,7 @@ PUT /visits: Creates a new CountryVisit object for the current user. In this req
 ### Delete country visit
 
 DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to delete their own visits. **Authenticated**.
+
+### List country visits for share token
+
+GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. The response contains both the visits as well as the user's name for UI purposes. **Unauthenticated**.

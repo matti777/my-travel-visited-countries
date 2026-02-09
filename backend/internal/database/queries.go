@@ -71,6 +71,35 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	return nil
 }
 
+// GetUserByShareToken looks up the User document by ShareToken. Returns (nil, nil) if not found.
+func (c *Client) GetUserByShareToken(ctx context.Context, shareToken string) (*models.User, error) {
+	if shareToken == "" {
+		return nil, fmt.Errorf("shareToken is required")
+	}
+	iter := c.Collection("users").Where("ShareToken", "==", shareToken).Limit(1).Documents(ctx)
+	docSnap, err := iter.Next()
+	if err == iterator.Done {
+		iter.Stop()
+		return nil, nil
+	}
+	if err != nil {
+		iter.Stop()
+		return nil, fmt.Errorf("failed to get user by share token: %w", err)
+	}
+	if !docSnap.Exists() {
+		iter.Stop()
+		return nil, nil
+	}
+	iter.Stop()
+	var u models.User
+	if err := docSnap.DataTo(&u); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal user: %w", err)
+	}
+	u.ID = docSnap.Ref.ID
+	u.UserID = u.ID
+	return &u, nil
+}
+
 // GetUserByID looks up the User document by ID (auth token UserID). Returns (nil, nil) if not found.
 func (c *Client) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
 	if userID == "" {

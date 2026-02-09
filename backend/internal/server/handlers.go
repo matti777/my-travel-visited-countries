@@ -50,6 +50,39 @@ func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
 	})
 }
 
+// GetShareVisitsHandler handles GET /share/visits/:shareToken. Unauthenticated; returns visits and userName for the user with that ShareToken.
+func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "GetShareVisitsHandler")
+	defer span.End()
+
+	shareToken := c.Param("shareToken")
+	if shareToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "share token required"})
+		return
+	}
+	log := logging.FromContext(ctx)
+	user, err := s.db.GetUserByShareToken(ctx, shareToken)
+	if err != nil {
+		log.Error("GetUserByShareToken failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch share"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "share not found"})
+		return
+	}
+	visits, err := s.db.GetCountryVisitsByUser(ctx, user.ID)
+	if err != nil {
+		log.Error("GetCountryVisitsByUser failed for share", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch visits"})
+		return
+	}
+	c.JSON(http.StatusOK, models.ShareVisitsResponse{
+		Visits:   visits,
+		UserName: user.Name,
+	})
+}
+
 // GetListHandler handles GET /visits.
 // Returns a list of country visits for the current user and the user's ShareToken.
 // Requires auth middleware (user in context). Reads User from DB for ShareToken.

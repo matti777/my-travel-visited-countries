@@ -20,6 +20,17 @@ export let visits: CountryVisit[] = [];
 /** Share token from GET /visits response; used for Share URL when logged in. */
 let shareToken: string | null = null;
 
+/** Shared visit list when URL has #s=<share-token>. */
+let sharedVisits: CountryVisit[] = [];
+let sharedUserName: string | null = null;
+
+function getShareTokenFromHash(): string | null {
+  const hash = window.location.hash.slice(1).trim();
+  if (!hash.startsWith("s=")) return null;
+  const token = hash.slice(2).trim();
+  return token || null;
+}
+
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
 const newVisitIds = new Set<string>();
 
@@ -60,6 +71,10 @@ export interface RenderOptions {
   onFormYearChange: (value: string) => void;
   onFormDayChange: (value: string) => void;
   shareToken: string | null;
+  isSharedMode: boolean;
+  sharedVisits: CountryVisit[];
+  sharedUserName: string | null;
+  onGoHome: () => void;
 }
 
 async function handleDeleteVisit(
@@ -90,11 +105,57 @@ async function handleDeleteVisit(
 }
 
 /**
- * Renders the main #app content from current state: visited countries section and add-visit form when logged in.
+ * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when #s=token.
  */
 function renderAppContent(container: HTMLElement, options: RenderOptions): void {
-  const { countries: countriesList, visits: visitsList, user, isEditMode, onEditModeToggle } = options;
+  const {
+    countries: countriesList,
+    visits: visitsList,
+    user,
+    isEditMode,
+    onEditModeToggle,
+    isSharedMode,
+    sharedVisits: sharedVisitsList,
+    sharedUserName: sharedUserNameVal,
+    onGoHome,
+  } = options;
   container.replaceChildren();
+
+  if (isSharedMode) {
+    const visitedSection = document.createElement("section");
+    visitedSection.className = "app-section";
+    const title = document.createElement("h2");
+    title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
+    visitedSection.appendChild(title);
+    const displayList = uniqueVisitsByCountry(sharedVisitsList);
+    if (displayList.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent = "No visited countries yet";
+      empty.className = "visited-empty";
+      visitedSection.appendChild(empty);
+    } else {
+      const grid = document.createElement("div");
+      grid.className = "visited-grid visited-grid--enter";
+      requestAnimationFrame(() => grid.classList.add("visible"));
+      for (const visit of displayList) {
+        const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
+        const cell = createCountryCell(visit.countryCode, name, baseUrl, undefined);
+        grid.appendChild(cell);
+      }
+      visitedSection.appendChild(grid);
+    }
+    const homeWrap = document.createElement("div");
+    homeWrap.className = "share-home-wrap";
+    const homeBtn = document.createElement("button");
+    homeBtn.type = "button";
+    homeBtn.textContent = "Home";
+    homeBtn.className = "share-home-btn";
+    homeBtn.addEventListener("click", onGoHome);
+    homeWrap.appendChild(homeBtn);
+    visitedSection.appendChild(homeWrap);
+    container.appendChild(visitedSection);
+    return;
+  }
 
   if (!user) {
     const p = document.createElement("p");
@@ -216,6 +277,13 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   dayInput.disabled = true;
   row.appendChild(dayInput);
 
+  const addBtn = document.createElement("button");
+  addBtn.type = "submit";
+  addBtn.textContent = "Add";
+  addBtn.className = "add-visit-form__add-btn";
+  addBtn.disabled = true;
+  row.appendChild(addBtn);
+
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
@@ -226,11 +294,6 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   function getDaysInMonth(year: number, month: number): number {
     return new Date(year, month, 0).getDate();
   }
-
-  const addBtn = document.createElement("button");
-  addBtn.type = "submit";
-  addBtn.textContent = "Add";
-  addBtn.disabled = true;
 
   function validateVisitTime(): {
     valid: boolean;
@@ -331,7 +394,6 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       }
     }
   });
-  form.appendChild(addBtn);
   updateValidationUI();
 
   addSection.appendChild(form);
@@ -353,6 +415,24 @@ export async function main(): Promise<void> {
   let selectedMonth: number | null = null;
   let formYear = "";
   let formDay = "";
+
+  function onGoHome(): void {
+    window.location.hash = "";
+  }
+  function onLogin(): void {
+    sessionStorage.setItem("login:initiated", "1");
+    signInWithGoogle().catch((err) => {
+      sessionStorage.removeItem("login:initiated");
+      console.error("Sign in failed:", err);
+      errorToast(err instanceof Error ? err.message : "Sign in failed");
+    });
+  }
+  function onLogout(): void {
+    signOut().then(() => {
+      api.setAuthToken(null);
+      console.log("Signed out");
+    });
+  }
 
   function refreshAppContent(): void {
     if (appEl)
@@ -385,6 +465,15 @@ export async function main(): Promise<void> {
           formDay = value;
         },
         shareToken,
+        isSharedMode: !!getShareTokenFromHash(),
+        sharedVisits,
+        sharedUserName,
+        onGoHome: () => {
+          window.location.hash = "";
+          sharedVisits = [];
+          sharedUserName = null;
+          refreshAppContent();
+        },
       });
   }
 
@@ -408,25 +497,27 @@ export async function main(): Promise<void> {
               errorToast("Failed to complete login");
             }
             sessionStorage.removeItem("login:initiated");
-            renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
+            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, onGoHome);
             refreshAppContent();
             return;
           }
           sessionStorage.removeItem("login:initiated");
         }
-        try {
-          const result = await api.getVisits();
-          visits = result.visits;
-          shareToken = result.shareToken ?? null;
-        } catch (err) {
-          console.error("Failed to load visits", err);
-          visits = [];
-          shareToken = null;
-          if (err instanceof ApiError && err.responseCode === 401) {
-            signOut();
-            errorToast("Session expired");
-          } else {
-            errorToast("Failed to load visits");
+        if (!getShareTokenFromHash()) {
+          try {
+            const result = await api.getVisits();
+            visits = result.visits;
+            shareToken = result.shareToken ?? null;
+          } catch (err) {
+            console.error("Failed to load visits", err);
+            visits = [];
+            shareToken = null;
+            if (err instanceof ApiError && err.responseCode === 401) {
+              signOut();
+              errorToast("Session expired");
+            } else {
+              errorToast("Failed to load visits");
+            }
           }
         }
       } else {
@@ -434,23 +525,10 @@ export async function main(): Promise<void> {
         visits = [];
         shareToken = null;
       }
-      renderAuthHeader(authHeaderEl, user, onLogin, onLogout);
+      const showHome = !!getShareTokenFromHash();
+      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, onGoHome);
       refreshAppContent();
     });
-    function onLogin(): void {
-      sessionStorage.setItem("login:initiated", "1");
-      signInWithGoogle().catch((err) => {
-        sessionStorage.removeItem("login:initiated");
-        console.error("Sign in failed:", err);
-        errorToast(err instanceof Error ? err.message : "Sign in failed");
-      });
-    }
-    function onLogout(): void {
-      signOut().then(() => {
-        api.setAuthToken(null);
-        console.log("Signed out");
-      });
-    }
     void unsubscribe;
   }
 
@@ -462,7 +540,34 @@ export async function main(): Promise<void> {
     console.error("Countries load failed", err);
   }
 
-  refreshAppContent();
+  async function applyHash(): Promise<void> {
+    const token = getShareTokenFromHash();
+    if (token) {
+      try {
+        const r = await api.getShareVisits(token);
+        sharedVisits = r.visits;
+        sharedUserName = r.userName;
+      } catch (err) {
+        console.error("Failed to load shared visits", err);
+        errorToast("Invalid or expired share link");
+        sharedVisits = [];
+        sharedUserName = null;
+      }
+    } else {
+      sharedVisits = [];
+      sharedUserName = null;
+    }
+    if (authHeaderEl) {
+      renderAuthHeader(authHeaderEl, currentUser, onLogin, onLogout, !!getShareTokenFromHash(), onGoHome);
+    }
+    refreshAppContent();
+  }
+
+  window.addEventListener("hashchange", () => {
+    applyHash();
+  });
+
+  await applyHash();
 
   window.addEventListener("error", function (event) {
     console.error(

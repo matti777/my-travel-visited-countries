@@ -21,6 +21,7 @@ export default defineConfig({
     proxy: {
       "/countries": { target: "http://localhost:8080", changeOrigin: true },
       "/login": { target: "http://localhost:8080", changeOrigin: true },
+      "/share": { target: "http://localhost:8080", changeOrigin: true },
       "/visits": { target: "http://localhost:8080", changeOrigin: true },
     },
   },

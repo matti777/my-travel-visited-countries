@@ -11,6 +11,9 @@ func (s *Server) RegisterRoutes() {
 	s.Router.GET("/countries", func(c *gin.Context) {
 		s.GetCountriesHandler(c.Request.Context(), c)
 	})
+	s.Router.GET("/share/visits/:shareToken", func(c *gin.Context) {
+		s.GetShareVisitsHandler(c.Request.Context(), c)
+	})
 
 	// Protected routes: require valid Firebase ID token
 	protected := s.Router.Group("")

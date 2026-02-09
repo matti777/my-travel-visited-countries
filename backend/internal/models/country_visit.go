@@ -25,3 +25,9 @@ type CountryVisitResponse struct {
 	Visits     []CountryVisit `json:"visits"`
 	ShareToken string         `json:"shareToken"`
 }
+
+// ShareVisitsResponse is the response for GET /share/visits/:shareToken.
+type ShareVisitsResponse struct {
+	Visits   []CountryVisit `json:"visits"`
+	UserName string         `json:"userName"`
+}

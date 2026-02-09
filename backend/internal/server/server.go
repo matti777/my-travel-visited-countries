@@ -32,6 +32,7 @@ type Server struct {
 type Database interface {
 	GetCountryVisitsByUser(ctx context.Context, userID string) ([]models.CountryVisit, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
+	GetUserByShareToken(ctx context.Context, shareToken string) (*models.User, error)
 	EnsureUser(ctx context.Context, user *models.User) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
 	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error

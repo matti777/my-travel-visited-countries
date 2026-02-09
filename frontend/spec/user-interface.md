@@ -2,6 +2,12 @@
 
 This document describes the application's user interface in reasonable detail. The exact page structure is described in [Page structure](#page-structure), from top to bottom. Sufficient padding space should be in between the sections.
 
+## UI routing
+
+If html fragment #s=<share-token> is present, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
+
+In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
+
 ## General look and feel
 
 The UI must work properly both on desktop and mobile browsers.
@@ -28,6 +34,8 @@ Any tooltips should be represented as a custom component instead of any "alt" te
 
 Top bar: name of logged in user + avatar image, if available. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
 
+If showing a shared visits list, a "Home" button is displayed to the left of other top bar contents, with ample padding. Pressing this will remove the html fragment from the URL and show the normal page routing. This button shall not be shown in normal page routing mode.
+
 ---
 
 If not logged in, this section is not visible.
@@ -46,9 +54,11 @@ After the section title there will be a button called "Edit" which, when pressed
 - The transformation between an unique / non-unique lists shall be animated as well.
 - In "Edit" state the button's tooltip should say "Click to edit the visits list".
 
+Edit mode will not be available when in shared visit list routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
+
 ---
 
-If not logged in, this section is not visible.
+If not logged in, this section is not visible. If viewing a shared visit list, this section is not visible either.
 
 This section holds the controls to add a new visited country.
 

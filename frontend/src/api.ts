@@ -1,6 +1,6 @@
 import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
-import type { CountryVisit, VisitsResponse } from "./types/visit";
+import type { CountryVisit, ShareVisitsResponse, VisitsResponse } from "./types/visit";
 
 
 const COUNTRIES_CACHE_KEY = "app:countries:cache";
@@ -88,6 +88,14 @@ export default class Api {
       visits: response?.visits ?? [],
       shareToken: response?.shareToken,
     };
+  }
+
+  async getShareVisits(shareToken: string): Promise<ShareVisitsResponse> {
+    const response = (await this.performRequest(
+      `/share/visits/${encodeURIComponent(shareToken)}`,
+      { method: "GET" }
+    )) as ShareVisitsResponse;
+    return response;
   }
 
   async putVisits(countryCode: string, visitedTime?: number): Promise<CountryVisit> {
