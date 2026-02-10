@@ -495,9 +495,12 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
 
   function updateValidationUI(): void {
     const dateValid = isVisitDateValid(options.formVisitDate);
-    const mediaUrlValid = isMediaUrlValid(options.formMediaUrl);
+    const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
     dateInput.classList.toggle("invalid", options.formVisitDate != null && !dateValid);
-    mediaUrlInput.classList.toggle("invalid", options.formMediaUrl.trim() !== "" && !mediaUrlValid);
+    mediaUrlInput.classList.toggle(
+      "invalid",
+      mediaUrlInput.value.trim() !== "" && !mediaUrlValid,
+    );
     addBtn.disabled = !(options.selectedCountryCode && dateValid && mediaUrlValid);
   }
 
@@ -551,7 +554,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       return;
     }
     const visitedTime = isoDateToUnixSeconds(isoDate);
-    const mediaUrl = options.formMediaUrl.trim() || undefined;
+    const mediaUrl = mediaUrlInput.value.trim() || undefined;
     try {
       const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
       visits = [...visits, created];
@@ -598,8 +601,11 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       ? visitsList
       : uniqueVisitsByCountry(visitsList);
   renderNormalVisitedSection(container, options, displayList);
-  renderAddVisitSection(container, options);
-  container.appendChild(createShareSection(options.shareToken));
+  const addShareWrapper = document.createElement("div");
+  addShareWrapper.id = "app-add-share";
+  renderAddVisitSection(addShareWrapper, options);
+  addShareWrapper.appendChild(createShareSection(options.shareToken));
+  container.appendChild(addShareWrapper);
 }
 
 export async function main(): Promise<void> {
@@ -633,49 +639,67 @@ export async function main(): Promise<void> {
     });
   }
 
+  function getRenderOptions(): RenderOptions {
+    return {
+      countries,
+      visits,
+      user: currentUser,
+      isEditMode,
+      onEditModeToggle: () => {
+        isEditMode = !isEditMode;
+        refreshAppContent();
+      },
+      onRefresh: refreshAppContent,
+      selectedCountryCode,
+      onSelectCountry: (code: string) => {
+        selectedCountryCode = code;
+        refreshAddFormAndShare();
+      },
+      formVisitDate,
+      onFormVisitDateChange: (value: string | null) => {
+        formVisitDate = value;
+        refreshAddFormAndShare();
+      },
+      formMediaUrl,
+      onFormMediaUrlChange: (value: string) => {
+        formMediaUrl = value;
+      },
+      shareToken,
+      isSharedMode: !!getShareTokenFromHash(),
+      sharedVisits,
+      sharedUserName,
+      onGoHome: () => {
+        window.location.hash = "";
+        sharedVisits = [];
+        sharedUserName = null;
+        refreshAppContent();
+      },
+      visitListTab,
+      onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => {
+        visitListTab = tab;
+        refreshAppContent();
+      },
+    };
+  }
+
+  function refreshAddFormAndShare(): void {
+    if (!appEl) return;
+    const addShareWrapper = document.getElementById("app-add-share");
+    if (!addShareWrapper) return;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    addShareWrapper.replaceChildren();
+    renderAddVisitSection(addShareWrapper, getRenderOptions());
+    addShareWrapper.appendChild(createShareSection(shareToken));
+    window.scrollTo(scrollX, scrollY);
+  }
+
   function refreshAppContent(): void {
-    if (appEl)
-      renderAppContent(appEl, {
-        countries,
-        visits,
-        user: currentUser,
-        isEditMode,
-        onEditModeToggle: () => {
-          isEditMode = !isEditMode;
-          refreshAppContent();
-        },
-        onRefresh: refreshAppContent,
-        selectedCountryCode,
-        onSelectCountry: (code: string) => {
-          selectedCountryCode = code;
-          refreshAppContent();
-        },
-        formVisitDate,
-        onFormVisitDateChange: (value: string | null) => {
-          formVisitDate = value;
-          refreshAppContent();
-        },
-        formMediaUrl,
-        onFormMediaUrlChange: (value: string) => {
-          formMediaUrl = value;
-          refreshAppContent();
-        },
-        shareToken,
-        isSharedMode: !!getShareTokenFromHash(),
-        sharedVisits,
-        sharedUserName,
-        onGoHome: () => {
-          window.location.hash = "";
-          sharedVisits = [];
-          sharedUserName = null;
-          refreshAppContent();
-        },
-        visitListTab,
-        onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => {
-          visitListTab = tab;
-          refreshAppContent();
-        },
-      });
+    if (!appEl) return;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    renderAppContent(appEl, getRenderOptions());
+    window.scrollTo(scrollX, scrollY);
   }
 
   if (authHeaderEl) {
