@@ -90,7 +90,9 @@ This section holds the controls to add a new visited country.
 
 - "Visit time" input - a textbox with placeholder text "Enter visit date". When clicked, this control opens up a date picker component, prepopulated to the current date. This date picker must allow entering the year as text input instead of using a picker component. No time component is shown. The input must be validated as `VisitTime` (see @data-models.md). It is a mandatory field so the Add button should be disabled until a valid value has been entered.
 
-- Add button which shall be inline with all the other controls in this section, as the rightmost one.
+- Media URL input - a textbox with placeholder text "Optional media URL". Frontend must validate this input to be a well-formed URL. An explanatory text underneath should explain that this can be used to attach media such as picture collection / video url to material taken on the trip.
+
+- Add button which shall be under (left-aligned) all the other controls in this section.
 
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.
 

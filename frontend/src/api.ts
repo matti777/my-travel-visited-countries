@@ -98,12 +98,15 @@ export default class Api {
     return response;
   }
 
-  async putVisits(countryCode: string, visitedTime: number): Promise<CountryVisit> {
+  async putVisits(countryCode: string, visitedTime: number, mediaUrl?: string): Promise<CountryVisit> {
     const token = this.getAuthToken();
     if (!token) {
       throw new ApiError({ message: "Not authenticated" });
     }
-    const body = { countryCode, visitedTime };
+    const body: { countryCode: string; visitedTime: number; mediaUrl?: string } = { countryCode, visitedTime };
+    if (mediaUrl != null && mediaUrl !== "") {
+      body.mediaUrl = mediaUrl;
+    }
     const response = (await this.performRequest("/visits", {
       method: "PUT",
       headers: {

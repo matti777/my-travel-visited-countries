@@ -5,6 +5,7 @@ export interface CountryVisit {
   id?: string;
   countryCode: string;
   visitedTime?: string;
+  mediaUrl?: string;
   userId: string;
 }
 

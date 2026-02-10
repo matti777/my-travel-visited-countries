@@ -126,7 +126,7 @@ func (c *Client) GetUserByID(ctx context.Context, userID string) (*models.User, 
 }
 
 // CreateCountryVisit adds a new country visit document under users/{userID}/country_visits.
-// Document contains only CountryCode and VisitTime (user is implied by path).
+// Document contains CountryCode, VisitTime, and optionally MediaURL (user is implied by path).
 func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error) {
 	if visit == nil {
 		return nil, fmt.Errorf("visit is required")
@@ -135,10 +135,14 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 		return nil, fmt.Errorf("user_id and country_code are required")
 	}
 	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").NewDoc()
-	_, err := ref.Set(ctx, map[string]interface{}{
+	doc := map[string]interface{}{
 		"CountryCode": visit.CountryCode,
 		"VisitTime":   visit.VisitedTime,
-	})
+	}
+	if visit.MediaURL != nil && *visit.MediaURL != "" {
+		doc["MediaURL"] = *visit.MediaURL
+	}
+	_, err := ref.Set(ctx, doc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create country visit: %w", err)
 	}

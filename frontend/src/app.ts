@@ -119,6 +119,8 @@ export interface RenderOptions {
   onSelectCountry: (code: string) => void;
   formVisitDate: string | null;
   onFormVisitDateChange: (value: string | null) => void;
+  formMediaUrl: string;
+  onFormMediaUrlChange: (value: string) => void;
   shareToken: string | null;
   isSharedMode: boolean;
   sharedVisits: CountryVisit[];
@@ -375,6 +377,18 @@ function parseIsoToLocalDate(isoDate: string): Date {
   return new Date(y, m - 1, d);
 }
 
+function isMediaUrlValid(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed === "") return true;
+  try {
+    const u = new URL(trimmed);
+    const scheme = u.protocol.replace(/:$/, "").toLowerCase();
+    return scheme === "http" || scheme === "https";
+  } catch {
+    return false;
+  }
+}
+
 function isVisitDateValid(isoDate: string | null): boolean {
   if (!isoDate) return false;
   const d = new Date(isoDate + "T00:00:00Z");
@@ -426,23 +440,52 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   dateInput.className = "add-visit-form__date-input";
   dateInput.autocomplete = "off";
   row.appendChild(dateInput);
-  const addBtn = document.createElement("button");
-  addBtn.type = "submit";
-  addBtn.textContent = "Add";
-  addBtn.className = "add-visit-form__add-btn";
-  addBtn.disabled = true;
-  row.appendChild(addBtn);
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
   visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
   form.appendChild(visitTimeHint);
 
+  const mediaUrlRow = document.createElement("div");
+  mediaUrlRow.className = "add-visit-form__row";
+  const mediaUrlInput = document.createElement("input");
+  mediaUrlInput.type = "text";
+  mediaUrlInput.placeholder = "Optional media URL";
+  mediaUrlInput.name = "mediaUrl";
+  mediaUrlInput.className = "add-visit-form__media-url";
+  mediaUrlInput.autocomplete = "off";
+  mediaUrlInput.value = options.formMediaUrl;
+  mediaUrlRow.appendChild(mediaUrlInput);
+  form.appendChild(mediaUrlRow);
+  const mediaUrlHint = document.createElement("p");
+  mediaUrlHint.className = "add-visit-form__media-url-hint";
+  mediaUrlHint.textContent =
+    "You can attach a link to media such as a picture collection or video from your trip.";
+  form.appendChild(mediaUrlHint);
+
+  const addBtnRow = document.createElement("div");
+  addBtnRow.className = "add-visit-form__add-row";
+  const addBtn = document.createElement("button");
+  addBtn.type = "submit";
+  addBtn.textContent = "Add";
+  addBtn.className = "add-visit-form__add-btn";
+  addBtn.disabled = true;
+  addBtnRow.appendChild(addBtn);
+  form.appendChild(addBtnRow);
+
   function updateValidationUI(): void {
-    const valid = isVisitDateValid(options.formVisitDate);
-    dateInput.classList.toggle("invalid", options.formVisitDate != null && !valid);
-    addBtn.disabled = !(options.selectedCountryCode && valid);
+    const dateValid = isVisitDateValid(options.formVisitDate);
+    const mediaUrlValid = isMediaUrlValid(options.formMediaUrl);
+    dateInput.classList.toggle("invalid", options.formVisitDate != null && !dateValid);
+    mediaUrlInput.classList.toggle("invalid", options.formMediaUrl.trim() !== "" && !mediaUrlValid);
+    addBtn.disabled = !(options.selectedCountryCode && dateValid && mediaUrlValid);
   }
+
+  mediaUrlInput.addEventListener("input", () => {
+    options.onFormMediaUrlChange(mediaUrlInput.value);
+    updateValidationUI();
+  });
+  mediaUrlInput.addEventListener("blur", updateValidationUI);
 
   const defaultDate = options.formVisitDate
     ? parseIsoToLocalDate(options.formVisitDate)
@@ -488,12 +531,14 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       return;
     }
     const visitedTime = isoDateToUnixSeconds(isoDate);
+    const mediaUrl = options.formMediaUrl.trim() || undefined;
     try {
-      const created = await api.putVisits(countryCode, visitedTime);
+      const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
       visits = [...visits, created];
       if (created.id) newVisitIds.add(created.id);
       options.onSelectCountry("");
       options.onFormVisitDateChange(new Date().toISOString().slice(0, 10));
+      options.onFormMediaUrlChange("");
       options.onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.responseCode === 401) {
@@ -545,6 +590,7 @@ export async function main(): Promise<void> {
   let selectedCountryCode = "";
   const todayIso = () => new Date().toISOString().slice(0, 10);
   let formVisitDate: string | null = todayIso();
+  let formMediaUrl = "";
 
   function onGoHome(): void {
     window.location.hash = "";
@@ -584,6 +630,11 @@ export async function main(): Promise<void> {
         formVisitDate,
         onFormVisitDateChange: (value: string | null) => {
           formVisitDate = value;
+          refreshAppContent();
+        },
+        formMediaUrl,
+        onFormMediaUrlChange: (value: string) => {
+          formMediaUrl = value;
           refreshAppContent();
         },
         shareToken,

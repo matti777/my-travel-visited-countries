@@ -38,7 +38,8 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `ID`: Database object ID, populated automatically when loading object.
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.
 - `VisitTime`: Time of the visit. Timestamp. Mandatory.
+- `MediaURL`: Media URL to photos etc. related to the visit. Optional.
 
 The CountryVisit collection in Firestore shall be nested under the corresponding User object.
 
-**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date.
+**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date. `MediaURL` must be a well-formed URL that can be used as a hyperlink on a web page.

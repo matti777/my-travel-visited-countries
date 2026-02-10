@@ -358,6 +358,20 @@ body {
   cursor: pointer;
 }
 
+.add-visit-form__add-row {
+  padding-top: 0.75rem;
+}
+
+.add-visit-form__add-row .add-visit-form__add-btn {
+  height: 2.25rem;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+  padding: 0.35rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .add-visit-form__row .add-visit-form__add-btn {
   margin-left: 0.25rem;
   height: 2.25rem;
@@ -466,6 +480,28 @@ body {
 }
 
 .add-visit-form__visit-time-hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.add-visit-form__row .add-visit-form__media-url {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.add-visit-form__media-url,
+.add-visit-form__media-url::placeholder {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.add-visit-form__media-url::placeholder {
+  color: #999;
+}
+
+.add-visit-form__media-url-hint {
   color: #666;
   font-size: 0.9rem;
   margin-top: 0.25rem;
