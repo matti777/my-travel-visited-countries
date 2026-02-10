@@ -31,14 +31,14 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `Name`: Full name of the country
 - `RegionCode`: Identifies the region using a 2-letter ISO 3166-1 Continent Code
 
-**Validation:** CountryCode should be a valid ISO 3166-1 alpha-2 code. RegionCode should be a valid continent code.
+**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `RegionCode` should be a valid continent code.
 
 ### CountryVisit model
 
 - `ID`: Database object ID, populated automatically when loading object.
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.
-- `VisitTime`: Time of the visit. Timestamp. Optional.
+- `VisitTime`: Time of the visit. Timestamp. Mandatory.
 
 The CountryVisit collection in Firestore shall be nested under the corresponding User object.
 
-**Validation:** CountryCode should be a valid ISO 3166-1 alpha-2 code.
+**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date.

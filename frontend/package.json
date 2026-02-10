@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "firebase": "^11.0.0",
+    "flatpickr": "^4.6.13",
     "notyf": "^3.10.0",
     "svgmap": "^2.19.2"
   }

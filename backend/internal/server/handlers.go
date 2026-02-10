@@ -133,7 +133,8 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 }
 
 // PutVisitsHandler handles PUT /visits.
-// Creates a new country visit for the current user. Body: { "countryCode": "FI", "visitedTime": null (optional) }.
+// Creates a new country visit for the current user. Body: { "countryCode": "FI", "visitedTime": <Unix seconds> }.
+// visitedTime is required and must be between 1900-01-01 and current date (inclusive).
 // Requires auth middleware.
 func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	ctx, span := tracing.New(ctx, "PutVisitsHandler")
@@ -149,7 +150,7 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 
 	var body struct {
 		CountryCode string `json:"countryCode"`
-		VisitedTime *int64 `json:"visitedTime,omitempty"` // Unix seconds; optional
+		VisitedTime *int64 `json:"visitedTime"` // Unix seconds; required
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid PUT /visits body", logging.Error, err)
@@ -164,14 +165,24 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid countryCode"})
 		return
 	}
+	if body.VisitedTime == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "visitedTime is required"})
+		return
+	}
+
+	t := time.Unix(*body.VisitedTime, 0).UTC()
+	minDate := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Now().UTC()
+	maxDate := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, time.UTC)
+	if t.Before(minDate) || t.After(maxDate) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "visitedTime must be between 1900-01-01 and current date"})
+		return
+	}
 
 	visit := &models.CountryVisit{
 		CountryCode: body.CountryCode,
+		VisitedTime: t,
 		UserID:      user.ID,
-	}
-	if body.VisitedTime != nil {
-		t := time.Unix(*body.VisitedTime, 0)
-		visit.VisitedTime = &t
 	}
 
 	created, err := s.db.CreateCountryVisit(ctx, visit)

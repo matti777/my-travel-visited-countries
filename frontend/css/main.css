@@ -441,6 +441,17 @@ body {
   line-height: 1.25;
 }
 
+/* Match country dropdown input font so placeholder matches "Select country" */
+.add-visit-form__date-input,
+.add-visit-form__date-input::placeholder {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.add-visit-form__date-input::placeholder {
+  color: #999;
+}
+
 .add-visit-form__visit-time-label {
   font-size: 0.95rem;
   color: #333;

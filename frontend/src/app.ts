@@ -1,8 +1,9 @@
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
-import { createMonthDropdown } from "Components/month-dropdown";
 import { createShareSection } from "Components/share-section";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
@@ -116,12 +117,8 @@ export interface RenderOptions {
   onRefresh: () => void;
   selectedCountryCode: string;
   onSelectCountry: (code: string) => void;
-  selectedMonth: number | null;
-  setSelectedMonth: (month: number | null) => void;
-  formYear: string;
-  formDay: string;
-  onFormYearChange: (value: string) => void;
-  onFormDayChange: (value: string) => void;
+  formVisitDate: string | null;
+  onFormVisitDateChange: (value: string | null) => void;
   shareToken: string | null;
   isSharedMode: boolean;
   sharedVisits: CountryVisit[];
@@ -369,9 +366,34 @@ function renderNormalVisitedSection(
   container.appendChild(visitedSection);
 }
 
+const VISIT_DATE_MIN = "1900-01-01";
+const MIN_DATE = new Date(1900, 0, 1);
+
+/** Parse YYYY-MM-DD to Date at local midnight (for flatpickr). */
+function parseIsoToLocalDate(isoDate: string): Date {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function isVisitDateValid(isoDate: string | null): boolean {
+  if (!isoDate) return false;
+  const d = new Date(isoDate + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return false;
+  const min = new Date(VISIT_DATE_MIN + "T00:00:00Z").getTime();
+  const now = new Date();
+  const max = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+  const t = d.getTime();
+  return t >= min && t <= max;
+}
+
+/** Unix seconds for start of day UTC from YYYY-MM-DD. */
+function isoDateToUnixSeconds(isoDate: string): number {
+  return Math.floor(new Date(isoDate + "T00:00:00Z").getTime() / 1000);
+}
+
 function renderAddVisitSection(container: HTMLElement, options: RenderOptions): void {
   const { countries: countriesList } = options;
-  const currentYear = new Date().getFullYear();
+  const today = new Date();
 
   const addSection = document.createElement("section");
   addSection.className = "app-section";
@@ -395,34 +417,15 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   );
   const visitTimeLabel = document.createElement("span");
   visitTimeLabel.className = "add-visit-form__visit-time-label";
-  visitTimeLabel.textContent = "Visit time";
+  visitTimeLabel.textContent = "Visit date";
   row.appendChild(visitTimeLabel);
-  const yearInput = document.createElement("input");
-  yearInput.type = "number";
-  yearInput.placeholder = "Year";
-  yearInput.min = "1900";
-  yearInput.max = String(currentYear);
-  yearInput.name = "year";
-  yearInput.className = "add-visit-form__year";
-  yearInput.autocomplete = "off";
-  yearInput.value = options.formYear ?? "";
-  row.appendChild(yearInput);
-  row.appendChild(
-    createMonthDropdown({
-      selectedMonth: options.selectedMonth,
-      onSelect: (month) => options.setSelectedMonth(month),
-    })
-  );
-  const dayInput = document.createElement("input");
-  dayInput.type = "number";
-  dayInput.placeholder = "Day";
-  dayInput.min = "1";
-  dayInput.max = "31";
-  dayInput.name = "day";
-  dayInput.autocomplete = "off";
-  dayInput.value = options.formDay ?? "";
-  dayInput.disabled = true;
-  row.appendChild(dayInput);
+  const dateInput = document.createElement("input");
+  dateInput.type = "text";
+  dateInput.placeholder = "Enter visit date";
+  dateInput.name = "visitDate";
+  dateInput.className = "add-visit-form__date-input";
+  dateInput.autocomplete = "off";
+  row.appendChild(dateInput);
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
   addBtn.textContent = "Add";
@@ -432,72 +435,46 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
-  visitTimeHint.textContent =
-    "Visit time is optional. You can enter only a year (we'll use January 1st), year and month (we'll use the 1st of that month), or a full date.";
+  visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
   form.appendChild(visitTimeHint);
 
-  function getDaysInMonth(year: number, month: number): number {
-    return new Date(year, month, 0).getDate();
-  }
-
-  function validateVisitTime(): { valid: boolean; yearInvalid?: boolean; dayInvalid?: boolean } {
-    const yStr = yearInput.value.trim();
-    const dayStr = dayInput.value.trim();
-    const y = yStr ? parseInt(yStr, 10) : NaN;
-    const day = dayStr ? parseInt(dayStr, 10) : NaN;
-    if (yStr && (isNaN(y) || y < 1900 || y > currentYear)) {
-      return { valid: false, yearInvalid: true };
-    }
-    if (dayStr) {
-      if (!yStr || isNaN(y)) return { valid: false, dayInvalid: true };
-      const monthVal = options.selectedMonth ?? 1;
-      if (isNaN(day) || day < 1 || day > getDaysInMonth(y, monthVal)) {
-        return { valid: false, dayInvalid: true };
-      }
-    }
-    return { valid: true };
-  }
-
   function updateValidationUI(): void {
-    const v = validateVisitTime();
-    yearInput.classList.toggle("invalid", !!v.yearInvalid);
-    dayInput.classList.toggle("invalid", !!v.dayInvalid);
-    dayInput.disabled = !(yearInput.value.trim() && options.selectedMonth != null);
-    addBtn.disabled = !(options.selectedCountryCode && v.valid);
+    const valid = isVisitDateValid(options.formVisitDate);
+    dateInput.classList.toggle("invalid", options.formVisitDate != null && !valid);
+    addBtn.disabled = !(options.selectedCountryCode && valid);
   }
 
-  yearInput.addEventListener("input", () => {
-    options.onFormYearChange(yearInput.value);
-    updateValidationUI();
+  const defaultDate = options.formVisitDate
+    ? parseIsoToLocalDate(options.formVisitDate)
+    : today;
+  const fp = flatpickr(dateInput, {
+    allowInput: true,
+    dateFormat: "M j, Y",
+    defaultDate,
+    minDate: MIN_DATE,
+    maxDate: today,
+    disable: [],
+    onChange: (selectedDates) => {
+      const d = selectedDates[0];
+      if (d) {
+        const iso =
+          d.getFullYear() +
+          "-" +
+          String(d.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(d.getDate()).padStart(2, "0");
+        options.onFormVisitDateChange(iso);
+      } else {
+        options.onFormVisitDateChange(null);
+      }
+      updateValidationUI();
+    },
   });
-  yearInput.addEventListener("keyup", () => {
-    options.onFormYearChange(yearInput.value);
-    updateValidationUI();
-  });
-  yearInput.addEventListener("change", () => {
-    options.onFormYearChange(yearInput.value);
-    updateValidationUI();
-    const y = parseInt(yearInput.value.trim(), 10);
-    if (!Number.isNaN(y) && y >= 1900 && y <= currentYear) {
-      options.onFormDayChange("1");
-      dayInput.value = "1";
-      options.setSelectedMonth(1);
-    }
-  });
-  yearInput.addEventListener("blur", updateValidationUI);
 
-  dayInput.addEventListener("input", () => {
-    options.onFormDayChange(dayInput.value);
-    updateValidationUI();
-  });
-  dayInput.addEventListener("keyup", () => {
-    options.onFormDayChange(dayInput.value);
-    updateValidationUI();
-  });
-  dayInput.addEventListener("change", () => {
-    options.onFormDayChange(dayInput.value);
-    updateValidationUI();
-  });
+  fp.setDate(defaultDate, false);
+  dateInput.value = fp.input.value ?? "";
+
+  updateValidationUI();
 
   addBtn.addEventListener("click", async () => {
     const countryCode = options.selectedCountryCode;
@@ -505,26 +482,19 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       errorToast("Please select a country");
       return;
     }
-    if (!validateVisitTime().valid) return;
-    let visitedTime: number | undefined;
-    const y = parseInt(yearInput.value.trim(), 10);
-    if (!Number.isNaN(y)) {
-      const month = options.selectedMonth ?? 1;
-      const day = parseInt(dayInput.value.trim(), 10) || 1;
-      visitedTime = Math.floor(new Date(Date.UTC(y, month - 1, day)).getTime() / 1000);
+    const isoDate = options.formVisitDate;
+    if (!isoDate || !isVisitDateValid(isoDate)) {
+      errorToast("Please select a valid visit date");
+      return;
     }
+    const visitedTime = isoDateToUnixSeconds(isoDate);
     try {
       const created = await api.putVisits(countryCode, visitedTime);
       visits = [...visits, created];
       if (created.id) newVisitIds.add(created.id);
       options.onSelectCountry("");
-      options.setSelectedMonth(null);
-      options.onFormYearChange("");
-      options.onFormDayChange("");
+      options.onFormVisitDateChange(new Date().toISOString().slice(0, 10));
       options.onRefresh();
-      yearInput.value = "";
-      dayInput.value = "";
-      updateValidationUI();
     } catch (err) {
       if (err instanceof ApiError && err.responseCode === 401) {
         signOut();
@@ -534,7 +504,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       }
     }
   });
-  updateValidationUI();
+
   addSection.appendChild(form);
   container.appendChild(addSection);
 }
@@ -573,9 +543,8 @@ export async function main(): Promise<void> {
   let isEditMode = false;
   let visitListTab: "alphabetical" | "byContinent" | "map" = "alphabetical";
   let selectedCountryCode = "";
-  let selectedMonth: number | null = null;
-  let formYear = "";
-  let formDay = "";
+  const todayIso = () => new Date().toISOString().slice(0, 10);
+  let formVisitDate: string | null = todayIso();
 
   function onGoHome(): void {
     window.location.hash = "";
@@ -612,18 +581,10 @@ export async function main(): Promise<void> {
           selectedCountryCode = code;
           refreshAppContent();
         },
-        selectedMonth,
-        setSelectedMonth: (month: number | null) => {
-          selectedMonth = month;
+        formVisitDate,
+        onFormVisitDateChange: (value: string | null) => {
+          formVisitDate = value;
           refreshAppContent();
-        },
-        formYear,
-        formDay,
-        onFormYearChange: (value: string) => {
-          formYear = value;
-        },
-        onFormDayChange: (value: string) => {
-          formDay = value;
         },
         shareToken,
         isSharedMode: !!getShareTokenFromHash(),
