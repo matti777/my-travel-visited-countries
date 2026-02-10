@@ -104,7 +104,11 @@ function groupVisitsByContinent(
   return sortedRegions.map(([regionCode, visits]) => ({
     regionCode,
     regionName: getRegionName(regionCode),
-    visits: [...visits].sort((a, b) => nameFor(a.countryCode).localeCompare(nameFor(b.countryCode))),
+    visits: [...visits].sort((a, b) => {
+      const nameCmp = nameFor(a.countryCode).localeCompare(nameFor(b.countryCode));
+      if (nameCmp !== 0) return nameCmp;
+      return (a.visitedTime ?? "").localeCompare(b.visitedTime ?? "");
+    }),
   }));
 }
 
@@ -219,20 +223,32 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     grid: HTMLElement,
     visit: CountryVisit,
     name: string,
-    withEdit: boolean
+    withEdit: boolean,
+    showVisitTimeAlways?: boolean
   ): void {
     const cellRef: { current: HTMLElement | null } = { current: null };
-    const cellOptions =
-      withEdit && visit.id && onRefresh
-        ? {
-            visitTimeLabel: formatVisitTime(visit.visitedTime),
-            onDelete: () => {
-              if (cellRef.current) handleDeleteVisit(visit, cellRef.current, onRefresh);
-            },
-          }
-        : undefined;
+    const showVisitTime = showVisitTimeAlways || (withEdit && visit.id && onRefresh);
+    const cellOptions = showVisitTime
+      ? {
+          visitTimeLabel: formatVisitTime(visit.visitedTime),
+          onDelete:
+            withEdit && visit.id && onRefresh
+              ? () => {
+                  if (cellRef.current) handleDeleteVisit(visit, cellRef.current, onRefresh);
+                }
+              : undefined,
+        }
+      : undefined;
     const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
     cellRef.current = cell;
+    if (visit.mediaUrl && showVisitTimeAlways) {
+      cell.classList.add("country-cell--has-media");
+      attachTooltip(cell, "Click to view attached media");
+      cell.addEventListener("click", (e) => {
+        if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
+        window.open(visit.mediaUrl!, "_blank");
+      });
+    }
     const isNew = visit.id != null && newVisitIds.has(visit.id);
     if (isNew) {
       cell.classList.add("cell-fade-in");
@@ -265,14 +281,15 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     section.className = "visit-list-by-continent__section";
     const subTitle = document.createElement("h3");
     subTitle.className = "visit-list-by-continent__title";
-    subTitle.textContent = `${regionName} (${groupVisits.length})`;
+    const countryCount = new Set(groupVisits.map((v) => v.countryCode)).size;
+    subTitle.textContent = `${regionName} (${countryCount})`;
     section.appendChild(subTitle);
     const grid = document.createElement("div");
     grid.className = "visited-grid visited-grid--enter";
     requestAnimationFrame(() => grid.classList.add("visible"));
     for (const visit of groupVisits) {
       const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-      addCellToGrid(grid, visit, name, isEditMode);
+      addCellToGrid(grid, visit, name, isEditMode, true);
     }
     section.appendChild(grid);
     wrapper.appendChild(section);
@@ -287,7 +304,10 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   const title = document.createElement("h2");
   title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
   visitedSection.appendChild(title);
-  const displayList = sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
+  const displayList =
+    options.visitListTab === "byContinent"
+      ? sharedVisitsList
+      : sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
   fillVisitListContent({
@@ -573,7 +593,10 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     return;
   }
 
-  const displayList = isEditMode ? visitsList : uniqueVisitsByCountry(visitsList);
+  const displayList =
+    isEditMode || options.visitListTab === "byContinent"
+      ? visitsList
+      : uniqueVisitsByCountry(visitsList);
   renderNormalVisitedSection(container, options, displayList);
   renderAddVisitSection(container, options);
   container.appendChild(createShareSection(options.shareToken));

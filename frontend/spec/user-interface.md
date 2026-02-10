@@ -62,11 +62,11 @@ Edit mode will not be available when in shared visit list routing mode; instead,
 
 **Tab 2:** Country lists by continent
 
-Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding.
+Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding. Unlike the alphabetical list, here the countries listed are not unique, but instead each visit gets its own country cell. The visits within a country are sorted by their `VisitTime`. Here the country cells will display the time of the visit, in a similar fashion as in the edit mode. A tooltip for each cell shall read "Click to view attached media" IF `MediaURL` is present. If such a cell is clicked, the media URL should be opened in a new tab. For such a cell, the visit time text should look like a link to indicate the presence of the media url.
 
 **Tab 3:** Countries plotted on map
 
-Displays a world map with the visited countries highlighted. The world map should be a free, ready made 3rd party eg from Google which provides this functionality.
+Displays a world map with the visited countries highlighted. The world map should be a free, ready made 3rd party eg from Google which provides this functionality. If a visit listed here has a `MediaURL` set, that visit should look like a link and have a tooltip about the link like in Tab 2. It also needs to be clickable and open the link in a new tab.
 
 In this mode the Edit button is disabled.
 

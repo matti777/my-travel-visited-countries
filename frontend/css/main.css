@@ -134,6 +134,15 @@ body {
   gap: 0.15rem;
 }
 
+.country-cell--has-media {
+  cursor: pointer;
+}
+
+.country-cell--has-media .country-cell__time {
+  color: var(--color-turquoise);
+  text-decoration: underline;
+}
+
 .country-cell--edit .country-cell__name {
   flex: 0 1 auto;
   min-width: 0;
@@ -325,6 +334,12 @@ body {
 /* Ocean: transparent so page background shows (override svgMap default #d9ecff). */
 .visit-list-map .svgMap-map-wrapper {
   background-color: transparent;
+}
+
+.visit-map-tooltip__visit-link {
+  color: var(--color-turquoise);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .visit-list-by-continent {

@@ -91,11 +91,26 @@ export function createVisitMap(
         const content = document.createElement("div");
         content.className = "svgMap-tooltip-content";
         const list = visitsByCountry.get(countryID) ?? [];
-        const lines: string[] = [`Visits: ${list.length}`];
+        const visitsLabel = document.createElement("div");
+        visitsLabel.textContent = `Visits: ${list.length}`;
+        content.appendChild(visitsLabel);
         for (const v of list) {
-          lines.push(`- ${formatVisitTime(v.visitedTime)}`);
+          const line = document.createElement("div");
+          if (v.mediaUrl) {
+            line.appendChild(document.createTextNode("- "));
+            const link = document.createElement("a");
+            link.href = v.mediaUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.title = "Click to view attached media";
+            link.className = "visit-map-tooltip__visit-link";
+            link.textContent = formatVisitTime(v.visitedTime);
+            line.appendChild(link);
+          } else {
+            line.textContent = `- ${formatVisitTime(v.visitedTime)}`;
+          }
+          content.appendChild(line);
         }
-        content.innerHTML = lines.join("<br>");
         wrapper.appendChild(content);
         return wrapper;
       },
