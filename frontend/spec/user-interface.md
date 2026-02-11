@@ -68,6 +68,15 @@ Similar listing to what Tab 1 describes but the countries are listed under 'subt
 
 Displays a world map with the visited countries highlighted. The world map should be a free, ready made 3rd party eg from Google which provides this functionality. If a visit listed here has a `MediaURL` set, that visit should look like a link and have a tooltip about the link like in Tab 2. It also needs to be clickable and open the link in a new tab.
 
+Each visited country fill color should depend on the continent they are on:
+
+- Europe: light blue
+- North America: light cyan
+- South America: light green
+- Africa: light red
+- Asia: Light yellow
+- Oceania: Turquoise
+
 In this mode the Edit button is disabled.
 
 ---

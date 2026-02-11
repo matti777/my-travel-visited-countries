@@ -3,10 +3,23 @@ import "svgmap/style";
 import type { Country } from "../../types/country";
 import type { CountryVisit } from "../../types/visit";
 
-/** Same turquoise as button color (--color-turquoise). */
-const COLOR_VISITED = "#40e0d0";
+/** Fill colors per continent for visited countries (user-interface.md). */
+const REGION_CODE_TO_COLOR: Record<string, string> = {
+  EU: "#add8e6", /* Europe: light blue */
+  NA: "#e0ffff", /* North America: light cyan */
+  SA: "#90ee90", /* South America: light green */
+  AF: "#f08080", /* Africa: light red */
+  AS: "#fffacd", /* Asia: light yellow */
+  OC: "#40e0d0", /* Oceania: turquoise */
+};
+/** Fallback for Antarctica or unknown region. */
+const COLOR_VISITED_DEFAULT = "#40e0d0";
 /** Dark gray for unvisited countries so they stand out from ocean/background. */
 const COLOR_NO_DATA = "#4a4a4a";
+
+function getFillColorForRegion(regionCode: string): string {
+  return REGION_CODE_TO_COLOR[regionCode] ?? COLOR_VISITED_DEFAULT;
+}
 
 function formatVisitTime(visitedTime?: string): string {
   if (!visitedTime) return "—";
@@ -50,9 +63,18 @@ export function createVisitMap(
     visitsByCountry.get(code)!.push(v);
   }
 
+  const countryByCode = new Map<string, Country>();
+  for (const c of countries) {
+    countryByCode.set(c.countryCode.toUpperCase(), c);
+  }
+
   const values: Record<string, { visited: number; color: string }> = {};
   for (const code of countryCodes) {
-    values[code.toUpperCase()] = { visited: 1, color: COLOR_VISITED };
+    const upper = code.toUpperCase();
+    const country = countryByCode.get(upper);
+    const regionCode = country?.regionCode ?? "";
+    const fillColor = getFillColorForRegion(regionCode);
+    values[upper] = { visited: 1, color: fillColor };
   }
 
   const countryNames: Record<string, string> = {};
@@ -124,7 +146,7 @@ export function createVisitMap(
         values,
         colorNoData: COLOR_NO_DATA,
         colorMin: COLOR_NO_DATA,
-        colorMax: COLOR_VISITED,
+        colorMax: COLOR_VISITED_DEFAULT,
       },
     });
   });
