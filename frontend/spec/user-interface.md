@@ -101,3 +101,11 @@ This section holds the controls to add a new visited country.
 If not logged in, this section is not visible.
 
 This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site address + HTML fragment value of "#s=<share-token>" where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
+
+---
+
+If logged in, this section is not visible.
+
+For users who have not logged in, the basic view should present a welcome message with a title and a descriptive text chapter or two about the service. There should be travel related (sceneries from beaches, palm trees, mountains, coral reefs, ancient ruins etc.) images on the page. The images should look like slightly faded photographs and have irregular edges with transparency.
+
+Centered on the bottom should be a large "Login" button whose functionality must copy the one in the top bar.

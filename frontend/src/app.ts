@@ -132,6 +132,7 @@ export interface RenderOptions {
   onGoHome: () => void;
   visitListTab: "alphabetical" | "byContinent" | "map";
   onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => void;
+  onLogin: () => void;
 }
 
 async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
@@ -577,6 +578,85 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   container.appendChild(addSection);
 }
 
+/** 4 Polaroid images: [left top, left bottom, right top, right bottom] */
+const WELCOME_POLAROID_IMAGES = [
+  "welcome-polaroid-1.jpg",
+  "welcome-polaroid-2.jpg",
+  "welcome-polaroid-3.jpg",
+  "welcome-polaroid-4.jpg",
+];
+
+/** Rotation in degrees for fridge-pin look: left top, left bottom, right top, right bottom */
+const WELCOME_POLAROID_ROTATIONS = ["-4deg", "3deg", "2deg", "-5deg"];
+
+function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
+  const wrap = document.createElement("div");
+  wrap.className = "welcome-view";
+
+  const inner = document.createElement("div");
+  inner.className = "welcome-view__inner";
+
+  const leftSide = document.createElement("div");
+  leftSide.className = "welcome-view__side welcome-view__side--left";
+  for (let i = 0; i < 2; i++) {
+    const polaroid = document.createElement("div");
+    polaroid.className = "welcome-view__polaroid";
+    polaroid.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
+    const img = document.createElement("img");
+    img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
+    img.alt = "";
+    img.loading = "lazy";
+    polaroid.appendChild(img);
+    leftSide.appendChild(polaroid);
+  }
+  inner.appendChild(leftSide);
+
+  const content = document.createElement("div");
+  content.className = "welcome-view__content";
+  const title = document.createElement("h2");
+  title.className = "welcome-view__title";
+  title.textContent = "Welcome to My Countries";
+  content.appendChild(title);
+  const p1 = document.createElement("p");
+  p1.className = "welcome-view__text";
+  p1.textContent =
+    "Track the countries you have visited and explore your travel history. View your list alphabetically, by continent, or on a world map. Add visits with optional dates and attach links to photos or videos from your trips.";
+  content.appendChild(p1);
+  const p2 = document.createElement("p");
+  p2.className = "welcome-view__text";
+  p2.textContent =
+    "You can share a read-only link so friends can see your country list. Sign in to get started.";
+  content.appendChild(p2);
+  const loginWrap = document.createElement("div");
+  loginWrap.className = "welcome-view__login-wrap";
+  const loginBtn = document.createElement("button");
+  loginBtn.type = "button";
+  loginBtn.className = "welcome-view__login-btn";
+  loginBtn.textContent = "Login";
+  loginBtn.addEventListener("click", onLogin);
+  loginWrap.appendChild(loginBtn);
+  content.appendChild(loginWrap);
+  inner.appendChild(content);
+
+  const rightSide = document.createElement("div");
+  rightSide.className = "welcome-view__side welcome-view__side--right";
+  for (let i = 2; i < 4; i++) {
+    const polaroid = document.createElement("div");
+    polaroid.className = "welcome-view__polaroid";
+    polaroid.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
+    const img = document.createElement("img");
+    img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
+    img.alt = "";
+    img.loading = "lazy";
+    polaroid.appendChild(img);
+    rightSide.appendChild(polaroid);
+  }
+  inner.appendChild(rightSide);
+
+  wrap.appendChild(inner);
+  container.appendChild(wrap);
+}
+
 /**
  * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when #s=token.
  */
@@ -589,10 +669,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     return;
   }
   if (!user) {
-    const p = document.createElement("p");
-    p.textContent = "Sign in to see and add your visited countries.";
-    p.className = "visited-empty";
-    container.appendChild(p);
+    renderWelcomeView(container, options.onLogin);
     return;
   }
 
@@ -679,6 +756,7 @@ export async function main(): Promise<void> {
         visitListTab = tab;
         refreshAppContent();
       },
+      onLogin,
     };
   }
 

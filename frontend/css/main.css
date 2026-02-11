@@ -48,6 +48,101 @@ body {
   padding-top: 2.5rem;
 }
 
+/* Welcome view (not logged in) – centered, Polaroids on sides */
+.welcome-view {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+  min-height: 85vh;
+}
+
+.welcome-view__inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  justify-content: center;
+  column-gap: 4rem;
+  row-gap: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.welcome-view__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.welcome-view__side--left {
+  justify-self: end;
+}
+
+.welcome-view__content {
+  min-width: 0;
+  max-width: 400px;
+  justify-self: center;
+}
+
+.welcome-view__side--right {
+  justify-self: start;
+}
+
+/* Polaroid-style photo: white border, shadow, rotation applied inline */
+.welcome-view__polaroid {
+  padding: 0.5rem 0.5rem 1.75rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform var(--animation-duration);
+}
+
+.welcome-view__polaroid:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.welcome-view__polaroid img {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+}
+
+.welcome-view__title {
+  margin: 0 0 1rem;
+  color: #333;
+  line-height: 1.2;
+  font-size: 1.5rem;
+}
+
+.welcome-view__text {
+  margin: 0 0 1rem;
+  line-height: 1.6;
+  color: #444;
+}
+
+.welcome-view__login-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.welcome-view__login-btn {
+  padding: 0.75rem 2.5rem;
+  font-size: 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity var(--animation-duration), transform var(--animation-duration);
+}
+
+.welcome-view__login-btn:hover {
+  opacity: 0.95;
+}
+
 .app-section {
   margin-bottom: 2rem;
 }
