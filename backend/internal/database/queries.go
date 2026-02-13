@@ -14,7 +14,9 @@ import (
 )
 
 var (
-	ErrVisitNotFound = errors.New("visit not found")
+	ErrVisitNotFound        = errors.New("visit not found")
+	ErrFriendAlreadyExists  = errors.New("friend already exists")
+	ErrFriendNotFound       = errors.New("friend not found")
 )
 
 // GetCountryVisitsByUser retrieves all country visits for a user. userID is the auth User ID (Firestore document ID).
@@ -171,6 +173,91 @@ func (c *Client) DeleteCountryVisit(ctx context.Context, visitID string, userID 
 	_, err = ref.Delete(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete country visit: %w", err)
+	}
+	return nil
+}
+
+// GetFriendsByUser retrieves all friends for a user from users/{userID}/friends.
+// Returns a nil slice (not error) when the user has no friends.
+func (c *Client) GetFriendsByUser(ctx context.Context, userID string) ([]models.Friend, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("userID is required")
+	}
+	iter := c.Collection("users").Doc(userID).Collection("friends").Documents(ctx)
+	defer iter.Stop()
+
+	var friends []models.Friend
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate friends: %w", err)
+		}
+		var f models.Friend
+		if err := doc.DataTo(&f); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal friend: %w", err)
+		}
+		f.ID = doc.Ref.ID
+		friends = append(friends, f)
+	}
+	return friends, nil
+}
+
+// AddFriend adds a friend by ShareToken and Name under users/{userID}/friends.
+// Returns ErrFriendAlreadyExists if a friend with that ShareToken already exists.
+func (c *Client) AddFriend(ctx context.Context, userID string, shareToken, name string) (models.Friend, error) {
+	if userID == "" || shareToken == "" || name == "" {
+		return models.Friend{}, fmt.Errorf("userID, shareToken and name are required")
+	}
+	coll := c.Collection("users").Doc(userID).Collection("friends")
+	iter := coll.Where("ShareToken", "==", shareToken).Limit(1).Documents(ctx)
+	docSnap, err := iter.Next()
+	iter.Stop()
+	if err != nil && err != iterator.Done {
+		return models.Friend{}, fmt.Errorf("failed to check existing friend: %w", err)
+	}
+	if err == nil && docSnap.Exists() {
+		return models.Friend{}, ErrFriendAlreadyExists
+	}
+
+	ref := coll.NewDoc()
+	_, err = ref.Set(ctx, map[string]interface{}{
+		"ShareToken": shareToken,
+		"Name":       name,
+	})
+	if err != nil {
+		return models.Friend{}, fmt.Errorf("failed to create friend: %w", err)
+	}
+	return models.Friend{ID: ref.ID, ShareToken: shareToken, Name: name}, nil
+}
+
+// DeleteFriendByShareToken deletes a friend by ShareToken from users/{userID}/friends.
+// Returns ErrFriendNotFound when no document with that ShareToken exists.
+func (c *Client) DeleteFriendByShareToken(ctx context.Context, userID, shareToken string) error {
+	if userID == "" || shareToken == "" {
+		return fmt.Errorf("userID and shareToken are required")
+	}
+	coll := c.Collection("users").Doc(userID).Collection("friends")
+	iter := coll.Where("ShareToken", "==", shareToken).Limit(1).Documents(ctx)
+	docSnap, err := iter.Next()
+	if err == iterator.Done {
+		iter.Stop()
+		return ErrFriendNotFound
+	}
+	if err != nil {
+		iter.Stop()
+		return fmt.Errorf("failed to find friend: %w", err)
+	}
+	if !docSnap.Exists() {
+		iter.Stop()
+		return ErrFriendNotFound
+	}
+	iter.Stop()
+	_, err = docSnap.Ref.Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete friend: %w", err)
 	}
 	return nil
 }

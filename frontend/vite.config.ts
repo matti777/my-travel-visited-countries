@@ -23,6 +23,7 @@ export default defineConfig({
       "/login": { target: "http://localhost:8080", changeOrigin: true },
       "/share": { target: "http://localhost:8080", changeOrigin: true },
       "/visits": { target: "http://localhost:8080", changeOrigin: true },
+      "/friends": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
   build: {

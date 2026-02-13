@@ -36,6 +36,9 @@ type Database interface {
 	EnsureUser(ctx context.Context, user *models.User) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
 	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error
+	GetFriendsByUser(ctx context.Context, userID string) ([]models.Friend, error)
+	AddFriend(ctx context.Context, userID string, shareToken, name string) (models.Friend, error)
+	DeleteFriendByShareToken(ctx context.Context, userID, shareToken string) error
 }
 
 // NewServer creates a new server instance

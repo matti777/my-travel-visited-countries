@@ -43,3 +43,11 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 The CountryVisit collection in Firestore shall be nested under the corresponding User object.
 
 **Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date. `MediaURL` must be a well-formed URL that can be used as a hyperlink on a web page.
+
+### Friend model
+
+Friend models represent other users in the system that have been added to a user as friends. They will be connected using the added friend's `ShareToken`. Friend objects should be stored in `friends` collection under the User.
+
+- `ID`: Database object ID, populated automatically when loading object.
+- `ShareToken`: ShareToken of the friend user
+- `Name`: Name of the friend user; duplicated here for faster access.

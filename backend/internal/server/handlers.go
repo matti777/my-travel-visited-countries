@@ -35,8 +35,14 @@ func (s *Server) PostLoginHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
 		return
 	}
+	friends, err := s.db.GetFriendsByUser(ctx, user.ID)
+	if err != nil {
+		log.Error("POST /login: GetFriendsByUser failed", logging.UserID, user.UserID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		return
+	}
 	log.Info("POST /login succeeded", logging.UserID, user.UserID)
-	c.JSON(http.StatusOK, gin.H{})
+	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
 
 // GetCountriesHandler handles GET /countries.
@@ -230,5 +236,88 @@ func (s *Server) DeleteVisitHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete visit"})
 		return
 	}
+	c.Status(http.StatusNoContent)
+}
+
+// PostFriendsHandler handles POST /friends.
+// Adds a friend by ShareToken and Name. Returns 201 with the created friend, 409 if already added, 404 if share token invalid.
+func (s *Server) PostFriendsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PostFriendsHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("POST /friends: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	var body struct {
+		ShareToken string `json:"shareToken"`
+		Name       string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn("Invalid POST /friends body", logging.Error, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if body.ShareToken == "" || body.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "shareToken and name are required"})
+		return
+	}
+	// Validate that the share token corresponds to an existing user
+	shareUser, err := s.db.GetUserByShareToken(ctx, body.ShareToken)
+	if err != nil {
+		log.Error("GetUserByShareToken failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to validate share token"})
+		return
+	}
+	if shareUser == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "share not found"})
+		return
+	}
+	friend, err := s.db.AddFriend(ctx, user.ID, body.ShareToken, body.Name)
+	if err != nil {
+		if errors.Is(err, database.ErrFriendAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "friend already added"})
+			return
+		}
+		log.Error("AddFriend failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add friend"})
+		return
+	}
+	log.Info("Added friend", logging.UserID, user.ID, "shareToken", body.ShareToken)
+	c.JSON(http.StatusCreated, friend)
+}
+
+// DeleteFriendHandler handles DELETE /friends/:shareToken.
+// Removes the friend with the given ShareToken. Returns 204 on success, 404 if not found.
+func (s *Server) DeleteFriendHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "DeleteFriendHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("DELETE /friends: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	shareToken := c.Param("shareToken")
+	if shareToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "shareToken is required"})
+		return
+	}
+	err := s.db.DeleteFriendByShareToken(ctx, user.ID, shareToken)
+	if err != nil {
+		if errors.Is(err, database.ErrFriendNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		log.Error("DeleteFriendByShareToken failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete friend"})
+		return
+	}
+	log.Info("Deleted friend", logging.UserID, user.ID, "shareToken", shareToken)
 	c.Status(http.StatusNoContent)
 }

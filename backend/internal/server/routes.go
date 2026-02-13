@@ -31,6 +31,12 @@ func (s *Server) RegisterRoutes() {
 		protected.DELETE("/visits/:id", func(c *gin.Context) {
 			s.DeleteVisitHandler(c.Request.Context(), c)
 		})
+		protected.POST("/friends", func(c *gin.Context) {
+			s.PostFriendsHandler(c.Request.Context(), c)
+		})
+		protected.DELETE("/friends/:shareToken", func(c *gin.Context) {
+			s.DeleteFriendHandler(c.Request.Context(), c)
+		})
 	}
 
 	// Static frontend: serve embedded files; unknown paths serve index.html (SPA fallback)
