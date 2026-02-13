@@ -37,7 +37,7 @@ type Database interface {
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
 	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error
 	GetFriendsByUser(ctx context.Context, userID string) ([]models.Friend, error)
-	AddFriend(ctx context.Context, userID string, shareToken, name string) (models.Friend, error)
+	AddFriend(ctx context.Context, userID string, shareToken, name, imageURL string) (models.Friend, error)
 	DeleteFriendByShareToken(ctx context.Context, userID, shareToken string) error
 }
 

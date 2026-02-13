@@ -14,7 +14,7 @@ GET /countries: Returns all the available countries as a list of Country objects
 
 ### Login
 
-POST /login: Frontend calls this right after login actions complete. Only called when user has initiated login by pressing the "Login" button and the login sequence towards Firebase Authentication has completed. The backend checks for existing user by that `UserID` and creates one if not found, allocating the `ShareToken` at the same time. No other request shall read/write to User model to avoid unnecessary database access unless otherwise stated. Response shall also contain the friends list of the user (see `Friend` model in @data-models.md). **Authenticated**
+POST /login: Frontend calls this right after login actions complete. Only called when user has initiated login by pressing the "Login" button and the login sequence towards Firebase Authentication has completed. The backend checks for existing user by that `UserID` and creates one if not found, allocating the `ShareToken` at the same time. ImageURL is extracted from the authentication token and stored on the User document (on creation). No other request shall read/write to User model to avoid unnecessary database access unless otherwise stated. The response is success-only (e.g. empty JSON body); the friends list is obtained via GET /friends. **Authenticated**
 
 ### List country visits for current user
 
@@ -30,11 +30,15 @@ DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to del
 
 ### List country visits for share token
 
-GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. The response contains both the visits as well as the user's name for UI purposes. **Unauthenticated**.
+GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. The response contains the visits as well as the user's name and image URL for UI purposes. **Unauthenticated**.
+
+### List friends
+
+GET /friends: Returns the list of Friend objects for the current user. Response body is a list of Friend objects in camelCase (e.g. `{ "friends": [ { "shareToken", "name", "imageUrl" }, ... ] }` as per the Friend model in @data-models.md). **Authenticated**.
 
 ### Add friend
 
-POST /friends: Adds a new friend user by their `ShareToken` if such friend does not yet exist for the current user. Stores the friend user's `Name` as well. The request will contain `ShareToken` and `Name`, obtained from an earlier call to the share endpoint. **Authenticated**.
+POST /friends: Adds a new friend user by their `ShareToken` if such friend does not yet exist for the current user. The backend stores the friend user's `Name` and `ImageURL` (in addition to `ShareToken`) when creating the Friend. The request body contains `shareToken`, `name`, and `imageUrl`, e.g. obtained from an earlier call to the share endpoint (GET /share/visits). **Authenticated**.
 
 ### Delete friend
 

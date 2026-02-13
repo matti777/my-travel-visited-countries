@@ -10,6 +10,7 @@ import { attachTooltip } from "Components/tooltip";
 import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
+import type { Friend } from "./types/friend";
 import type { CountryVisit } from "./types/visit";
 import type { User } from "firebase/auth";
 
@@ -21,6 +22,9 @@ export let visits: CountryVisit[] = [];
 
 /** Share token from GET /visits response; used for Share URL when logged in. */
 let shareToken: string | null = null;
+
+/** Friends list from GET /friends, filled when user is authenticated (on load and on login). */
+let friends: Friend[] = [];
 
 /** Shared visit list when URL has #s=<share-token>. */
 let sharedVisits: CountryVisit[] = [];
@@ -807,26 +811,36 @@ export async function main(): Promise<void> {
           sessionStorage.removeItem("login:initiated");
         }
         if (!getShareTokenFromHash()) {
-          try {
-            const result = await api.getVisits();
-            visits = result.visits;
-            shareToken = result.shareToken ?? null;
-          } catch (err) {
-            console.error("Failed to load visits", err);
+          const [visitsSettled, friendsSettled] = await Promise.allSettled([
+            api.getVisits(),
+            api.getFriends(),
+          ]);
+          if (visitsSettled.status === "fulfilled") {
+            visits = visitsSettled.value.visits;
+            shareToken = visitsSettled.value.shareToken ?? null;
+          } else {
             visits = [];
             shareToken = null;
-            if (err instanceof ApiError && err.responseCode === 401) {
+            console.error("Failed to load visits", visitsSettled.reason);
+            if (visitsSettled.reason instanceof ApiError && visitsSettled.reason.responseCode === 401) {
               signOut();
               errorToast("Session expired");
             } else {
               errorToast("Failed to load visits");
             }
           }
+          if (friendsSettled.status === "fulfilled") {
+            friends = friendsSettled.value.friends;
+          } else {
+            friends = [];
+            console.error("Failed to load friends", friendsSettled.reason);
+          }
         }
       } else {
         api.setAuthToken(null);
         visits = [];
         shareToken = null;
+        friends = [];
       }
       const showHome = !!getShareTokenFromHash();
       renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, onGoHome);

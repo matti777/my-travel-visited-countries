@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"cloud.google.com/go/firestore"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
@@ -46,7 +47,7 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 	return visits, nil
 }
 
-// EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email.
+// EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email, ImageURL. When user already exists, updates ImageURL from the token so avatar changes are reflected.
 // Only POST /login should call this; auth middleware does not.
 func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	if user == nil || user.ID == "" {
@@ -57,11 +58,15 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			shareToken := uuid.New().String()
-			_, err = ref.Set(ctx, map[string]interface{}{
+			doc := map[string]interface{}{
 				"ShareToken": shareToken,
 				"Name":       user.Name,
 				"Email":      user.Email,
-			})
+			}
+			if user.ImageURL != "" {
+				doc["ImageURL"] = user.ImageURL
+			}
+			_, err = ref.Set(ctx, doc)
 			if err != nil {
 				return fmt.Errorf("failed to create user: %w", err)
 			}
@@ -69,7 +74,13 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 		}
 		return fmt.Errorf("failed to check user: %w", err)
 	}
-	// Doc exists
+	// Doc exists: always update ImageURL from token so avatar changes are reflected
+	_, err = ref.Update(ctx, []firestore.Update{
+		{Path: "ImageURL", Value: user.ImageURL},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update user ImageURL: %w", err)
+	}
 	return nil
 }
 
@@ -205,9 +216,9 @@ func (c *Client) GetFriendsByUser(ctx context.Context, userID string) ([]models.
 	return friends, nil
 }
 
-// AddFriend adds a friend by ShareToken and Name under users/{userID}/friends.
+// AddFriend adds a friend by ShareToken, Name, and ImageURL under users/{userID}/friends.
 // Returns ErrFriendAlreadyExists if a friend with that ShareToken already exists.
-func (c *Client) AddFriend(ctx context.Context, userID string, shareToken, name string) (models.Friend, error) {
+func (c *Client) AddFriend(ctx context.Context, userID string, shareToken, name, imageURL string) (models.Friend, error) {
 	if userID == "" || shareToken == "" || name == "" {
 		return models.Friend{}, fmt.Errorf("userID, shareToken and name are required")
 	}
@@ -223,14 +234,18 @@ func (c *Client) AddFriend(ctx context.Context, userID string, shareToken, name 
 	}
 
 	ref := coll.NewDoc()
-	_, err = ref.Set(ctx, map[string]interface{}{
+	doc := map[string]interface{}{
 		"ShareToken": shareToken,
 		"Name":       name,
-	})
+	}
+	if imageURL != "" {
+		doc["ImageURL"] = imageURL
+	}
+	_, err = ref.Set(ctx, doc)
 	if err != nil {
 		return models.Friend{}, fmt.Errorf("failed to create friend: %w", err)
 	}
-	return models.Friend{ID: ref.ID, ShareToken: shareToken, Name: name}, nil
+	return models.Friend{ID: ref.ID, ShareToken: shareToken, Name: name, ImageURL: imageURL}, nil
 }
 
 // DeleteFriendByShareToken deletes a friend by ShareToken from users/{userID}/friends.

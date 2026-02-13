@@ -20,9 +20,10 @@ const firebaseIDTokenJWKSURL = "https://www.googleapis.com/service_accounts/v1/j
 
 // Claims holds verified Firebase ID token claims needed to build a User.
 type Claims struct {
-	Sub   string // Firebase UID
-	Name  string
-	Email string
+	Sub     string // Firebase UID
+	Name    string
+	Email   string
+	Picture string // Profile photo URL (Firebase "picture" claim)
 }
 
 // Authenticator verifies Firebase ID tokens using JWKS with a 1-hour cache.
@@ -113,6 +114,11 @@ func (a *Authenticator) VerifyIDToken(ctx context.Context, idToken string) (*Cla
 			claims.Email = s
 		}
 	}
+	if v, ok := tok.Get("picture"); ok {
+		if s, ok := v.(string); ok {
+			claims.Picture = s
+		}
+	}
 	return claims, nil
 }
 
@@ -122,9 +128,10 @@ func UserFromClaims(claims *Claims) *models.User {
 		return nil
 	}
 	return &models.User{
-		ID:     claims.Sub,
-		UserID: claims.Sub,
-		Name:   claims.Name,
-		Email:  claims.Email,
+		ID:       claims.Sub,
+		UserID:   claims.Sub,
+		Name:     claims.Name,
+		Email:    claims.Email,
+		ImageURL: claims.Picture,
 	}
 }

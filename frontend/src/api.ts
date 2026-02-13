@@ -1,5 +1,6 @@
 import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
+import type { Friend, FriendsResponse } from "./types/friend";
 import type { CountryVisit, ShareVisitsResponse, VisitsResponse } from "./types/visit";
 
 
@@ -88,6 +89,18 @@ export default class Api {
       visits: response?.visits ?? [],
       shareToken: response?.shareToken,
     };
+  }
+
+  async getFriends(): Promise<{ friends: Friend[] }> {
+    const token = this.getAuthToken();
+    if (!token) {
+      return { friends: [] };
+    }
+    const response = (await this.performRequest("/friends", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })) as FriendsResponse;
+    return { friends: response?.friends ?? [] };
   }
 
   async getShareVisits(shareToken: string): Promise<ShareVisitsResponse> {

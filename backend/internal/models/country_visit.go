@@ -55,4 +55,5 @@ type CountryVisitResponse struct {
 type ShareVisitsResponse struct {
 	Visits   []CountryVisit `json:"visits"`
 	UserName string         `json:"userName"`
+	ImageUrl string         `json:"imageUrl"`
 }

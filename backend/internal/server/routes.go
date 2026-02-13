@@ -31,6 +31,9 @@ func (s *Server) RegisterRoutes() {
 		protected.DELETE("/visits/:id", func(c *gin.Context) {
 			s.DeleteVisitHandler(c.Request.Context(), c)
 		})
+		protected.GET("/friends", func(c *gin.Context) {
+			s.GetFriendsHandler(c.Request.Context(), c)
+		})
 		protected.POST("/friends", func(c *gin.Context) {
 			s.PostFriendsHandler(c.Request.Context(), c)
 		})

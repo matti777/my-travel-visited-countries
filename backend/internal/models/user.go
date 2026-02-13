@@ -17,4 +17,7 @@ type User struct {
 
 	// Email is the user email from the token.
 	Email string `firestore:"Email" json:"-"`
+
+	// ImageURL is the user's profile image URL from the token; stored at login.
+	ImageURL string `firestore:"ImageURL" json:"-"`
 }

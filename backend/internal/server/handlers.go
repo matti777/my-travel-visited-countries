@@ -35,14 +35,8 @@ func (s *Server) PostLoginHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
 		return
 	}
-	friends, err := s.db.GetFriendsByUser(ctx, user.ID)
-	if err != nil {
-		log.Error("POST /login: GetFriendsByUser failed", logging.UserID, user.UserID, logging.Error, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
-		return
-	}
 	log.Info("POST /login succeeded", logging.UserID, user.UserID)
-	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 // GetCountriesHandler handles GET /countries.
@@ -86,6 +80,7 @@ func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
 	c.JSON(http.StatusOK, models.ShareVisitsResponse{
 		Visits:   visits,
 		UserName: user.Name,
+		ImageUrl: user.ImageURL,
 	})
 }
 
@@ -255,6 +250,7 @@ func (s *Server) PostFriendsHandler(ctx context.Context, c *gin.Context) {
 	var body struct {
 		ShareToken string `json:"shareToken"`
 		Name       string `json:"name"`
+		ImageUrl   string `json:"imageUrl"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid POST /friends body", logging.Error, err)
@@ -276,7 +272,11 @@ func (s *Server) PostFriendsHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "share not found"})
 		return
 	}
-	friend, err := s.db.AddFriend(ctx, user.ID, body.ShareToken, body.Name)
+	imageURL := body.ImageUrl
+	if imageURL == "" && shareUser.ImageURL != "" {
+		imageURL = shareUser.ImageURL
+	}
+	friend, err := s.db.AddFriend(ctx, user.ID, body.ShareToken, body.Name, imageURL)
 	if err != nil {
 		if errors.Is(err, database.ErrFriendAlreadyExists) {
 			c.JSON(http.StatusConflict, gin.H{"error": "friend already added"})
@@ -320,4 +320,25 @@ func (s *Server) DeleteFriendHandler(ctx context.Context, c *gin.Context) {
 	}
 	log.Info("Deleted friend", logging.UserID, user.ID, "shareToken", shareToken)
 	c.Status(http.StatusNoContent)
+}
+
+// GetFriendsHandler handles GET /friends. Returns the list of Friend objects for the current user.
+func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "GetFriendsHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("GET /friends: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	friends, err := s.db.GetFriendsByUser(ctx, user.ID)
+	if err != nil {
+		log.Error("GetFriendsByUser failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch friends"})
+		return
+	}
+	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }

@@ -11,6 +11,9 @@ type Friend struct {
 
 	// Name is the friend user's name; duplicated for faster access.
 	Name string `firestore:"Name" json:"name"`
+
+	// ImageURL is the friend user's image URL; duplicated for faster access, set when the friend is created.
+	ImageURL string `firestore:"ImageURL" json:"imageUrl"`
 }
 
 // LoginResponse is the response body for POST /login (includes friends list).

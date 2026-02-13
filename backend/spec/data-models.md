@@ -24,6 +24,7 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `ShareToken`: A random UUID string generated at user creation
 - `Name`: User name from the auth token
 - `Email`: User email from the auth token
+- `ImageURL`: User's image URL; extracted from the authentication token and stored at login (on user creation).
 
 ### Country model
 
@@ -51,3 +52,4 @@ Friend models represent other users in the system that have been added to a user
 - `ID`: Database object ID, populated automatically when loading object.
 - `ShareToken`: ShareToken of the friend user
 - `Name`: Name of the friend user; duplicated here for faster access.
+- `ImageURL`: Image URL of the friend user; duplicated here for faster access and set when the friend is created (e.g. from the share endpoint response or from the User document looked up by ShareToken).
