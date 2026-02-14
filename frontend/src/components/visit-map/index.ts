@@ -35,6 +35,8 @@ export interface CreateVisitMapOptions {
   baseUrl: string;
   /** Optional fixed height in px; default from CSS. */
   height?: number;
+  /** Called when the user clicks a media link in the tooltip. */
+  onViewMediaUrl?: (visit: CountryVisit) => void;
 }
 
 /**
@@ -46,7 +48,7 @@ export function createVisitMap(
   parent: HTMLElement,
   options: CreateVisitMapOptions
 ): void {
-  const { countryCodes, countries, visits, baseUrl } = options;
+  const { countryCodes, countries, visits, baseUrl, onViewMediaUrl } = options;
   const container = document.createElement("div");
   container.className = "visit-list-map";
   const id = "visit-map-" + Math.random().toString(36).slice(2);
@@ -127,6 +129,9 @@ export function createVisitMap(
             link.title = "Click to view attached media";
             link.className = "visit-map-tooltip__visit-link";
             link.textContent = formatVisitTime(v.visitedTime);
+            link.addEventListener("click", () => {
+              onViewMediaUrl?.(v);
+            });
             line.appendChild(link);
           } else {
             line.textContent = `- ${formatVisitTime(v.visitedTime)}`;

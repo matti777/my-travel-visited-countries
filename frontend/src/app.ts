@@ -7,7 +7,7 @@ import { createCountryDropdown } from "Components/country-dropdown";
 import { createShareSection } from "Components/share-section";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
-import { subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
+import { logAnalyticsEvent, subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
@@ -66,6 +66,16 @@ function formatVisitTime(visitedTime?: string): string {
   const d = new Date(visitedTime);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+/**
+ * Parses an ISO date string or YYYY-MM-DD to year, month (1–12), day for analytics. Returns zeros if missing/invalid.
+ */
+function parseVisitDateToYMD(isoOrVisitedTime?: string | null): { year: number; month: number; day: number } {
+  if (!isoOrVisitedTime) return { year: 0, month: 0, day: 0 };
+  const d = new Date(isoOrVisitedTime);
+  if (Number.isNaN(d.getTime())) return { year: 0, month: 0, day: 0 };
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
 /**
@@ -146,12 +156,20 @@ export interface RenderOptions {
   friends: Friend[];
   onAddFriend: () => void;
   onDeleteFriend: (shareToken: string) => void;
+  onViewMediaUrl?: (visit: CountryVisit) => void;
 }
 
 async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
   if (!visit.id) return;
   try {
     await api.deleteVisit(visit.id);
+    const d = parseVisitDateToYMD(visit.visitedTime);
+    logAnalyticsEvent("remove_visit", {
+      country_code: visit.countryCode,
+      year: d.year,
+      month: d.month,
+      day: d.day,
+    });
     cell.classList.add("cell-fade-out");
     cell.addEventListener(
       "transitionend",
@@ -173,7 +191,7 @@ async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefre
 
 function createVisitListTabRow(
   visitListTab: RenderOptions["visitListTab"],
-  onVisitListTabChange: RenderOptions["onVisitListTabChange"]
+  onVisitListTabChange: RenderOptions["onVisitListTabChange"],
 ): HTMLElement {
   const tabRow = document.createElement("div");
   tabRow.className = "visit-list-tabs";
@@ -202,6 +220,7 @@ interface FillVisitListContentParams {
   visitsForMap: CountryVisit[];
   isEditMode?: boolean;
   onRefresh?: () => void;
+  onViewMediaUrl?: (visit: CountryVisit) => void;
 }
 
 function fillVisitListContent(params: FillVisitListContentParams): void {
@@ -213,6 +232,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     visitsForMap,
     isEditMode = false,
     onRefresh,
+    onViewMediaUrl,
   } = params;
 
   if (visitListTab === "map") {
@@ -222,6 +242,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       countries: countriesList,
       visits: visitsForMap,
       baseUrl,
+      onViewMediaUrl,
     });
     return;
   }
@@ -238,7 +259,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     visit: CountryVisit,
     name: string,
     withEdit: boolean,
-    showVisitTimeAlways?: boolean
+    showVisitTimeAlways?: boolean,
   ): void {
     const cellRef: { current: HTMLElement | null } = { current: null };
     const showVisitTime = showVisitTimeAlways || (withEdit && visit.id && onRefresh);
@@ -260,6 +281,13 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       attachTooltip(cell, "Click to view attached media");
       cell.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
+        const d = parseVisitDateToYMD(visit.visitedTime);
+        logAnalyticsEvent("view_media_url", {
+          country_code: visit.countryCode,
+          year: d.year,
+          month: d.month,
+          day: d.day,
+        });
         window.open(visit.mediaUrl!, "_blank");
       });
     }
@@ -312,7 +340,12 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
 }
 
 function renderSharedVisitSection(container: HTMLElement, options: RenderOptions): void {
-  const { countries: countriesList, sharedVisits: sharedVisitsList, sharedUserName: sharedUserNameVal, onGoHome } = options;
+  const {
+    countries: countriesList,
+    sharedVisits: sharedVisitsList,
+    sharedUserName: sharedUserNameVal,
+    onGoHome,
+  } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
   const title = document.createElement("h2");
@@ -330,6 +363,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     countriesList,
     visitListTab: options.visitListTab,
     visitsForMap: sharedVisitsList,
+    onViewMediaUrl: options.onViewMediaUrl,
   });
   const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
   const listFrame = document.createElement("div");
@@ -381,11 +415,7 @@ function renderAddFriendSection(container: HTMLElement, options: RenderOptions):
   container.appendChild(section);
 }
 
-function renderNormalVisitedSection(
-  container: HTMLElement,
-  options: RenderOptions,
-  displayList: CountryVisit[]
-): void {
+function renderNormalVisitedSection(container: HTMLElement, options: RenderOptions, displayList: CountryVisit[]): void {
   const { countries: countriesList, visits: visitsList, isEditMode, onEditModeToggle } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
@@ -420,6 +450,7 @@ function renderNormalVisitedSection(
     visitsForMap: visitsList,
     isEditMode,
     onRefresh: options.onRefresh,
+    onViewMediaUrl: options.onViewMediaUrl,
   });
   const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
   const listFrame = document.createElement("div");
@@ -476,7 +507,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   const addSection = document.createElement("section");
   addSection.className = "app-section";
   const addTitle = document.createElement("h2");
-  addTitle.textContent = "Add a visited country";
+  addTitle.textContent = "Add a visit to a country";
   addSection.appendChild(addTitle);
 
   const form = document.createElement("form");
@@ -491,7 +522,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       baseUrl,
       selectedCountryCode: options.selectedCountryCode,
       onSelect: options.onSelectCountry,
-    })
+    }),
   );
   const visitTimeLabel = document.createElement("span");
   visitTimeLabel.className = "add-visit-form__visit-time-label";
@@ -523,8 +554,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   form.appendChild(mediaUrlRow);
   const mediaUrlHint = document.createElement("p");
   mediaUrlHint.className = "add-visit-form__media-url-hint";
-  mediaUrlHint.textContent =
-    "You can attach a link to media such as a picture collection or video from your trip.";
+  mediaUrlHint.textContent = "You can attach a link to media such as a picture collection or video from your trip.";
   form.appendChild(mediaUrlHint);
 
   const addBtnRow = document.createElement("div");
@@ -541,10 +571,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
     const dateValid = isVisitDateValid(options.formVisitDate);
     const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
     dateInput.classList.toggle("invalid", options.formVisitDate != null && !dateValid);
-    mediaUrlInput.classList.toggle(
-      "invalid",
-      mediaUrlInput.value.trim() !== "" && !mediaUrlValid,
-    );
+    mediaUrlInput.classList.toggle("invalid", mediaUrlInput.value.trim() !== "" && !mediaUrlValid);
     addBtn.disabled = !(options.selectedCountryCode && dateValid && mediaUrlValid);
   }
 
@@ -554,9 +581,7 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
   });
   mediaUrlInput.addEventListener("blur", updateValidationUI);
 
-  const defaultDate = options.formVisitDate
-    ? parseIsoToLocalDate(options.formVisitDate)
-    : today;
+  const defaultDate = options.formVisitDate ? parseIsoToLocalDate(options.formVisitDate) : today;
   const fp = flatpickr(dateInput, {
     allowInput: true,
     dateFormat: "M j, Y",
@@ -603,6 +628,13 @@ function renderAddVisitSection(container: HTMLElement, options: RenderOptions): 
       const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
       visits = [...visits, created];
       if (created.id) newVisitIds.add(created.id);
+      const d = parseVisitDateToYMD(isoDate);
+      logAnalyticsEvent("add_visit", {
+        country_code: countryCode,
+        year: d.year,
+        month: d.month,
+        day: d.day,
+      });
       options.onSelectCountry("");
       options.onFormVisitDateChange(new Date().toISOString().slice(0, 10));
       options.onFormMediaUrlChange("");
@@ -667,8 +699,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
   content.appendChild(p1);
   const p2 = document.createElement("p");
   p2.className = "welcome-view__text";
-  p2.textContent =
-    "You can share a read-only link so friends can see your country list. Sign in to get started.";
+  p2.textContent = "You can share a read-only link so friends can see your country list. Sign in to get started.";
   content.appendChild(p2);
   const loginWrap = document.createElement("div");
   loginWrap.className = "welcome-view__login-wrap";
@@ -720,9 +751,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   }
 
   const displayList =
-    isEditMode || options.visitListTab === "byContinent"
-      ? visitsList
-      : uniqueVisitsByCountry(visitsList);
+    isEditMode || options.visitListTab === "byContinent" ? visitsList : uniqueVisitsByCountry(visitsList);
   renderNormalVisitedSection(container, options, displayList);
   const addShareWrapper = document.createElement("div");
   addShareWrapper.id = "app-add-share";
@@ -822,6 +851,7 @@ export async function main(): Promise<void> {
   }
   function onLogout(): void {
     signOut().then(() => {
+      logAnalyticsEvent("logout");
       api.setAuthToken(null);
       console.log("Signed out");
     });
@@ -867,6 +897,8 @@ export async function main(): Promise<void> {
       visitListTab,
       onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => {
         visitListTab = tab;
+        const tabParam = tab === "byContinent" ? "by_continent" : tab;
+        logAnalyticsEvent("select_tab", { tab: tabParam });
         refreshAppContent();
       },
       onLogin,
@@ -876,6 +908,7 @@ export async function main(): Promise<void> {
         if (!token || sharedUserName == null) return;
         try {
           await api.postFriend(token, sharedUserName, sharedUserImageUrl ?? undefined);
+          logAnalyticsEvent("add_friend", { share_token: token });
           friends = [
             ...friends,
             { shareToken: token, name: sharedUserName, imageUrl: sharedUserImageUrl ?? undefined },
@@ -893,6 +926,7 @@ export async function main(): Promise<void> {
       onDeleteFriend: async (shareTokenToDelete: string) => {
         try {
           await api.deleteFriend(shareTokenToDelete);
+          logAnalyticsEvent("remove_friend", { share_token: shareTokenToDelete });
           friends = friends.filter((f) => f.shareToken !== shareTokenToDelete);
           refreshAppContent();
         } catch (err) {
@@ -903,6 +937,15 @@ export async function main(): Promise<void> {
             errorToast(err instanceof Error ? err.message : "Failed to remove friend");
           }
         }
+      },
+      onViewMediaUrl: (visit) => {
+        const d = parseVisitDateToYMD(visit.visitedTime);
+        logAnalyticsEvent("view_media_url", {
+          country_code: visit.countryCode,
+          year: d.year,
+          month: d.month,
+          day: d.day,
+        });
       },
     };
   }
@@ -952,12 +995,10 @@ export async function main(): Promise<void> {
             return;
           }
           sessionStorage.removeItem("login:initiated");
+          logAnalyticsEvent("login");
         }
         if (!getShareTokenFromHash()) {
-          const [visitsSettled, friendsSettled] = await Promise.allSettled([
-            api.getVisits(),
-            api.getFriends(),
-          ]);
+          const [visitsSettled, friendsSettled] = await Promise.allSettled([api.getVisits(), api.getFriends()]);
           if (visitsSettled.status === "fulfilled") {
             visits = visitsSettled.value.visits;
             shareToken = visitsSettled.value.shareToken ?? null;
@@ -1008,6 +1049,7 @@ export async function main(): Promise<void> {
         sharedVisits = r.visits;
         sharedUserName = r.userName;
         sharedUserImageUrl = r.imageUrl ?? null;
+        logAnalyticsEvent("open_shared_url", { share_token: token });
       } catch (err) {
         console.error("Failed to load shared visits", err);
         errorToast("Invalid or expired share link");

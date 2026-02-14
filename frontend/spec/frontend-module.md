@@ -29,6 +29,20 @@ The application provides Login (or Log out, when logged in) buttons in the top r
 
 This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.
 
+## Analytics
+
+The app sends Firebase Analytics events about the most important actions:
+
+- Login
+- Logout (button press)
+- Adding a country visit (fields: country code, year, month, day)
+- Removing a country visit (fields: country code, year, month, day)
+- Selecting a visualization tab to display
+- Viewing media URL (fields: country code, year, month, day)
+- Opening a shared URL (fields: share token)
+- Adding a friend (fields: share token)
+- Removing a friend (fields: share token)
+
 ## Error handling
 
 All errors must be logged to console error log. All errors must by default show an errorToast() with a descriptive message.

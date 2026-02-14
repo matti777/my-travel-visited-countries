@@ -6,6 +6,7 @@
  * See: https://firebase.google.com/docs/projects/api-keys
  */
 
+import { getAnalytics, logEvent } from "firebase/analytics";
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -29,8 +30,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 export const auth = getAuth(app);
 export const googleAuthProvider = new GoogleAuthProvider();
+
+export function logAnalyticsEvent(
+  eventName: string,
+  params?: Record<string, string | number>,
+): void {
+  try {
+    logEvent(analytics, eventName, params);
+  } catch {
+    // Ignore so missing or invalid Analytics config does not break the app.
+  }
+}
 
 export async function signInWithGoogle(): Promise<void> {
   await signInWithPopup(auth, googleAuthProvider);

@@ -22,7 +22,7 @@ You are an expert Go developer. Follow these standards for all code generation:
 5. **Type aliasing:** Never do type aliasing just to "import" a type from another package
 6. **Linebreaks:** Insert a linebreak after a logical block of code; typically after a }
 7. **Line length:** Try to avoid code lines longer than 100 characters
-8. **Naming identifiers:** Use best practices for Typescript when naming identifiers
+8. **Naming identifiers:** Use best practices for Typescript when naming identifiers. For example when an identifier contains an acronym (eg. UserID, ImageURL), that acronym should always be in capital letters.
 9. **Error messages:** All error messages shall begin with a lowercase letter as per Go standards
 
 ## Consistency
