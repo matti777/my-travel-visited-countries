@@ -49,7 +49,9 @@ gcloud run deploy "$SERVICE_NAME" \
   --platform managed \
   --allow-unauthenticated \
   --set-env-vars "GOOGLE_CLOUD_PROJECT=${GCP_PROJECT_ID}" \
-  --timeout=300
+  --timeout=300 \
+  --min-instances 0 \
+  --max-instances 1
 
 echo "Deployment complete."
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --format='value(status.url)')

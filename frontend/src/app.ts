@@ -42,6 +42,9 @@ function getShareTokenFromHash(): string | null {
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
 const newVisitIds = new Set<string>();
 
+/** Firebase Auth error codes that mean user cancelled or closed the sign-in popup. */
+const CANCELLED_AUTH_CODES = new Set(["auth/cancelled-popup-request", "auth/popup-closed-by-user"]);
+
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
 
 const REGION_CODE_TO_NAME: Record<string, string> = {
@@ -809,6 +812,10 @@ export async function main(): Promise<void> {
     sessionStorage.setItem("login:initiated", "1");
     signInWithGoogle().catch((err) => {
       sessionStorage.removeItem("login:initiated");
+      const code = (err as { code?: string })?.code;
+      if (code && CANCELLED_AUTH_CODES.has(code)) {
+        return;
+      }
       console.error("Sign in failed:", err);
       errorToast(err instanceof Error ? err.message : "Sign in failed");
     });
