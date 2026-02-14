@@ -1,4 +1,5 @@
 import type { User } from "firebase/auth";
+import { attachTooltip } from "Components/tooltip";
 
 /**
  * Renders the auth header content: optionally Home (when showHomeButton), then Login or (name + avatar + Log out).
@@ -37,7 +38,10 @@ export function renderAuthHeader(
     logoutBtn.type = "button";
     logoutBtn.addEventListener("click", onLogout);
     container.appendChild(name);
-    if (user.photoURL) container.appendChild(avatar);
+    if (user.photoURL) {
+      container.appendChild(avatar);
+      if (user.email) attachTooltip(avatar, user.email);
+    }
     container.appendChild(logoutBtn);
   } else {
     const loginBtn = document.createElement("button");

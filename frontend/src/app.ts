@@ -769,6 +769,7 @@ function renderFriendsListSection(container: HTMLElement, options: RenderOptions
       linkArea.addEventListener("click", () => {
         window.location.hash = "s=" + friend.shareToken;
       });
+      attachTooltip(linkArea, `Click to view country visits by ${friend.name}`);
       cell.appendChild(linkArea);
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
@@ -779,6 +780,7 @@ function renderFriendsListSection(container: HTMLElement, options: RenderOptions
         e.stopPropagation();
         onDeleteFriend(friend.shareToken);
       });
+      attachTooltip(deleteBtn, `Click to remove ${friend.name} as friend`);
       cell.appendChild(deleteBtn);
       list.appendChild(cell);
     }
