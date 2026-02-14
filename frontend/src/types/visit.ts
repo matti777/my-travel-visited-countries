@@ -17,4 +17,5 @@ export interface VisitsResponse {
 export interface ShareVisitsResponse {
   visits: CountryVisit[];
   userName: string;
+  imageUrl?: string;
 }

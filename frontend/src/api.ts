@@ -142,6 +142,37 @@ export default class Api {
     });
   }
 
+  async postFriend(shareToken: string, name: string, imageUrl?: string): Promise<Friend> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const body: { shareToken: string; name: string; imageUrl?: string } = { shareToken, name };
+    if (imageUrl != null && imageUrl !== "") {
+      body.imageUrl = imageUrl;
+    }
+    const response = (await this.performRequest("/friends", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    })) as Friend;
+    return response;
+  }
+
+  async deleteFriend(shareToken: string): Promise<void> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    await this.performRequest(`/friends/${encodeURIComponent(shareToken)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   private parseContentType(contentTypeHeader: string): string {
     const parts = contentTypeHeader.split(";");
     const contentType = parts[0].trim();

@@ -77,6 +77,9 @@ func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch visits"})
 		return
 	}
+	if visits == nil {
+		visits = []models.CountryVisit{}
+	}
 	c.JSON(http.StatusOK, models.ShareVisitsResponse{
 		Visits:   visits,
 		UserName: user.Name,
@@ -127,6 +130,9 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	log.Info("Successfully fetched country visits for current user", logging.Count, len(visits))
+	if visits == nil {
+		visits = []models.CountryVisit{}
+	}
 	c.JSON(http.StatusOK, models.CountryVisitResponse{
 		Visits:     visits,
 		ShareToken: dbUser.ShareToken,
@@ -339,6 +345,9 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 		log.Error("GetFriendsByUser failed", logging.Error, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch friends"})
 		return
+	}
+	if friends == nil {
+		friends = []models.Friend{}
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }

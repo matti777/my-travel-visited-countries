@@ -4,6 +4,8 @@ This document defines the REST API routes used by the application. The data mode
 
 All routes are currently **unauthenticated** (see @backend-module.md). Authentication will be introduced later.
 
+When ever there is an array being returned and it has no values, it should return an empty array instead of null.
+
 ## API routes
 
 Each subsection describes a single API route. When an API route is added, a corresponding Vite proxy config must be added to facilitate local testing.

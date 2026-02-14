@@ -29,6 +29,8 @@ let friends: Friend[] = [];
 /** Shared visit list when URL has #s=<share-token>. */
 let sharedVisits: CountryVisit[] = [];
 let sharedUserName: string | null = null;
+/** Image URL of the shared user (from GET /share/visits). */
+let sharedUserImageUrl: string | null = null;
 
 function getShareTokenFromHash(): string | null {
   const hash = window.location.hash.slice(1).trim();
@@ -133,10 +135,14 @@ export interface RenderOptions {
   isSharedMode: boolean;
   sharedVisits: CountryVisit[];
   sharedUserName: string | null;
+  sharedUserImageUrl: string | null;
   onGoHome: () => void;
   visitListTab: "alphabetical" | "byContinent" | "map";
   onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => void;
   onLogin: () => void;
+  friends: Friend[];
+  onAddFriend: () => void;
+  onDeleteFriend: (shareToken: string) => void;
 }
 
 async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
@@ -340,6 +346,36 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   homeWrap.appendChild(homeBtn);
   visitedSection.appendChild(homeWrap);
   container.appendChild(visitedSection);
+}
+
+function renderAddFriendSection(container: HTMLElement, options: RenderOptions): void {
+  const currentShareToken = getShareTokenFromHash();
+  const { sharedUserName: name, sharedUserImageUrl: imageUrl, friends: friendsList, onAddFriend } = options;
+  if (!currentShareToken || name == null) return;
+  const isAlreadyFriend = friendsList.some((f) => f.shareToken === currentShareToken);
+  const section = document.createElement("section");
+  section.className = "app-section add-friend-section";
+  if (isAlreadyFriend) {
+    const text = document.createElement("p");
+    text.className = "add-friend-section__text";
+    text.textContent = `${name} is in your friend list.`;
+    section.appendChild(text);
+  } else {
+    const box = document.createElement("div");
+    box.className = "add-friend-section__box";
+    const text = document.createElement("p");
+    text.className = "add-friend-section__text";
+    text.textContent = `Would you like to add ${name} to your friends list?`;
+    box.appendChild(text);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "add-friend-section__btn";
+    btn.textContent = "Add friend";
+    btn.addEventListener("click", () => onAddFriend());
+    box.appendChild(btn);
+    section.appendChild(box);
+  }
+  container.appendChild(section);
 }
 
 function renderNormalVisitedSection(
@@ -670,6 +706,9 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
 
   if (isSharedMode) {
     renderSharedVisitSection(container, options);
+    if (user) {
+      renderAddFriendSection(container, options);
+    }
     return;
   }
   if (!user) {
@@ -687,6 +726,65 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   renderAddVisitSection(addShareWrapper, options);
   addShareWrapper.appendChild(createShareSection(options.shareToken));
   container.appendChild(addShareWrapper);
+
+  renderFriendsListSection(container, options);
+}
+
+function renderFriendsListSection(container: HTMLElement, options: RenderOptions): void {
+  const { friends: friendsList, onDeleteFriend } = options;
+  const section = document.createElement("section");
+  section.className = "app-section friends-section";
+  const title = document.createElement("h2");
+  title.className = "friends-section__title";
+  title.textContent = "Friends";
+  section.appendChild(title);
+  const list = document.createElement("div");
+  list.className = "friends-list";
+  if (friendsList.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "friends-section__empty";
+    empty.textContent = "No friends yet";
+    list.appendChild(empty);
+  } else {
+    for (const friend of friendsList) {
+      const cell = document.createElement("div");
+      cell.className = "friend-cell";
+      const linkArea = document.createElement("div");
+      linkArea.className = "friend-cell__link-area";
+      if (friend.imageUrl) {
+        const img = document.createElement("img");
+        img.src = friend.imageUrl;
+        img.alt = "";
+        img.className = "friend-cell__avatar";
+        linkArea.appendChild(img);
+      }
+      const nameEl = document.createElement("span");
+      nameEl.className = "friend-cell__name";
+      nameEl.textContent = friend.name;
+      linkArea.appendChild(nameEl);
+      const viewLink = document.createElement("span");
+      viewLink.className = "friend-cell__view";
+      viewLink.textContent = "View";
+      linkArea.appendChild(viewLink);
+      linkArea.addEventListener("click", () => {
+        window.location.hash = "s=" + friend.shareToken;
+      });
+      cell.appendChild(linkArea);
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "friend-cell__delete";
+      deleteBtn.textContent = "✕";
+      deleteBtn.setAttribute("aria-label", "Remove friend");
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onDeleteFriend(friend.shareToken);
+      });
+      cell.appendChild(deleteBtn);
+      list.appendChild(cell);
+    }
+  }
+  section.appendChild(list);
+  container.appendChild(section);
 }
 
 export async function main(): Promise<void> {
@@ -749,10 +847,12 @@ export async function main(): Promise<void> {
       isSharedMode: !!getShareTokenFromHash(),
       sharedVisits,
       sharedUserName,
+      sharedUserImageUrl,
       onGoHome: () => {
         window.location.hash = "";
         sharedVisits = [];
         sharedUserName = null;
+        sharedUserImageUrl = null;
         refreshAppContent();
       },
       visitListTab,
@@ -761,6 +861,40 @@ export async function main(): Promise<void> {
         refreshAppContent();
       },
       onLogin,
+      friends,
+      onAddFriend: async () => {
+        const token = getShareTokenFromHash();
+        if (!token || sharedUserName == null) return;
+        try {
+          await api.postFriend(token, sharedUserName, sharedUserImageUrl ?? undefined);
+          friends = [
+            ...friends,
+            { shareToken: token, name: sharedUserName, imageUrl: sharedUserImageUrl ?? undefined },
+          ];
+          refreshAppContent();
+        } catch (err) {
+          if (err instanceof ApiError && err.responseCode === 401) {
+            signOut();
+            errorToast("Session expired");
+          } else {
+            errorToast(err instanceof Error ? err.message : "Failed to add friend");
+          }
+        }
+      },
+      onDeleteFriend: async (shareTokenToDelete: string) => {
+        try {
+          await api.deleteFriend(shareTokenToDelete);
+          friends = friends.filter((f) => f.shareToken !== shareTokenToDelete);
+          refreshAppContent();
+        } catch (err) {
+          if (err instanceof ApiError && err.responseCode === 401) {
+            signOut();
+            errorToast("Session expired");
+          } else {
+            errorToast(err instanceof Error ? err.message : "Failed to remove friend");
+          }
+        }
+      },
     };
   }
 
@@ -864,15 +998,18 @@ export async function main(): Promise<void> {
         const r = await api.getShareVisits(token);
         sharedVisits = r.visits;
         sharedUserName = r.userName;
+        sharedUserImageUrl = r.imageUrl ?? null;
       } catch (err) {
         console.error("Failed to load shared visits", err);
         errorToast("Invalid or expired share link");
         sharedVisits = [];
         sharedUserName = null;
+        sharedUserImageUrl = null;
       }
     } else {
       sharedVisits = [];
       sharedUserName = null;
+      sharedUserImageUrl = null;
     }
     if (authHeaderEl) {
       renderAuthHeader(authHeaderEl, currentUser, onLogin, onLogout, !!getShareTokenFromHash(), onGoHome);
