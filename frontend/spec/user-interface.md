@@ -84,6 +84,16 @@ In this mode the Edit button is disabled.
 
 Similar list to "by continent" but instead organized by year, sorted to ascending order.
 
+**Tab 5:** Statistics
+
+This tab displays certain statistics about the number of country visits.
+
+A central element is "circle graph cell" which consists of the following elements:
+
+1. A circular (clockwise) graph that represents a value 0-100% [of countries visited within a certain area]. Its thickness should be something like 1/5 of its radius. Inside this circular graph shall be a black text "<percentage> %" which shows the same value as the graph but in text. Under the circular graph element should be a text element stating the name of the area. The tooltip for the entire cell should read: "<num-visits> / <total-countries> countries visited in <area>" , eg. "3 / 20", showing number of visited countries in the area / total number of countries in the area.
+
+There should be such a cell for each of the continents (except Antarctica) and The World which shows the count for all the countries in the world.
+
 ---
 
 Tabbed control (with Tab 1 being the default selection) which lists the selectable tabs by their names:
@@ -92,6 +102,7 @@ Tabbed control (with Tab 1 being the default selection) which lists the selectab
 - "By continent"
 - "Map"
 - "Timeline"
+- "Statistics"
 
 Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it.
 

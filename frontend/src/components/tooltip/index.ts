@@ -121,14 +121,17 @@ function positionTooltip(tooltip: HTMLDivElement, anchor: HTMLElement): Placemen
   return placement;
 }
 
-function show(anchor: HTMLElement, text: string): void {
+function show(anchor: HTMLElement, text: string, useHtml = false): void {
   clearHideTimeout();
   if (currentAnchor && currentAnchor !== anchor) {
     currentAnchor.removeAttribute("aria-describedby");
   }
   const tooltip = getTooltipElement();
   const contentEl = tooltip.querySelector(".tooltip__content");
-  if (contentEl) contentEl.textContent = text;
+  if (contentEl) {
+    if (useHtml) contentEl.innerHTML = text;
+    else contentEl.textContent = text;
+  }
   tooltip.removeAttribute("data-placement");
   tooltip.classList.remove("tooltip--visible");
   tooltip.hidden = false;
@@ -162,13 +165,19 @@ function hide(): void {
  * Attaches a custom tooltip to an anchor element. Prefers placement above;
  * if it does not fit in the viewport, places below or on the side.
  * Show after 1s delay on hover/focus, hide on leave/blur. Fades in (opacity 0->1).
+ * @param options.useHtml - when true, content is set as HTML instead of plain text
  */
-export function attachTooltip(anchor: HTMLElement, text: string): () => void {
+export function attachTooltip(
+  anchor: HTMLElement,
+  text: string,
+  options?: { useHtml?: boolean },
+): () => void {
+  const useHtml = options?.useHtml ?? false;
   const scheduleShow = () => {
     clearShowTimeout();
     showTimeout = setTimeout(() => {
       showTimeout = null;
-      show(anchor, text);
+      show(anchor, text, useHtml);
     }, SHOW_DELAY_MS);
   };
   const cancelShow = () => {

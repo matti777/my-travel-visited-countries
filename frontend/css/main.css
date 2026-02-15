@@ -364,24 +364,30 @@ body {
 .visit-list-tabs::after {
   left: auto;
   right: 0;
-  width: 75%;
+  width: 80%;
 }
 .visit-list-frame--tab-1 .visit-list-tabs::before {
-  width: 25%;
+  width: 20%;
 }
 .visit-list-frame--tab-1 .visit-list-tabs::after {
-  width: 50%;
+  width: 60%;
 }
 .visit-list-frame--tab-2 .visit-list-tabs::before {
-  width: 50%;
+  width: 40%;
 }
 .visit-list-frame--tab-2 .visit-list-tabs::after {
-  width: 25%;
+  width: 40%;
 }
 .visit-list-frame--tab-3 .visit-list-tabs::before {
-  width: 75%;
+  width: 60%;
 }
 .visit-list-frame--tab-3 .visit-list-tabs::after {
+  width: 20%;
+}
+.visit-list-frame--tab-4 .visit-list-tabs::before {
+  width: 80%;
+}
+.visit-list-frame--tab-4 .visit-list-tabs::after {
   width: 0;
 }
 
@@ -423,6 +429,57 @@ body {
 }
 .visit-list-tabs__tab--active:hover {
   background: #8ee6df;
+}
+
+/* Statistics tab: grid of circle graph cells */
+.statistics-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1.5rem;
+  max-width: 680px;
+  padding: 1.5rem 0;
+}
+
+.statistics-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.statistics-cell__circle-wrap {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  flex-shrink: 0;
+}
+
+.statistics-cell__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.statistics-cell__percent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000;
+  pointer-events: none;
+}
+
+.statistics-cell__name {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+  color: #333;
 }
 
 .visit-list-map {

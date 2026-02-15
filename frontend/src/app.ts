@@ -5,6 +5,7 @@ import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createShareSection } from "Components/share-section";
+import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
 import { logAnalyticsEvent, subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
@@ -56,6 +57,17 @@ const REGION_CODE_TO_NAME: Record<string, string> = {
   OC: "Oceania",
   SA: "South America",
 };
+
+/** Fill colors per continent for statistics circle graph (same as map tab, user-interface.md). */
+const REGION_CODE_TO_FILL_COLOR: Record<string, string> = {
+  EU: "#add8e6",
+  NA: "#e0ffff",
+  SA: "#90ee90",
+  AF: "#f08080",
+  AS: "#fffacd",
+  OC: "#40e0d0",
+};
+const STATISTICS_DEFAULT_FILL_COLOR = "#40e0d0";
 
 function getRegionName(regionCode: string): string {
   return REGION_CODE_TO_NAME[regionCode] ?? regionCode;
@@ -179,8 +191,8 @@ export interface RenderOptions {
   sharedUserName: string | null;
   sharedUserImageUrl: string | null;
   onGoHome: () => void;
-  visitListTab: "alphabetical" | "byContinent" | "map" | "timeline";
-  onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline") => void;
+  visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics";
+  onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => void;
   onLogin: () => void;
   friends: Friend[];
   onAddFriend: () => void;
@@ -224,11 +236,12 @@ function createVisitListTabRow(
 ): HTMLElement {
   const tabRow = document.createElement("div");
   tabRow.className = "visit-list-tabs";
-  const tabs: { tab: "alphabetical" | "byContinent" | "map" | "timeline"; label: string }[] = [
+  const tabs: { tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics"; label: string }[] = [
     { tab: "alphabetical", label: "Alphabetical" },
     { tab: "byContinent", label: "By continent" },
     { tab: "map", label: "Map" },
     { tab: "timeline", label: "Timeline" },
+    { tab: "statistics", label: "Statistics" },
   ];
   for (const { tab, label } of tabs) {
     const btn = document.createElement("button");
@@ -274,6 +287,73 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       baseUrl,
       onViewMediaUrl,
     });
+    return;
+  }
+  if (visitListTab === "statistics") {
+    const countryCodeToRegion = new Map<string, string>();
+    const regionTotals = new Map<string, number>();
+    for (const c of countriesList) {
+      const code = c.countryCode.toUpperCase();
+      countryCodeToRegion.set(code, c.regionCode);
+      regionTotals.set(c.regionCode, (regionTotals.get(c.regionCode) ?? 0) + 1);
+    }
+    const worldTotal = countriesList.length;
+    const uniqueCodes = new Set(visitsForMap.map((v) => v.countryCode.toUpperCase()));
+    const visitedByRegion = new Map<string, number>();
+    for (const code of uniqueCodes) {
+      const region = countryCodeToRegion.get(code) ?? "ZZ";
+      visitedByRegion.set(region, (visitedByRegion.get(region) ?? 0) + 1);
+    }
+    const worldVisited = uniqueCodes.size;
+    const STATISTICS_REGION_ORDER = ["AF", "AS", "EU", "NA", "OC", "SA"] as const;
+    const wrapper = document.createElement("div");
+    wrapper.className = "statistics-section";
+    const areas: { key: string; name: string; visited: number; total: number }[] = [
+      ...STATISTICS_REGION_ORDER.map((regionCode) => ({
+        key: regionCode,
+        name: getRegionName(regionCode),
+        visited: visitedByRegion.get(regionCode) ?? 0,
+        total: regionTotals.get(regionCode) ?? 0,
+      })),
+      { key: "world", name: "The World", visited: worldVisited, total: worldTotal },
+    ];
+    for (const area of areas) {
+      const percentage = area.total > 0 ? Math.round((area.visited / area.total) * 100) : 0;
+      const fillColor =
+        area.key === "world"
+          ? STATISTICS_DEFAULT_FILL_COLOR
+          : REGION_CODE_TO_FILL_COLOR[area.key] ?? STATISTICS_DEFAULT_FILL_COLOR;
+      const cell = createCircleGraphCell({
+        percentage,
+        fillColor,
+        label: area.name,
+      });
+      const notVisitedCountries =
+        area.key === "world"
+          ? countriesList.filter((c) => !uniqueCodes.has(c.countryCode.toUpperCase()))
+          : countriesList.filter(
+              (c) => c.regionCode === area.key && !uniqueCodes.has(c.countryCode.toUpperCase()),
+            );
+      const notVisitedNames = notVisitedCountries.map((c) => c.name).sort();
+      const escapeHtml = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const firstLine = `${area.visited} / ${area.total} countries visited in ${area.name}`;
+      const maxList = 30;
+      const shown = notVisitedNames.slice(0, maxList).map(escapeHtml).join(", ");
+      const remaining = notVisitedNames.length - maxList;
+      const notVisitedList =
+        notVisitedNames.length === 0
+          ? "—"
+          : remaining > 0
+            ? `${shown} and ${remaining} more`
+            : shown;
+      const tooltipHtml =
+        `<span style="display:block; padding-bottom:0.5em">${escapeHtml(firstLine)}</span>` +
+        `<strong>Countries not visited:</strong> ${notVisitedList}`;
+      attachTooltip(cell, tooltipHtml, { useHtml: true });
+      wrapper.appendChild(cell);
+    }
+    contentArea.appendChild(wrapper);
     return;
   }
   if (displayList.length === 0) {
@@ -430,7 +510,9 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
         ? "1"
         : options.visitListTab === "map"
           ? "2"
-          : "3");
+          : options.visitListTab === "timeline"
+            ? "3"
+            : "4");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
@@ -489,15 +571,17 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   editDoneBtn.type = "button";
   editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
   editDoneBtn.className = "edit-done-btn";
-  editDoneBtn.disabled = options.visitListTab === "map";
+  editDoneBtn.disabled = options.visitListTab === "map" || options.visitListTab === "statistics";
   editDoneBtn.addEventListener("click", onEditModeToggle);
   attachTooltip(
     editDoneBtn,
     options.visitListTab === "map"
       ? "Edit is not available in Map view"
-      : isEditMode
-        ? "Click to complete editing"
-        : "Click to edit the visits list",
+      : options.visitListTab === "statistics"
+        ? "Edit is not available in Statistics view"
+        : isEditMode
+          ? "Click to complete editing"
+          : "Click to edit the visits list",
   );
   titleRow.appendChild(editDoneBtn);
   visitedSection.appendChild(titleRow);
@@ -523,7 +607,9 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
         ? "1"
         : options.visitListTab === "map"
           ? "2"
-          : "3");
+          : options.visitListTab === "timeline"
+            ? "3"
+            : "4");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
@@ -897,7 +983,7 @@ export async function main(): Promise<void> {
 
   let currentUser: User | null = null;
   let isEditMode = false;
-  let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" = "alphabetical";
+  let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics" = "alphabetical";
   let selectedCountryCode = "";
   const todayIso = () => new Date().toISOString().slice(0, 10);
   let formVisitDate: string | null = todayIso();
@@ -964,7 +1050,7 @@ export async function main(): Promise<void> {
         refreshAppContent();
       },
       visitListTab,
-      onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline") => {
+      onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => {
         visitListTab = tab;
         const tabParam = tab === "byContinent" ? "by_continent" : tab;
         logAnalyticsEvent("select_tab", { tab: tabParam });
