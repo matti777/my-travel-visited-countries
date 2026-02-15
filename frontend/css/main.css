@@ -1140,3 +1140,30 @@ body {
 .friend-cell__delete:hover {
   background: #f5f5f5;
 }
+
+@media (max-width: 768px) {
+  #auth-header {
+    padding-bottom: 1.75rem;
+  }
+  #app {
+    padding-top: 5rem;
+  }
+  #auth-header::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    width: 100vw;
+    bottom: 0;
+    border-bottom: 1px solid #000;
+  }
+  .visited-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .welcome-view__polaroid img {
+    width: 56px;
+    height: 56px;
+  }
+  .welcome-view__inner {
+    column-gap: 1.5rem;
+  }
+}
