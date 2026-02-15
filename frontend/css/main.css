@@ -1142,6 +1142,10 @@ body {
 }
 
 @media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
   #auth-header {
     padding-bottom: 1.75rem;
   }
@@ -1159,11 +1163,40 @@ body {
   .visited-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
+  .country-cell {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .add-visit-form__media-url {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .month-dropdown {
+    min-width: 0;
+  }
+  .share-section__url-input {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
   .welcome-view__polaroid img {
     width: 56px;
     height: 56px;
   }
   .welcome-view__inner {
     column-gap: 1.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  #app {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (hover: none) {
+  .svgMap-tooltip,
+  .tooltip {
+    display: none !important;
   }
 }

@@ -172,6 +172,9 @@ export function attachTooltip(
   text: string,
   options?: { useHtml?: boolean },
 ): () => void {
+  if (window.matchMedia("(hover: none)").matches) {
+    return () => {};
+  }
   const useHtml = options?.useHtml ?? false;
   const scheduleShow = () => {
     clearShowTimeout();
