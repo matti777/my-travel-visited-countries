@@ -364,18 +364,24 @@ body {
 .visit-list-tabs::after {
   left: auto;
   right: 0;
-  width: 66.666%;
+  width: 75%;
 }
 .visit-list-frame--tab-1 .visit-list-tabs::before {
-  width: 33.333%;
+  width: 25%;
 }
 .visit-list-frame--tab-1 .visit-list-tabs::after {
-  width: 33.333%;
+  width: 50%;
 }
 .visit-list-frame--tab-2 .visit-list-tabs::before {
-  width: 66.666%;
+  width: 50%;
 }
 .visit-list-frame--tab-2 .visit-list-tabs::after {
+  width: 25%;
+}
+.visit-list-frame--tab-3 .visit-list-tabs::before {
+  width: 75%;
+}
+.visit-list-frame--tab-3 .visit-list-tabs::after {
   width: 0;
 }
 

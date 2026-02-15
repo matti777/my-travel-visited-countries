@@ -76,8 +76,13 @@ Each visited country fill color should depend on the continent they are on:
 - Africa: light red
 - Asia: Light yellow
 - Oceania: Turquoise
+- Antarctica: Icy deep blue
 
 In this mode the Edit button is disabled.
+
+**Tab 4:** Timeline
+
+Similar list to "by continent" but instead organized by year, sorted to ascending order.
 
 ---
 
@@ -86,6 +91,7 @@ Tabbed control (with Tab 1 being the default selection) which lists the selectab
 - "Alphabetical"
 - "By continent"
 - "Map"
+- "Timeline"
 
 Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it.
 

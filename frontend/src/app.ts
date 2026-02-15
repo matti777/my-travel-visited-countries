@@ -131,6 +131,35 @@ function groupVisitsByContinent(
   }));
 }
 
+/**
+ * Groups visits by year (from visitedTime); years sorted ascending. Visits within a year sorted by visitedTime then country name.
+ */
+function groupVisitsByYear(
+  list: CountryVisit[],
+  countriesList: Country[],
+): { year: number; visits: CountryVisit[] }[] {
+  const byYear = new Map<number, CountryVisit[]>();
+  const nameFor = (code: string) => countriesList.find((c) => c.countryCode === code)?.name ?? code;
+  for (const v of list) {
+    let year = 0;
+    if (v.visitedTime) {
+      const d = new Date(v.visitedTime);
+      if (!Number.isNaN(d.getTime())) year = d.getUTCFullYear();
+    }
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year)!.push(v);
+  }
+  const sortedYears = [...byYear.keys()].sort((a, b) => a - b);
+  return sortedYears.map((year) => ({
+    year,
+    visits: [...(byYear.get(year)!)].sort((a, b) => {
+      const timeCmp = (a.visitedTime ?? "").localeCompare(b.visitedTime ?? "");
+      if (timeCmp !== 0) return timeCmp;
+      return nameFor(a.countryCode).localeCompare(nameFor(b.countryCode));
+    }),
+  }));
+}
+
 export interface RenderOptions {
   countries: Country[];
   visits: CountryVisit[];
@@ -150,8 +179,8 @@ export interface RenderOptions {
   sharedUserName: string | null;
   sharedUserImageUrl: string | null;
   onGoHome: () => void;
-  visitListTab: "alphabetical" | "byContinent" | "map";
-  onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => void;
+  visitListTab: "alphabetical" | "byContinent" | "map" | "timeline";
+  onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline") => void;
   onLogin: () => void;
   friends: Friend[];
   onAddFriend: () => void;
@@ -195,10 +224,11 @@ function createVisitListTabRow(
 ): HTMLElement {
   const tabRow = document.createElement("div");
   tabRow.className = "visit-list-tabs";
-  const tabs: { tab: "alphabetical" | "byContinent" | "map"; label: string }[] = [
+  const tabs: { tab: "alphabetical" | "byContinent" | "map" | "timeline"; label: string }[] = [
     { tab: "alphabetical", label: "Alphabetical" },
     { tab: "byContinent", label: "By continent" },
     { tab: "map", label: "Map" },
+    { tab: "timeline", label: "Timeline" },
   ];
   for (const { tab, label } of tabs) {
     const btn = document.createElement("button");
@@ -315,6 +345,31 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     return;
   }
 
+  if (visitListTab === "timeline") {
+    const yearGroups = groupVisitsByYear(displayList, countriesList);
+    const wrapper = document.createElement("div");
+    wrapper.className = "visit-list-by-continent";
+    for (const { year, visits: groupVisits } of yearGroups) {
+      const section = document.createElement("div");
+      section.className = "visit-list-by-continent__section";
+      const subTitle = document.createElement("h3");
+      subTitle.className = "visit-list-by-continent__title";
+      subTitle.textContent = `${year} (${groupVisits.length})`;
+      section.appendChild(subTitle);
+      const grid = document.createElement("div");
+      grid.className = "visited-grid visited-grid--enter";
+      requestAnimationFrame(() => grid.classList.add("visible"));
+      for (const visit of groupVisits) {
+        const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
+        addCellToGrid(grid, visit, name, isEditMode, true);
+      }
+      section.appendChild(grid);
+      wrapper.appendChild(section);
+    }
+    contentArea.appendChild(wrapper);
+    return;
+  }
+
   const groups = groupVisitsByContinent(displayList, countriesList);
   const wrapper = document.createElement("div");
   wrapper.className = "visit-list-by-continent";
@@ -352,7 +407,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
   visitedSection.appendChild(title);
   const displayList =
-    options.visitListTab === "byContinent"
+    options.visitListTab === "byContinent" || options.visitListTab === "timeline"
       ? sharedVisitsList
       : sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
   const contentArea = document.createElement("div");
@@ -369,7 +424,13 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   const listFrame = document.createElement("div");
   listFrame.className =
     "visit-list-frame visit-list-frame--tab-" +
-    (options.visitListTab === "alphabetical" ? "0" : options.visitListTab === "byContinent" ? "1" : "2");
+    (options.visitListTab === "alphabetical"
+      ? "0"
+      : options.visitListTab === "byContinent"
+        ? "1"
+        : options.visitListTab === "map"
+          ? "2"
+          : "3");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
@@ -456,7 +517,13 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   const listFrame = document.createElement("div");
   listFrame.className =
     "visit-list-frame visit-list-frame--tab-" +
-    (options.visitListTab === "alphabetical" ? "0" : options.visitListTab === "byContinent" ? "1" : "2");
+    (options.visitListTab === "alphabetical"
+      ? "0"
+      : options.visitListTab === "byContinent"
+        ? "1"
+        : options.visitListTab === "map"
+          ? "2"
+          : "3");
   listFrame.appendChild(contentArea);
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
@@ -751,7 +818,9 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   }
 
   const displayList =
-    isEditMode || options.visitListTab === "byContinent" ? visitsList : uniqueVisitsByCountry(visitsList);
+    isEditMode || options.visitListTab === "byContinent" || options.visitListTab === "timeline"
+      ? visitsList
+      : uniqueVisitsByCountry(visitsList);
   renderNormalVisitedSection(container, options, displayList);
   const addShareWrapper = document.createElement("div");
   addShareWrapper.id = "app-add-share";
@@ -828,7 +897,7 @@ export async function main(): Promise<void> {
 
   let currentUser: User | null = null;
   let isEditMode = false;
-  let visitListTab: "alphabetical" | "byContinent" | "map" = "alphabetical";
+  let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" = "alphabetical";
   let selectedCountryCode = "";
   const todayIso = () => new Date().toISOString().slice(0, 10);
   let formVisitDate: string | null = todayIso();
@@ -895,7 +964,7 @@ export async function main(): Promise<void> {
         refreshAppContent();
       },
       visitListTab,
-      onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map") => {
+      onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline") => {
         visitListTab = tab;
         const tabParam = tab === "byContinent" ? "by_continent" : tab;
         logAnalyticsEvent("select_tab", { tab: tabParam });
