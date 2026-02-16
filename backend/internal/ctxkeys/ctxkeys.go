@@ -7,6 +7,7 @@ type Key string
 type TraceContext struct {
 	TraceID string
 	SpanID  string
+	Sampled bool // true when W3C trace flags are "01"
 }
 
 // contextKey is a private type so only this package can create keys that store *models.User.

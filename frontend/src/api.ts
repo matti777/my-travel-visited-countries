@@ -6,10 +6,26 @@ import type { CountryVisit, ShareVisitsResponse, VisitsResponse } from "./types/
 
 const COUNTRIES_CACHE_KEY = "app:countries:cache";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const REQUEST_TIMEOUT_MS = 5_000; // connection/request timeout
+const RETRY_DELAY_MS = 1_500; // wait before retry after connection failure
 
 interface CountriesCache {
   countries: Country[];
   cachedAt: number;
+}
+
+function isRetryableNetworkError(error: unknown): boolean {
+  if (error instanceof ApiError) return false;
+  const err = error as Error;
+  if (err instanceof TypeError && err.message === "Failed to fetch") return true;
+  if (err?.name === "AbortError") return true;
+  return false;
+}
+
+function fetchWithTimeout(endpoint: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(endpoint, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
 export class ApiError extends Error {
@@ -180,43 +196,47 @@ export default class Api {
   }
 
   private async performRequest(endpoint: string, options: RequestInit): Promise<any> {
+    let response: Response;
     try {
-      console.log(`Making request to ${endpoint} with options: ${JSON.stringify(options)}`);
-
-      const response = await fetch(endpoint, options);
-
-      if (response.status < 200 || response.status >= 400) {
-        console.log("throwing a new ApiError due to status");
-        throw new ApiError({
-          message: `Invalid status ${response.status}: ${response.statusText}`,
-          responseCode: response.status,
-        });
+      response = await fetchWithTimeout(endpoint, options, REQUEST_TIMEOUT_MS);
+    } catch (firstError) {
+      if (!isRetryableNetworkError(firstError)) {
+        console.error("fetch failed with error: ", firstError);
+        errorToast(`${firstError}`);
+        throw new ApiError({ message: `${firstError}`, cause: firstError });
       }
-
-      if (response.status === 204) {
-        console.log("Request succeeded:", (options as RequestInit).method ?? "GET", endpoint);
-        return undefined;
+      console.warn("API request failed (e.g. connection closed), retrying in", RETRY_DELAY_MS / 1000, "s:", endpoint, firstError);
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      try {
+        response = await fetchWithTimeout(endpoint, options, REQUEST_TIMEOUT_MS);
+      } catch (retryError) {
+        console.error("fetch failed on retry: ", retryError);
+        errorToast(`${retryError}`);
+        throw new ApiError({ message: `${retryError}`, cause: retryError });
       }
-
-      const contentType = this.parseContentType(response.headers.get("Content-Type") ?? "");
-      if (contentType !== "application/json") {
-        throw new ApiError({ message: `Invalid response type '${contentType}'` });
-      }
-
-      const data = await response.json();
-      console.log("Request succeeded:", (options as RequestInit).method ?? "GET", endpoint);
-      return data;
-    } catch (error) {
-      console.error("fetch failed with error: ", error);
-      if (error instanceof ApiError) {
-        if (error.responseCode !== 401) {
-          errorToast(error.message);
-        }
-        throw error;
-      }
-      errorToast(`${error}`);
-      throw new ApiError({ message: `${error}`, cause: error });
     }
+
+    if (response.status < 200 || response.status >= 400) {
+      const apiError = new ApiError({
+        message: `Invalid status ${response.status}: ${response.statusText}`,
+        responseCode: response.status,
+      });
+      if (response.status !== 401) {
+        errorToast(apiError.message);
+      }
+      throw apiError;
+    }
+
+    if (response.status === 204) {
+      return undefined;
+    }
+
+    const contentType = this.parseContentType(response.headers.get("Content-Type") ?? "");
+    if (contentType !== "application/json") {
+      throw new ApiError({ message: `Invalid response type '${contentType}'` });
+    }
+
+    return response.json();
   }
 }
 

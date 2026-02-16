@@ -151,7 +151,7 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 		}
 		user := auth.UserFromClaims(claims)
 		ctx = context.WithValue(ctx, ctxkeys.CurrentUserKey, user)
-		ctx = logging.WithContext(ctx, log.WithCurrentUserID(user.UserID))
+		ctx = logging.WithContext(ctx, log.WithParams(logging.CurrentUserID, user.UserID))
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
