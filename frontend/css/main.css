@@ -48,13 +48,53 @@ body {
   padding-top: 2.5rem;
 }
 
-/* Welcome view (not logged in) – centered, Polaroids on sides */
+/* Welcome splash (logged out): title + main + Login grouped and vertically centered */
 .welcome-view {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  align-items: center;
   margin-bottom: 2rem;
   min-height: 85vh;
+  width: 100%;
+  max-width: 100%;
+  gap: 1.25rem;
+}
+
+.welcome-view__brand {
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 1rem;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.welcome-view__brand-title {
+  margin: 0;
+  font-family: "Dancing Script", cursive;
+  font-weight: 700;
+  font-size: clamp(1.85rem, 6.5vw, 3.35rem);
+  line-height: 1.12;
+  max-width: 100%;
+  background: linear-gradient(to bottom, #000000, #4a4a4a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  /* drop-shadow works with gradient text; text-shadow does not */
+  filter: drop-shadow(0 0.06em 0.14em rgba(0, 0, 0, 0.28));
+  overflow-wrap: anywhere;
+}
+
+@supports not (background-clip: text) {
+  .welcome-view__brand-title {
+    background: none;
+    color: #2a2a2a;
+    -webkit-text-fill-color: unset;
+    filter: none;
+    text-shadow: 0 0.08em 0.16em rgba(0, 0, 0, 0.22);
+  }
 }
 
 .welcome-view__inner {
@@ -67,6 +107,7 @@ body {
   max-width: 960px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0;
 }
 
 .welcome-view__side {
@@ -90,30 +131,35 @@ body {
   justify-self: start;
 }
 
-/* Polaroid-style photo: white border, shadow, rotation applied inline */
-.welcome-view__polaroid {
-  padding: 0.5rem 0.5rem 1.75rem;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+/* Faded travel photos with irregular silhouette (no polaroid frame) */
+.welcome-view__photo {
+  padding: 0;
+  background: transparent;
   transition: transform var(--animation-duration);
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.12));
 }
 
-.welcome-view__polaroid:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.12);
+.welcome-view__photo:hover {
+  filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.18));
 }
 
-.welcome-view__polaroid img {
+.welcome-view__photo img {
   display: block;
   width: 120px;
   height: 120px;
   object-fit: cover;
-}
-
-.welcome-view__title {
-  margin: 0 0 1rem;
-  color: #333;
-  line-height: 1.2;
-  font-size: 1.5rem;
+  opacity: 0.88;
+  filter: saturate(0.88) brightness(1.03);
+  clip-path: polygon(
+    4% 2%,
+    96% 0%,
+    100% 18%,
+    98% 78%,
+    88% 100%,
+    12% 98%,
+    0% 72%,
+    3% 28%
+  );
 }
 
 .welcome-view__text {
@@ -122,15 +168,21 @@ body {
   color: #444;
 }
 
+.welcome-view__text:last-child {
+  margin-bottom: 0;
+}
+
 .welcome-view__login-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 2rem;
+  align-items: center;
+  padding: 0 1rem 0.5rem;
+  width: 100%;
 }
 
 .welcome-view__login-btn {
-  padding: 0.75rem 2.5rem;
-  font-size: 1.1rem;
+  padding: 0.95rem 3rem;
+  font-size: 1.2rem;
   border-radius: 6px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
@@ -1178,12 +1230,15 @@ body {
     overflow-wrap: break-word;
     word-break: break-word;
   }
-  .welcome-view__polaroid img {
+  .welcome-view__photo img {
     width: 56px;
     height: 56px;
   }
   .welcome-view__inner {
     column-gap: 1.5rem;
+  }
+  .welcome-view__brand {
+    padding: 0 0.75rem;
   }
 }
 

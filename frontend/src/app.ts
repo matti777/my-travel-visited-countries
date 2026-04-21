@@ -821,39 +821,68 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
   const wrap = document.createElement("div");
   wrap.className = "welcome-view";
 
+  const brand = document.createElement("div");
+  brand.className = "welcome-view__brand";
+  const brandTitle = document.createElement("h1");
+  brandTitle.className = "welcome-view__brand-title";
+  brandTitle.textContent = "Countries of Earth";
+  brand.appendChild(brandTitle);
+  wrap.appendChild(brand);
+
   const inner = document.createElement("div");
   inner.className = "welcome-view__inner";
 
   const leftSide = document.createElement("div");
   leftSide.className = "welcome-view__side welcome-view__side--left";
   for (let i = 0; i < 2; i++) {
-    const polaroid = document.createElement("div");
-    polaroid.className = "welcome-view__polaroid";
-    polaroid.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
+    const frame = document.createElement("div");
+    frame.className = "welcome-view__photo";
+    frame.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
     const img = document.createElement("img");
     img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
     img.alt = "";
     img.loading = "lazy";
-    polaroid.appendChild(img);
-    leftSide.appendChild(polaroid);
+    frame.appendChild(img);
+    leftSide.appendChild(frame);
   }
   inner.appendChild(leftSide);
 
   const content = document.createElement("div");
   content.className = "welcome-view__content";
-  const title = document.createElement("h2");
-  title.className = "welcome-view__title";
-  title.textContent = "Welcome to My Countries";
-  content.appendChild(title);
   const p1 = document.createElement("p");
   p1.className = "welcome-view__text";
   p1.textContent =
-    "Track the countries you have visited and explore your travel history. View your list alphabetically, by continent, or on a world map. Add visits with optional dates and attach links to photos or videos from your trips.";
+    "A free online tool for keeping track of the countries you have visited. " +
+    "After you sign in, you can browse your list alphabetically, by continent, on a map, or along a timeline—and share a read-only link with friends.";
   content.appendChild(p1);
   const p2 = document.createElement("p");
   p2.className = "welcome-view__text";
-  p2.textContent = "You can share a read-only link so friends can see your country list. Sign in to get started.";
+  p2.textContent =
+    "Add visit dates and attach media links and similar metadata—photo collections, video URLs, and more—from the places you've explored.";
   content.appendChild(p2);
+  const p3 = document.createElement("p");
+  p3.className = "welcome-view__text";
+  p3.textContent = "Log in to start creating your travel history!";
+  content.appendChild(p3);
+  inner.appendChild(content);
+
+  const rightSide = document.createElement("div");
+  rightSide.className = "welcome-view__side welcome-view__side--right";
+  for (let i = 2; i < 4; i++) {
+    const frame = document.createElement("div");
+    frame.className = "welcome-view__photo";
+    frame.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
+    const img = document.createElement("img");
+    img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
+    img.alt = "";
+    img.loading = "lazy";
+    frame.appendChild(img);
+    rightSide.appendChild(frame);
+  }
+  inner.appendChild(rightSide);
+
+  wrap.appendChild(inner);
+
   const loginWrap = document.createElement("div");
   loginWrap.className = "welcome-view__login-wrap";
   const loginBtn = document.createElement("button");
@@ -862,25 +891,8 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
   loginBtn.textContent = "Login";
   loginBtn.addEventListener("click", onLogin);
   loginWrap.appendChild(loginBtn);
-  content.appendChild(loginWrap);
-  inner.appendChild(content);
+  wrap.appendChild(loginWrap);
 
-  const rightSide = document.createElement("div");
-  rightSide.className = "welcome-view__side welcome-view__side--right";
-  for (let i = 2; i < 4; i++) {
-    const polaroid = document.createElement("div");
-    polaroid.className = "welcome-view__polaroid";
-    polaroid.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
-    const img = document.createElement("img");
-    img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
-    img.alt = "";
-    img.loading = "lazy";
-    polaroid.appendChild(img);
-    rightSide.appendChild(polaroid);
-  }
-  inner.appendChild(rightSide);
-
-  wrap.appendChild(inner);
   container.appendChild(wrap);
 }
 
