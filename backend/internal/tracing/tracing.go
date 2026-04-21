@@ -11,7 +11,9 @@ import (
 
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/matti777/my-countries/backend/internal/ctxkeys"
@@ -44,9 +46,15 @@ func NewClient(ctx context.Context, projectID string, isDebug bool) (*Client, er
 		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(0.1))
 	}
 
+	r, err := resource.Merge(resource.Default(), resource.NewWithAttributes("", attribute.String("service.name", "backend")))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace resource: %w", err)
+	}
+
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
 		sdktrace.WithSampler(sampler),
+		sdktrace.WithResource(r),
 	)
 	otel.SetTracerProvider(tp)
 
