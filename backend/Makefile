@@ -46,7 +46,7 @@ deploy:
 	echo "Configuring Docker for Artifact Registry..."; \
 	gcloud auth configure-docker "$(REGION)-docker.pkg.dev" --quiet; \
 	echo "Building frontend and copying static files to backend..."; \
-	(cd "$(FRONTEND_DIR)" && npm run build:and-copy); \
+	(cd "$(FRONTEND_DIR)" && APP_PUBLIC_URL=https://countriesof.earth npm run build:and-copy); \
 	echo "Building Docker image..."; \
 	docker build -t "$(IMAGE_TAG)" .; \
 	echo "Pushing image to Artifact Registry..."; \
