@@ -56,7 +56,7 @@ Pure TypeScript frontend, built with Vite. See [spec/frontend-module.md](spec/fr
 
 4. **Open Graph (link previews):** `index.html` includes `og:*` and Twitter Card meta tags. Absolute URLs are filled in by `scripts/copy-to-backend.mjs`, which replaces `__APP_PUBLIC_URL__` with the environment variable **`APP_PUBLIC_URL`** (no trailing slash). If unset, it defaults to `https://countriesof.earth`. The **`backend/Makefile`** `deploy` target sets `APP_PUBLIC_URL=https://countriesof.earth` when it runs `npm run build:and-copy`. For a local preview URL, run `APP_PUBLIC_URL=http://localhost:8080 npm run build:and-copy` (or your dev origin) before testing.
 
-5. **Preview image:** `assets/images/og-preview.jpg` (1200×630) is the image for `og:image` / `twitter:image`. The generator renders the title with **Dancing Script** using `resources/fonts/DancingScript-wght.ttf` at the repo root (build-only font for OG rasterization; not shipped with the app—see `resources/README.md`). Regenerate after changing polaroids, background, title styling, or layout:
+5. **Preview image:** `assets/images/og-preview.jpg` (1200×630) is the image for `og:image` / `twitter:image`. The generator renders the title with **Dancing Script** using `resources/fonts/DancingScript-wght.ttf` (build-only font for OG rasterization; not shipped with the app—see [`resources/README.md`](resources/README.md)). Regenerate after changing polaroids, background, title styling, or layout:
 
    ```bash
    npm run generate-og-preview

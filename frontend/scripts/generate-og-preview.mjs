@@ -13,10 +13,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
-const repoRoot = join(__dirname, "..", "..");
 const imagesDir = join(root, "assets", "images");
 const outPath = join(imagesDir, "og-preview.jpg");
-const fontPath = join(repoRoot, "resources", "fonts", "DancingScript-wght.ttf");
+const fontPath = join(root, "resources", "fonts", "DancingScript-wght.ttf");
 
 const W = 1200;
 const H = 630;
