@@ -131,7 +131,7 @@ body {
   justify-self: start;
 }
 
-/* Faded travel photos with irregular silhouette (no polaroid frame) */
+/* Welcome side photos: rectangular tiles, slight rotation on the frame in JS; drop shadow here */
 .welcome-view__photo {
   padding: 0;
   background: transparent;
@@ -150,16 +150,6 @@ body {
   object-fit: cover;
   opacity: 0.88;
   filter: saturate(0.88) brightness(1.03);
-  clip-path: polygon(
-    4% 2%,
-    96% 0%,
-    100% 18%,
-    98% 78%,
-    88% 100%,
-    12% 98%,
-    0% 72%,
-    3% 28%
-  );
 }
 
 .welcome-view__text {
