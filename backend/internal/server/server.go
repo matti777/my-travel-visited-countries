@@ -259,6 +259,10 @@ func contentTypeByExt(ext string) string {
 		return "font/woff"
 	case ".woff2":
 		return "font/woff2"
+	case ".txt":
+		return "text/plain; charset=utf-8"
+	case ".xml":
+		return "application/xml; charset=utf-8"
 	}
 	return ""
 }

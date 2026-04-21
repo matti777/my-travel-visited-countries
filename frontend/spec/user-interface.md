@@ -2,9 +2,11 @@
 
 This document describes the application's user interface in reasonable detail. The exact page structure is described in [Page structure](#page-structure), from top to bottom. Sufficient padding space should be in between the sections.
 
+The name of the application is "Countries of Earth"; this should be reflected eg. as the page title.
+
 ## UI routing
 
-If html fragment #s=<share-token> is present, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
+If the URL path is `/share/<share-token>`, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -134,7 +136,7 @@ Clicking "Add friend" button should attempt to create the friend in the backend 
 
 If not logged in OR viewing another user's shared visits, this section is not visible.
 
-This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site address + HTML fragment value of "#s=<share-token>" where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
+This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site origin + path `/share/<share-token>` (with optional base path when the app is not deployed at `/`) where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
 
 ---
 
@@ -146,6 +148,16 @@ The UI shall show a list of friends for the current user. The "friend cells" sho
 
 If logged in, this section is not visible.
 
-For users who have not logged in, the basic view should present a welcome message with a title and a descriptive text chapter or two about the service. There should be travel related (sceneries from beaches, palm trees, mountains, coral reefs, ancient ruins etc.) images on the page. The images should look like slightly faded photographs and have irregular edges with transparency.
+For users who have not logged in, the basic view should present a service "splash screen".
+
+On top and centered, there should be a title label with the name of the service, "Countries of Earth". This title should be in large cursive font. It should have a top-to-bottom color gradient from black to dark gray. The effect should be subtle but noticeable. The title label should have a slight soft drop shadow. The font for the title should be "Dancing Script" from Google Fonts. The title MUST fit on screen horizontally also on mobile resolutions, with enough padding on each side to look good.
+
+Below it, the content: a welcome message with a title and a descriptive text chapter or two about the service. There should be travel related (sceneries from beaches, palm trees, mountains, coral reefs, ancient ruins etc.) images on the page. The images should look like slightly faded photographs and have irregular edges with transparency.
+
+The welcome text should indicate that this is a free online tool for keeping track of one's visited countries and that it allows for adding media links and similar metadata.
 
 Centered on the bottom should be a large "Login" button whose functionality must copy the one in the top bar.
+
+--
+
+At the very bottom of the page there are links to Privacy Policy / Terms of Service pages.

@@ -161,10 +161,25 @@ function hide(): void {
   }, HIDE_DELAY_MS);
 }
 
+/** Hide immediately when the user presses on the anchor (click navigates away without mouseleave). */
+function hideImmediately(): void {
+  clearShowTimeout();
+  clearHideTimeout();
+  const tooltip = getTooltipElement();
+  tooltip.classList.remove("tooltip--visible");
+  tooltip.hidden = true;
+  tooltip.setAttribute("aria-hidden", "true");
+  if (currentAnchor) {
+    currentAnchor.removeAttribute("aria-describedby");
+    currentAnchor = null;
+  }
+}
+
 /**
  * Attaches a custom tooltip to an anchor element. Prefers placement above;
  * if it does not fit in the viewport, places below or on the side.
- * Show after 1s delay on hover/focus, hide on leave/blur. Fades in (opacity 0->1).
+ * Show after 1s delay on hover/focus, hide on leave/blur or pointerdown/click on the anchor
+ * (avoids a stuck tooltip when the anchor triggers navigation). Fades in (opacity 0->1).
  * @param options.useHtml - when true, content is set as HTML instead of plain text
  */
 export function attachTooltip(
@@ -192,6 +207,8 @@ export function attachTooltip(
   anchor.addEventListener("mouseleave", cancelShow);
   anchor.addEventListener("focus", scheduleShow);
   anchor.addEventListener("blur", cancelShow);
+  anchor.addEventListener("pointerdown", hideImmediately);
+  anchor.addEventListener("click", hideImmediately);
 
   return () => {
     clearShowTimeout();
@@ -207,5 +224,7 @@ export function attachTooltip(
     anchor.removeEventListener("mouseleave", cancelShow);
     anchor.removeEventListener("focus", scheduleShow);
     anchor.removeEventListener("blur", cancelShow);
+    anchor.removeEventListener("pointerdown", hideImmediately);
+    anchor.removeEventListener("click", hideImmediately);
   };
 }
