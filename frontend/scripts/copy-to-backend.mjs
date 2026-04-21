@@ -28,6 +28,22 @@ indexHtml = indexHtml.split("__APP_PUBLIC_URL__").join(appPublicUrl);
 writeFileSync(indexHtmlDist, indexHtml, "utf8");
 console.log(`Injected APP_PUBLIC_URL=${appPublicUrl} into dist/index.html`);
 
+for (const name of ["robots.txt", "sitemap.xml"]) {
+  const p = join(distDir, name);
+  if (!existsSync(p)) {
+    console.warn(`dist/${name} not found, skip URL inject`);
+    continue;
+  }
+  let text = readFileSync(p, "utf8");
+  if (!text.includes("__APP_PUBLIC_URL__")) {
+    console.warn(`dist/${name} missing __APP_PUBLIC_URL__, skip inject`);
+    continue;
+  }
+  text = text.split("__APP_PUBLIC_URL__").join(appPublicUrl);
+  writeFileSync(p, text, "utf8");
+  console.log(`Injected APP_PUBLIC_URL into dist/${name}`);
+}
+
 if (existsSync(backendStatic)) {
   rmSync(backendStatic, { recursive: true });
 }

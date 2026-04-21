@@ -27,17 +27,31 @@ let shareToken: string | null = null;
 /** Friends list from GET /friends, filled when user is authenticated (on load and on login). */
 let friends: Friend[] = [];
 
-/** Shared visit list when URL has #s=<share-token>. */
+/** Shared visit list when URL path is /share/<token>. */
 let sharedVisits: CountryVisit[] = [];
 let sharedUserName: string | null = null;
 /** Image URL of the shared user (from GET /share/visits). */
 let sharedUserImageUrl: string | null = null;
 
-function getShareTokenFromHash(): string | null {
-  const hash = window.location.hash.slice(1).trim();
-  if (!hash.startsWith("s=")) return null;
-  const token = hash.slice(2).trim();
-  return token || null;
+const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
+
+function getShareTokenFromPath(): string | null {
+  let pathname = window.location.pathname;
+  if (baseUrl && pathname.startsWith(baseUrl)) {
+    pathname = pathname.slice(baseUrl.length) || "/";
+  }
+  const m = pathname.match(/^\/share\/([^/]+)\/?$/);
+  if (!m) return null;
+  try {
+    const decoded = decodeURIComponent(m[1]);
+    return decoded.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function homePath(): string {
+  return baseUrl ? `${baseUrl}/` : "/";
 }
 
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
@@ -45,8 +59,6 @@ const newVisitIds = new Set<string>();
 
 /** Firebase Auth error codes that mean user cancelled or closed the sign-in popup. */
 const CANCELLED_AUTH_CODES = new Set(["auth/cancelled-popup-request", "auth/popup-closed-by-user"]);
-
-const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
 
 const REGION_CODE_TO_NAME: Record<string, string> = {
   AF: "Africa",
@@ -483,7 +495,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
-  const title = document.createElement("h2");
+  const title = document.createElement("h1");
   title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
   visitedSection.appendChild(title);
   const displayList =
@@ -529,7 +541,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
 }
 
 function renderAddFriendSection(container: HTMLElement, options: RenderOptions): void {
-  const currentShareToken = getShareTokenFromHash();
+  const currentShareToken = getShareTokenFromPath();
   const { sharedUserName: name, sharedUserImageUrl: imageUrl, friends: friendsList, onAddFriend } = options;
   if (!currentShareToken || name == null) return;
   const isAlreadyFriend = friendsList.some((f) => f.shareToken === currentShareToken);
@@ -564,7 +576,7 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   visitedSection.className = "app-section";
   const titleRow = document.createElement("div");
   titleRow.className = "app-section__title-row";
-  const visitedTitle = document.createElement("h2");
+  const visitedTitle = document.createElement("h1");
   visitedTitle.textContent = `Your visited countries (${uniqueVisitsByCountry(visitsList).length})`;
   titleRow.appendChild(visitedTitle);
   const editDoneBtn = document.createElement("button");
@@ -814,6 +826,13 @@ const WELCOME_POLAROID_IMAGES = [
   "welcome-polaroid-4.jpg",
 ];
 
+const WELCOME_POLAROID_ALTS = [
+  "Polaroid-style travel photo from a visited city",
+  "Travel snapshot from a trip abroad",
+  "Landmark photo from a country on the world map",
+  "Scenic travel memory from a visited destination",
+];
+
 /** Rotation in degrees for fridge-pin look: left top, left bottom, right top, right bottom */
 const WELCOME_POLAROID_ROTATIONS = ["-4deg", "3deg", "2deg", "-5deg"];
 
@@ -840,7 +859,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
     frame.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
     const img = document.createElement("img");
     img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
-    img.alt = "";
+    img.alt = WELCOME_POLAROID_ALTS[i] ?? "Travel photo from the welcome collage";
     img.loading = "lazy";
     frame.appendChild(img);
     leftSide.appendChild(frame);
@@ -874,7 +893,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
     frame.style.transform = `rotate(${WELCOME_POLAROID_ROTATIONS[i]})`;
     const img = document.createElement("img");
     img.src = `${baseUrl}/assets/images/${WELCOME_POLAROID_IMAGES[i]}`;
-    img.alt = "";
+    img.alt = WELCOME_POLAROID_ALTS[i] ?? "Travel photo from the welcome collage";
     img.loading = "lazy";
     frame.appendChild(img);
     rightSide.appendChild(frame);
@@ -897,7 +916,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
 }
 
 /**
- * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when #s=token.
+ * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when URL is /share/<token>.
  */
 function renderAppContent(container: HTMLElement, options: RenderOptions): void {
   const { user, isEditMode, visits: visitsList, isSharedMode } = options;
@@ -966,7 +985,12 @@ function renderFriendsListSection(container: HTMLElement, options: RenderOptions
       viewLink.textContent = "View";
       linkArea.appendChild(viewLink);
       linkArea.addEventListener("click", () => {
-        window.location.hash = "s=" + friend.shareToken;
+        history.pushState(
+          null,
+          "",
+          `${baseUrl}/share/${encodeURIComponent(friend.shareToken)}`,
+        );
+        window.dispatchEvent(new PopStateEvent("popstate"));
       });
       attachTooltip(linkArea, `Click to view country visits by ${friend.name}`);
       cell.appendChild(linkArea);
@@ -1001,9 +1025,45 @@ export async function main(): Promise<void> {
   let formVisitDate: string | null = todayIso();
   let formMediaUrl = "";
 
-  function onGoHome(): void {
-    window.location.hash = "";
+  async function applyShareRoute(): Promise<void> {
+    const token = getShareTokenFromPath();
+    if (token) {
+      try {
+        const r = await api.getShareVisits(token);
+        sharedVisits = r.visits;
+        sharedUserName = r.userName;
+        sharedUserImageUrl = r.imageUrl ?? null;
+        logAnalyticsEvent("open_shared_url", { share_token: token });
+      } catch (err) {
+        console.error("Failed to load shared visits", err);
+        errorToast("Invalid or expired share link");
+        sharedVisits = [];
+        sharedUserName = null;
+        sharedUserImageUrl = null;
+      }
+    } else {
+      sharedVisits = [];
+      sharedUserName = null;
+      sharedUserImageUrl = null;
+    }
+    if (authHeaderEl) {
+      renderAuthHeader(
+        authHeaderEl,
+        currentUser,
+        onLogin,
+        onLogout,
+        !!getShareTokenFromPath(),
+        navigateHome,
+      );
+    }
+    refreshAppContent();
   }
+
+  function navigateHome(): void {
+    history.pushState(null, "", homePath());
+    void applyShareRoute();
+  }
+
   function onLogin(): void {
     sessionStorage.setItem("login:initiated", "1");
     signInWithGoogle().catch((err) => {
@@ -1050,17 +1110,11 @@ export async function main(): Promise<void> {
         formMediaUrl = value;
       },
       shareToken,
-      isSharedMode: !!getShareTokenFromHash(),
+      isSharedMode: !!getShareTokenFromPath(),
       sharedVisits,
       sharedUserName,
       sharedUserImageUrl,
-      onGoHome: () => {
-        window.location.hash = "";
-        sharedVisits = [];
-        sharedUserName = null;
-        sharedUserImageUrl = null;
-        refreshAppContent();
-      },
+      onGoHome: navigateHome,
       visitListTab,
       onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => {
         visitListTab = tab;
@@ -1071,7 +1125,7 @@ export async function main(): Promise<void> {
       onLogin,
       friends,
       onAddFriend: async () => {
-        const token = getShareTokenFromHash();
+        const token = getShareTokenFromPath();
         if (!token || sharedUserName == null) return;
         try {
           await api.postFriend(token, sharedUserName, sharedUserImageUrl ?? undefined);
@@ -1157,14 +1211,14 @@ export async function main(): Promise<void> {
               errorToast("Failed to complete login");
             }
             sessionStorage.removeItem("login:initiated");
-            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, onGoHome);
+            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, navigateHome);
             refreshAppContent();
             return;
           }
           sessionStorage.removeItem("login:initiated");
           logAnalyticsEvent("login");
         }
-        if (!getShareTokenFromHash()) {
+        if (!getShareTokenFromPath()) {
           const [visitsSettled, friendsSettled] = await Promise.allSettled([api.getVisits(), api.getFriends()]);
           if (visitsSettled.status === "fulfilled") {
             visits = visitsSettled.value.visits;
@@ -1193,8 +1247,8 @@ export async function main(): Promise<void> {
         shareToken = null;
         friends = [];
       }
-      const showHome = !!getShareTokenFromHash();
-      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, onGoHome);
+      const showHome = !!getShareTokenFromPath();
+      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, navigateHome);
       refreshAppContent();
     });
     void unsubscribe;
@@ -1208,38 +1262,11 @@ export async function main(): Promise<void> {
     console.error("Countries load failed", err);
   }
 
-  async function applyHash(): Promise<void> {
-    const token = getShareTokenFromHash();
-    if (token) {
-      try {
-        const r = await api.getShareVisits(token);
-        sharedVisits = r.visits;
-        sharedUserName = r.userName;
-        sharedUserImageUrl = r.imageUrl ?? null;
-        logAnalyticsEvent("open_shared_url", { share_token: token });
-      } catch (err) {
-        console.error("Failed to load shared visits", err);
-        errorToast("Invalid or expired share link");
-        sharedVisits = [];
-        sharedUserName = null;
-        sharedUserImageUrl = null;
-      }
-    } else {
-      sharedVisits = [];
-      sharedUserName = null;
-      sharedUserImageUrl = null;
-    }
-    if (authHeaderEl) {
-      renderAuthHeader(authHeaderEl, currentUser, onLogin, onLogout, !!getShareTokenFromHash(), onGoHome);
-    }
-    refreshAppContent();
-  }
-
-  window.addEventListener("hashchange", () => {
-    applyHash();
+  window.addEventListener("popstate", () => {
+    void applyShareRoute();
   });
 
-  await applyHash();
+  await applyShareRoute();
 
   window.addEventListener("error", function (event) {
     console.error(

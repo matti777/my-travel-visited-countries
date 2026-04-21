@@ -64,6 +64,13 @@ Pure TypeScript frontend, built with Vite. See [spec/frontend-module.md](spec/fr
 
 6. **Validate** in [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) and [Twitter Card Validator](https://cards-dev.twitter.com/validator). Telegram, WhatsApp, and others cache images; change the filename or add a query string on `og:image` if you replace the art and previews look stale.
 
+### Search engine visibility (SEO)
+
+- **`robots.txt` and `sitemap.xml`** live in `public/` with `__APP_PUBLIC_URL__` placeholders. `npm run build:and-copy` injects the same `APP_PUBLIC_URL` as for `index.html`, so production serves `https://<your-domain>/robots.txt` and `https://<your-domain>/sitemap.xml`.
+- **`index.html`** includes a canonical URL, Open Graph / Twitter tags, and JSON-LD (`WebApplication`) for structured data. Validate with [Google Rich Results Test](https://search.google.com/test/rich-results).
+- **Search Console and Bing:** After deploy, add the site in [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters), then submit the sitemap URL (for example `https://countriesof.earth/sitemap.xml` when using the default public URL).
+- **Performance:** Run [PageSpeed Insights](https://pagespeed.web.dev/) on the production URL to check Core Web Vitals (LCP, INP, CLS) and follow any high-impact suggestions.
+
 ---
 
 ## Flag assets

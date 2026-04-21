@@ -6,7 +6,7 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 ## UI routing
 
-If html fragment #s=<share-token> is present, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
+If the URL path is `/share/<share-token>`, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -136,7 +136,7 @@ Clicking "Add friend" button should attempt to create the friend in the backend 
 
 If not logged in OR viewing another user's shared visits, this section is not visible.
 
-This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site address + HTML fragment value of "#s=<share-token>" where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
+This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site origin + path `/share/<share-token>` (with optional base path when the app is not deployed at `/`) where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
 
 ---
 
