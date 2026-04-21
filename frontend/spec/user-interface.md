@@ -157,3 +157,7 @@ Below it, the content: a welcome message with a title and a descriptive text cha
 The welcome text should indicate that this is a free online tool for keeping track of one's visited countries and that it allows for adding media links and similar metadata.
 
 Centered on the bottom should be a large "Login" button whose functionality must copy the one in the top bar.
+
+--
+
+At the very bottom of the page there are links to Privacy Policy / Terms of Service pages.
