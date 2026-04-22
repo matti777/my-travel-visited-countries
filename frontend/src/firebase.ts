@@ -62,6 +62,13 @@ function ensureAuthCredentialFromJsonPolyfill(): void {
       }
       return (firebase.auth as any).TwitterAuthProvider.credential(token, secret);
     }
+    if (providerId === "github.com") {
+      const accessToken = json.oauthAccessToken ?? json.accessToken;
+      if (!accessToken) {
+        throw new Error("Missing GitHub access token for account linking.");
+      }
+      return (firebase.auth as any).GithubAuthProvider.credential(accessToken);
+    }
     throw new Error(`Unsupported credential provider for linking: ${providerId ?? "unknown"}`);
   };
 }

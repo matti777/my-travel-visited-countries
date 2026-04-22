@@ -95,6 +95,13 @@ function ensureAuthCredentialFromJsonPolyfill(): void {
       }
       return (firebaseApp.auth as any).TwitterAuthProvider.credential(token, secret);
     }
+    if (providerId === "github.com") {
+      const accessToken = json.oauthAccessToken ?? json.accessToken;
+      if (!accessToken) {
+        throw new Error("Missing GitHub access token for account linking.");
+      }
+      return (firebaseApp.auth as any).GithubAuthProvider.credential(accessToken);
+    }
     throw new Error(`Unsupported credential provider for linking: ${providerId ?? "unknown"}`);
   };
 }
@@ -132,6 +139,8 @@ function providerLabel(providerId: string): string {
       return "Google";
     case "twitter.com":
       return "Twitter / X";
+    case "github.com":
+      return "GitHub";
     case "password":
       return "Email and password";
     default:
@@ -145,6 +154,8 @@ function providerForId(providerId: string): firebase.auth.AuthProvider | null {
       return new (firebaseApp.auth as any).GoogleAuthProvider();
     case "twitter.com":
       return new (firebaseApp.auth as any).TwitterAuthProvider();
+    case "github.com":
+      return new (firebaseApp.auth as any).GithubAuthProvider();
     default:
       return null;
   }
@@ -388,6 +399,7 @@ function startFirebaseUi(): void {
       // Provider IDs are Firebase Auth constants.
       "google.com",
       "twitter.com",
+      "github.com",
     ],
     callbacks: {
       signInSuccessWithAuthResult: () => {
