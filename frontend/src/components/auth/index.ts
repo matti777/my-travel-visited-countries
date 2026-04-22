@@ -1,12 +1,17 @@
-import type { User } from "firebase/auth";
 import { attachTooltip } from "Components/tooltip";
+
+type AuthUser = {
+  displayName?: string | null;
+  email?: string | null;
+  photoURL?: string | null;
+} | null;
 
 /**
  * Renders the auth header content: optionally Home (when showHomeButton), then Login or (name + avatar + Log out).
  */
 export function renderAuthHeader(
   container: HTMLElement,
-  user: User | null,
+  user: AuthUser,
   onLogin: () => void,
   onLogout: () => void,
   showHomeButton?: boolean,

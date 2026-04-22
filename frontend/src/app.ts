@@ -1,5 +1,6 @@
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
+import "firebaseui/dist/firebaseui.css";
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
@@ -8,12 +9,21 @@ import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
-import { logAnalyticsEvent, subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
+import {
+  auth,
+  completeRedirectSignIn,
+  logAnalyticsEvent,
+  subscribeToAuthStateChanged,
+  signOut,
+} from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
 import type { CountryVisit } from "./types/visit";
-import type { User } from "firebase/auth";
+import type firebase from "firebase/compat/app";
+import * as firebaseui from "firebaseui";
+
+type User = firebase.User;
 
 /** Country list from GET /countries, filled after app start (from cache or backend). */
 export let countries: Country[] = [];
@@ -52,6 +62,110 @@ function getShareTokenFromPath(): string | null {
 
 function homePath(): string {
   return baseUrl ? `${baseUrl}/` : "/";
+}
+
+let firebaseUi: any | null = null;
+
+const FIREBASE_UI_OVERLAY_ANIM_MS = 400;
+
+function closeFirebaseUiOverlay(overlay: HTMLElement): void {
+  if (!overlay.isConnected) return;
+  overlay.classList.remove("firebaseui-overlay--visible");
+  overlay.classList.add("firebaseui-overlay--closing");
+  let done = false;
+  const finish = (): void => {
+    if (done) return;
+    done = true;
+    overlay.remove();
+  };
+  overlay.addEventListener(
+    "transitionend",
+    (e) => {
+      if (e.target !== overlay || e.propertyName !== "opacity") return;
+      finish();
+    },
+    { once: true },
+  );
+  window.setTimeout(finish, FIREBASE_UI_OVERLAY_ANIM_MS + 80);
+}
+
+function revealFirebaseUiOverlay(overlay: HTMLElement): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => overlay.classList.add("firebaseui-overlay--visible"));
+  });
+}
+
+function ensureFirebaseUiOverlay(): { overlay: HTMLDivElement; container: HTMLDivElement } {
+  const existing = document.getElementById("firebaseui-overlay");
+  const existingContainer = document.getElementById("firebaseui-auth-container");
+  if (existing instanceof HTMLDivElement && existingContainer instanceof HTMLDivElement) {
+    revealFirebaseUiOverlay(existing);
+    return { overlay: existing, container: existingContainer };
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "firebaseui-overlay";
+  overlay.className = "firebaseui-overlay";
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeFirebaseUiOverlay(overlay);
+  });
+
+  const panel = document.createElement("div");
+  panel.className = "firebaseui-overlay__panel";
+
+  const header = document.createElement("div");
+  header.className = "firebaseui-overlay__header";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "firebaseui-overlay__close";
+  closeBtn.textContent = "Close";
+  closeBtn.setAttribute("aria-label", "Close sign-in");
+  closeBtn.addEventListener("click", () => closeFirebaseUiOverlay(overlay));
+
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "firebaseui-overlay__title-block";
+  const title = document.createElement("h2");
+  title.className = "firebaseui-overlay__title";
+  title.textContent = "Sign in";
+  const intro = document.createElement("p");
+  intro.className = "firebaseui-overlay__intro";
+  intro.textContent = "Select an authentication provider below to log into Countries of Earth.";
+  titleBlock.appendChild(title);
+  titleBlock.appendChild(intro);
+  header.appendChild(closeBtn);
+  header.appendChild(titleBlock);
+  panel.appendChild(header);
+
+  const container = document.createElement("div");
+  container.id = "firebaseui-auth-container";
+  panel.appendChild(container);
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  revealFirebaseUiOverlay(overlay);
+  return { overlay, container };
+}
+
+function startFirebaseUi(): void {
+  const { container } = ensureFirebaseUiOverlay();
+  if (!firebaseUi) {
+    firebaseUi = new (firebaseui as any).auth.AuthUI(auth);
+  }
+  firebaseUi.start(container, {
+    signInFlow: "popup",
+    signInOptions: [
+      // Provider IDs are Firebase Auth constants.
+      "google.com",
+      "twitter.com",
+    ],
+    callbacks: {
+      signInSuccessWithAuthResult: () => {
+        const overlay = document.getElementById("firebaseui-overlay");
+        if (overlay) closeFirebaseUiOverlay(overlay);
+        return false;
+      },
+    },
+  });
 }
 
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
@@ -491,6 +605,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     countries: countriesList,
     sharedVisits: sharedVisitsList,
     sharedUserName: sharedUserNameVal,
+    sharedUserImageUrl: _sharedUserImageUrl,
     onGoHome,
   } = options;
   const visitedSection = document.createElement("section");
@@ -542,7 +657,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
 
 function renderAddFriendSection(container: HTMLElement, options: RenderOptions): void {
   const currentShareToken = getShareTokenFromPath();
-  const { sharedUserName: name, sharedUserImageUrl: imageUrl, friends: friendsList, onAddFriend } = options;
+  const { sharedUserName: name, friends: friendsList, onAddFriend } = options;
   if (!currentShareToken || name == null) return;
   const isAlreadyFriend = friendsList.some((f) => f.shareToken === currentShareToken);
   const section = document.createElement("section");
@@ -1017,7 +1132,14 @@ export async function main(): Promise<void> {
   const appEl = document.getElementById("app");
   if (!appEl) return;
 
-  let currentUser: User | null = null;
+  try {
+    await completeRedirectSignIn();
+  } catch (err) {
+    console.error("Redirect sign-in failed:", err);
+    errorToast(err instanceof Error ? err.message : "Sign in failed");
+  }
+
+  let currentUser: firebase.User | null = null;
   let isEditMode = false;
   let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics" = "alphabetical";
   let selectedCountryCode = "";
@@ -1066,7 +1188,9 @@ export async function main(): Promise<void> {
 
   function onLogin(): void {
     sessionStorage.setItem("login:initiated", "1");
-    signInWithGoogle().catch((err) => {
+    Promise.resolve()
+      .then(() => startFirebaseUi())
+      .catch((err) => {
       sessionStorage.removeItem("login:initiated");
       const code = (err as { code?: string })?.code;
       if (code && CANCELLED_AUTH_CODES.has(code)) {
@@ -1074,7 +1198,7 @@ export async function main(): Promise<void> {
       }
       console.error("Sign in failed:", err);
       errorToast(err instanceof Error ? err.message : "Sign in failed");
-    });
+      });
   }
   function onLogout(): void {
     signOut().then(() => {

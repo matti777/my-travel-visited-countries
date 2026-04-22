@@ -6,16 +6,9 @@
  * See: https://firebase.google.com/docs/projects/api-keys
  */
 
-import { getAnalytics, logEvent } from "firebase/analytics";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  type User,
-} from "firebase/auth";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/analytics";
 
 const env = import.meta.env;
 
@@ -29,30 +22,30 @@ const firebaseConfig = {
   measurementId: env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-export const auth = getAuth(app);
-export const googleAuthProvider = new GoogleAuthProvider();
+firebase.initializeApp(firebaseConfig);
+const analytics = firebase.analytics();
+export const auth = firebase.auth();
 
 export function logAnalyticsEvent(
   eventName: string,
   params?: Record<string, string | number>,
 ): void {
   try {
-    logEvent(analytics, eventName, params);
+    analytics.logEvent(eventName, params as Record<string, any> | undefined);
   } catch {
     // Ignore so missing or invalid Analytics config does not break the app.
   }
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  await signInWithPopup(auth, googleAuthProvider);
+export async function completeRedirectSignIn(): Promise<void> {
+  // Needed when sign-in uses redirects. Also surfaces redirect errors reliably.
+  await auth.getRedirectResult();
 }
 
 export function signOut(): Promise<void> {
-  return firebaseSignOut(auth);
+  return auth.signOut();
 }
 
-export function subscribeToAuthStateChanged(callback: (user: User | null) => void): () => void {
-  return onAuthStateChanged(auth, callback);
+export function subscribeToAuthStateChanged(callback: (user: firebase.User | null) => void): () => void {
+  return auth.onAuthStateChanged(callback);
 }
