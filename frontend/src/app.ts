@@ -1,5 +1,6 @@
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
+import "firebaseui/dist/firebaseui.css";
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
@@ -8,12 +9,23 @@ import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
-import { logAnalyticsEvent, subscribeToAuthStateChanged, signInWithGoogle, signOut } from "./firebase";
+import {
+  auth,
+  completeRedirectSignIn,
+  logAnalyticsEvent,
+  subscribeToAuthStateChanged,
+  signOut,
+} from "./firebase";
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
 import type { CountryVisit } from "./types/visit";
-import type { User } from "firebase/auth";
+import type firebase from "firebase/compat/app";
+import firebaseApp from "firebase/compat/app";
+import "firebase/compat/auth";
+import * as firebaseui from "firebaseui";
+
+type User = firebase.User;
 
 /** Country list from GET /countries, filled after app start (from cache or backend). */
 export let countries: Country[] = [];
@@ -52,6 +64,406 @@ function getShareTokenFromPath(): string | null {
 
 function homePath(): string {
   return baseUrl ? `${baseUrl}/` : "/";
+}
+
+let firebaseUi: any | null = null;
+
+const FIREBASE_UI_OVERLAY_ANIM_MS = 400;
+
+const LINK_SESSION_EMAIL_KEY = "link:email";
+const LINK_SESSION_PENDING_CRED_KEY = "link:pendingCredentialJSON";
+const LINK_SESSION_ATTEMPTED_PROVIDER_KEY = "link:attemptedProviderId";
+const LINK_SESSION_EXISTING_PROVIDER_KEY = "link:existingProviderId";
+
+function ensureAuthCredentialFromJsonPolyfill(): void {
+  const AuthCredentialAny = (firebaseApp.auth as any)?.AuthCredential as any;
+  if (!AuthCredentialAny) return;
+  if (typeof AuthCredentialAny.fromJSON === "function") return;
+
+  AuthCredentialAny.fromJSON = (json: any): firebase.auth.AuthCredential => {
+    const providerId = json?.providerId;
+    if (providerId === "google.com") {
+      const idToken = json.oauthIdToken ?? json.idToken ?? undefined;
+      const accessToken = json.oauthAccessToken ?? json.accessToken ?? undefined;
+      return (firebaseApp.auth as any).GoogleAuthProvider.credential(idToken, accessToken);
+    }
+    if (providerId === "twitter.com") {
+      const token = json.oauthAccessToken ?? json.accessToken;
+      const secret = json.oauthTokenSecret ?? json.secret;
+      if (!token || !secret) {
+        throw new Error("Missing Twitter credential token/secret for account linking.");
+      }
+      return (firebaseApp.auth as any).TwitterAuthProvider.credential(token, secret);
+    }
+    if (providerId === "github.com") {
+      const accessToken = json.oauthAccessToken ?? json.accessToken;
+      if (!accessToken) {
+        throw new Error("Missing GitHub access token for account linking.");
+      }
+      return (firebaseApp.auth as any).GithubAuthProvider.credential(accessToken);
+    }
+    throw new Error(`Unsupported credential provider for linking: ${providerId ?? "unknown"}`);
+  };
+}
+
+function closeFirebaseUiOverlay(overlay: HTMLElement): void {
+  if (!overlay.isConnected) return;
+  overlay.classList.remove("firebaseui-overlay--visible");
+  overlay.classList.add("firebaseui-overlay--closing");
+  let done = false;
+  const finish = (): void => {
+    if (done) return;
+    done = true;
+    overlay.remove();
+  };
+  overlay.addEventListener(
+    "transitionend",
+    (e) => {
+      if (e.target !== overlay || e.propertyName !== "opacity") return;
+      finish();
+    },
+    { once: true },
+  );
+  window.setTimeout(finish, FIREBASE_UI_OVERLAY_ANIM_MS + 80);
+}
+
+function revealFirebaseUiOverlay(overlay: HTMLElement): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => overlay.classList.add("firebaseui-overlay--visible"));
+  });
+}
+
+function providerLabel(providerId: string): string {
+  switch (providerId) {
+    case "google.com":
+      return "Google";
+    case "twitter.com":
+      return "Twitter / X";
+    case "github.com":
+      return "GitHub";
+    case "password":
+      return "Email and password";
+    default:
+      return providerId;
+  }
+}
+
+function providerForId(providerId: string): firebase.auth.AuthProvider | null {
+  switch (providerId) {
+    case "google.com":
+      return new (firebaseApp.auth as any).GoogleAuthProvider();
+    case "twitter.com":
+      return new (firebaseApp.auth as any).TwitterAuthProvider();
+    case "github.com":
+      return new (firebaseApp.auth as any).GithubAuthProvider();
+    default:
+      return null;
+  }
+}
+
+function ensureFirebaseUiOverlay(): { overlay: HTMLDivElement; container: HTMLDivElement } {
+  const existing = document.getElementById("firebaseui-overlay");
+  const existingContainer = document.getElementById("firebaseui-auth-container");
+  if (existing instanceof HTMLDivElement && existingContainer instanceof HTMLDivElement) {
+    revealFirebaseUiOverlay(existing);
+    return { overlay: existing, container: existingContainer };
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "firebaseui-overlay";
+  overlay.className = "firebaseui-overlay";
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeFirebaseUiOverlay(overlay);
+  });
+
+  const panel = document.createElement("div");
+  panel.className = "firebaseui-overlay__panel";
+
+  const header = document.createElement("div");
+  header.className = "firebaseui-overlay__header";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "firebaseui-overlay__close";
+  closeBtn.textContent = "Close";
+  closeBtn.setAttribute("aria-label", "Close sign-in");
+  closeBtn.addEventListener("click", () => closeFirebaseUiOverlay(overlay));
+
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "firebaseui-overlay__title-block";
+  const title = document.createElement("h2");
+  title.className = "firebaseui-overlay__title";
+  title.textContent = "Sign in";
+  const intro = document.createElement("p");
+  intro.className = "firebaseui-overlay__intro";
+  intro.textContent = "Select an authentication provider below to log into Countries of Earth.";
+  titleBlock.appendChild(title);
+  titleBlock.appendChild(intro);
+  header.appendChild(closeBtn);
+  header.appendChild(titleBlock);
+  panel.appendChild(header);
+
+  const container = document.createElement("div");
+  container.id = "firebaseui-auth-container";
+  panel.appendChild(container);
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  revealFirebaseUiOverlay(overlay);
+  return { overlay, container };
+}
+
+type PendingAccountLink = {
+  email: string;
+  pendingCred: firebase.auth.AuthCredential;
+  attemptedProviderId: string;
+  methods: string[];
+};
+
+let pendingAccountLink: PendingAccountLink | null = null;
+
+function closeLinkAccountsOverlay(): void {
+  const overlay = document.getElementById("link-accounts-overlay");
+  if (overlay) closeFirebaseUiOverlay(overlay);
+  pendingAccountLink = null;
+}
+
+function ensureLinkAccountsOverlay(): { overlay: HTMLDivElement; body: HTMLDivElement } {
+  const existing = document.getElementById("link-accounts-overlay");
+  const existingBody = document.getElementById("link-accounts-body");
+  if (existing instanceof HTMLDivElement && existingBody instanceof HTMLDivElement) {
+    revealFirebaseUiOverlay(existing);
+    return { overlay: existing, body: existingBody };
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "link-accounts-overlay";
+  overlay.className = "firebaseui-overlay";
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeLinkAccountsOverlay();
+  });
+
+  const panel = document.createElement("div");
+  panel.className = "firebaseui-overlay__panel";
+
+  const header = document.createElement("div");
+  header.className = "firebaseui-overlay__header";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "firebaseui-overlay__close";
+  closeBtn.textContent = "Close";
+  closeBtn.setAttribute("aria-label", "Close account linking");
+  closeBtn.addEventListener("click", closeLinkAccountsOverlay);
+
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "firebaseui-overlay__title-block";
+  const title = document.createElement("h2");
+  title.className = "firebaseui-overlay__title";
+  title.textContent = "Link accounts";
+  const intro = document.createElement("p");
+  intro.className = "firebaseui-overlay__intro";
+  intro.textContent =
+    "You already have an account with this email. Sign in with the existing provider to link the new one.";
+  titleBlock.appendChild(title);
+  titleBlock.appendChild(intro);
+  header.appendChild(closeBtn);
+  header.appendChild(titleBlock);
+  panel.appendChild(header);
+
+  const body = document.createElement("div");
+  body.id = "link-accounts-body";
+  body.className = "link-accounts__body";
+  panel.appendChild(body);
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  revealFirebaseUiOverlay(overlay);
+  return { overlay, body };
+}
+
+function renderLinkAccountsOverlay(state: PendingAccountLink): void {
+  const { body } = ensureLinkAccountsOverlay();
+  body.replaceChildren();
+
+  const details = document.createElement("div");
+  details.className = "link-accounts__details";
+  const p1 = document.createElement("p");
+  p1.className = "link-accounts__detail";
+  p1.textContent = `Email: ${state.email}`;
+  const p2 = document.createElement("p");
+  p2.className = "link-accounts__detail";
+  p2.textContent = `You tried: ${providerLabel(state.attemptedProviderId)}`;
+  details.appendChild(p1);
+  details.appendChild(p2);
+  body.appendChild(details);
+
+  const methods = state.methods.filter((m) => m !== state.attemptedProviderId);
+  const supported = methods.filter((m) => providerForId(m) != null);
+
+  if (supported.length === 0) {
+    const msg = document.createElement("p");
+    msg.className = "link-accounts__detail";
+    msg.textContent = "No supported existing sign-in method was found for this email.";
+    body.appendChild(msg);
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "link-accounts__btn";
+    backBtn.textContent = "Back to sign in";
+    backBtn.addEventListener("click", () => {
+      closeLinkAccountsOverlay();
+      startFirebaseUi();
+    });
+    body.appendChild(backBtn);
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "link-accounts__methods";
+  body.appendChild(list);
+
+  let busy = false;
+  const setBusy = (b: boolean): void => {
+    busy = b;
+    list.querySelectorAll("button").forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = busy;
+    });
+  };
+
+  for (const providerId of supported) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "link-accounts__btn";
+    btn.textContent = `Continue with ${providerLabel(providerId)}`;
+    btn.addEventListener("click", async () => {
+      if (busy || !pendingAccountLink) return;
+      setBusy(true);
+      logAnalyticsEvent("auth_link_start", {
+        attempted_provider: pendingAccountLink.attemptedProviderId,
+        existing_provider: providerId,
+      });
+      try {
+        const provider = providerForId(providerId);
+        if (!provider) throw new Error("Unsupported provider");
+
+        try {
+          const result = await auth.signInWithPopup(provider);
+          const user = result.user;
+          if (!user) throw new Error("Sign-in failed");
+          const currentEmail = (user.email ?? "").trim().toLowerCase();
+          if (currentEmail !== pendingAccountLink.email.trim().toLowerCase()) {
+            throw new Error(`Please choose the account for ${pendingAccountLink.email}.`);
+          }
+          await user.linkWithCredential(pendingAccountLink.pendingCred);
+          logAnalyticsEvent("auth_link_success", {
+            attempted_provider: pendingAccountLink.attemptedProviderId,
+            existing_provider: providerId,
+          });
+          closeLinkAccountsOverlay();
+        } catch (err) {
+          const code = (err as { code?: string })?.code;
+          if (code && CANCELLED_AUTH_CODES.has(code)) return;
+          if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+            const toJson = (pendingAccountLink.pendingCred as any)?.toJSON as (() => any) | undefined;
+            if (!toJson) throw new Error("Account linking is not supported in this browser/session.");
+            sessionStorage.setItem(LINK_SESSION_EMAIL_KEY, pendingAccountLink.email);
+            sessionStorage.setItem(LINK_SESSION_PENDING_CRED_KEY, JSON.stringify(toJson.call(pendingAccountLink.pendingCred)));
+            sessionStorage.setItem(LINK_SESSION_ATTEMPTED_PROVIDER_KEY, pendingAccountLink.attemptedProviderId);
+            sessionStorage.setItem(LINK_SESSION_EXISTING_PROVIDER_KEY, providerId);
+            await auth.signInWithRedirect(provider);
+            return;
+          }
+          throw err;
+        }
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        logAnalyticsEvent("auth_link_failed", { code: code ?? "unknown" });
+        console.error("Account linking failed:", err);
+        errorToast(err instanceof Error ? err.message : "Account linking failed");
+      } finally {
+        setBusy(false);
+      }
+    });
+    list.appendChild(btn);
+  }
+}
+
+function startFirebaseUi(): void {
+  ensureAuthCredentialFromJsonPolyfill();
+  const { container } = ensureFirebaseUiOverlay();
+  if (!firebaseUi) {
+    firebaseUi = new (firebaseui as any).auth.AuthUI(auth);
+  }
+  console.log("[auth] startFirebaseUi: start");
+  firebaseUi.start(container, {
+    signInFlow: "popup",
+    signInOptions: [
+      // Provider IDs are Firebase Auth constants.
+      "google.com",
+      "twitter.com",
+      "github.com",
+    ],
+    callbacks: {
+      signInSuccessWithAuthResult: () => {
+        console.log("[auth] firebaseui: signInSuccessWithAuthResult");
+        const overlay = document.getElementById("firebaseui-overlay");
+        if (overlay) closeFirebaseUiOverlay(overlay);
+        return false;
+      },
+      signInFailure: async (err: any) => {
+        const code = (err as { code?: string })?.code;
+        console.log("[auth] firebaseui: signInFailure", { code, err });
+        if (code && CANCELLED_AUTH_CODES.has(code)) return;
+        if (code !== "auth/account-exists-with-different-credential") {
+          throw err;
+        }
+
+        // Important: FirebaseUI may render its own recovery UI (e.g. "Recover password")
+        // while we await network calls. Reset/close it immediately so our custom linking
+        // flow takes over deterministically.
+        try {
+          firebaseUi?.reset?.();
+        } catch {
+          // ignore
+        }
+        const firebaseUiOverlay = document.getElementById("firebaseui-overlay");
+        if (firebaseUiOverlay) closeFirebaseUiOverlay(firebaseUiOverlay);
+
+        const pendingCred = (err as { credential?: firebase.auth.AuthCredential })?.credential;
+        const email =
+          (err as { email?: string })?.email ??
+          (err as { customData?: { email?: string } })?.customData?.email ??
+          null;
+
+        console.log("[auth] account-exists: extracted", {
+          hasPendingCred: !!pendingCred,
+          email,
+          pendingCredProviderId: (pendingCred as any)?.providerId,
+        });
+        if (!pendingCred || !email) {
+          errorToast("Sign in failed: could not determine account email for linking.");
+          return;
+        }
+
+        try {
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          console.log("[auth] account-exists: methods", { email, methods });
+          pendingAccountLink = {
+            email,
+            pendingCred,
+            attemptedProviderId: (pendingCred as any)?.providerId ?? "unknown",
+            methods,
+          };
+          renderLinkAccountsOverlay(pendingAccountLink);
+          return;
+        } catch (e) {
+          console.error("Failed to fetch sign-in methods:", e);
+          errorToast("Sign in failed");
+          // Fall back to the normal sign-in UI.
+          startFirebaseUi();
+          return;
+        }
+      },
+    },
+  });
 }
 
 /** Visit IDs that were just added; used to trigger fade-in animation. Cleared after animation. */
@@ -491,6 +903,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     countries: countriesList,
     sharedVisits: sharedVisitsList,
     sharedUserName: sharedUserNameVal,
+    sharedUserImageUrl: _sharedUserImageUrl,
     onGoHome,
   } = options;
   const visitedSection = document.createElement("section");
@@ -542,7 +955,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
 
 function renderAddFriendSection(container: HTMLElement, options: RenderOptions): void {
   const currentShareToken = getShareTokenFromPath();
-  const { sharedUserName: name, sharedUserImageUrl: imageUrl, friends: friendsList, onAddFriend } = options;
+  const { sharedUserName: name, friends: friendsList, onAddFriend } = options;
   if (!currentShareToken || name == null) return;
   const isAlreadyFriend = friendsList.some((f) => f.shareToken === currentShareToken);
   const section = document.createElement("section");
@@ -1017,7 +1430,14 @@ export async function main(): Promise<void> {
   const appEl = document.getElementById("app");
   if (!appEl) return;
 
-  let currentUser: User | null = null;
+  try {
+    await completeRedirectSignIn();
+  } catch (err) {
+    console.error("Redirect sign-in failed:", err);
+    errorToast(err instanceof Error ? err.message : "Sign in failed");
+  }
+
+  let currentUser: firebase.User | null = null;
   let isEditMode = false;
   let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics" = "alphabetical";
   let selectedCountryCode = "";
@@ -1065,8 +1485,11 @@ export async function main(): Promise<void> {
   }
 
   function onLogin(): void {
+    console.log("[auth] onLogin: clicked");
     sessionStorage.setItem("login:initiated", "1");
-    signInWithGoogle().catch((err) => {
+    Promise.resolve()
+      .then(() => startFirebaseUi())
+      .catch((err) => {
       sessionStorage.removeItem("login:initiated");
       const code = (err as { code?: string })?.code;
       if (code && CANCELLED_AUTH_CODES.has(code)) {
@@ -1074,7 +1497,7 @@ export async function main(): Promise<void> {
       }
       console.error("Sign in failed:", err);
       errorToast(err instanceof Error ? err.message : "Sign in failed");
-    });
+      });
   }
   function onLogout(): void {
     signOut().then(() => {
@@ -1193,6 +1616,13 @@ export async function main(): Promise<void> {
 
   if (authHeaderEl) {
     const unsubscribe = subscribeToAuthStateChanged(async (user) => {
+      console.log("[auth] onAuthStateChanged", {
+        hasUser: !!user,
+        uid: user?.uid,
+        email: user?.email,
+        providers: user?.providerData?.map((p) => p?.providerId).filter(Boolean),
+        loginInitiated: !!sessionStorage.getItem("login:initiated"),
+      });
       currentUser = user;
       if (user) {
         const token = await user.getIdToken();
@@ -1201,7 +1631,9 @@ export async function main(): Promise<void> {
         const loginInitiated = sessionStorage.getItem("login:initiated");
         if (loginInitiated) {
           try {
+            console.log("[auth] postLogin: start");
             await api.postLogin();
+            console.log("[auth] postLogin: success");
           } catch (err) {
             console.error("Post-login failed", err);
             if (err instanceof ApiError && err.responseCode === 401) {
@@ -1219,6 +1651,7 @@ export async function main(): Promise<void> {
           logAnalyticsEvent("login");
         }
         if (!getShareTokenFromPath()) {
+          console.log("[auth] loadUserData: start");
           const [visitsSettled, friendsSettled] = await Promise.allSettled([api.getVisits(), api.getFriends()]);
           if (visitsSettled.status === "fulfilled") {
             visits = visitsSettled.value.visits;
@@ -1240,6 +1673,7 @@ export async function main(): Promise<void> {
             friends = [];
             console.error("Failed to load friends", friendsSettled.reason);
           }
+          console.log("[auth] loadUserData: done");
         }
       } else {
         api.setAuthToken(null);
