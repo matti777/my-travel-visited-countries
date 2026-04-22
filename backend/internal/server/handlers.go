@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -169,7 +170,8 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "countryCode is required"})
 		return
 	}
-	if !models.ValidateCountryCode(body.CountryCode) {
+	countryCode := strings.ToUpper(strings.TrimSpace(body.CountryCode))
+	if !data.IsListedCountry(countryCode) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid countryCode"})
 		return
 	}
@@ -192,7 +194,7 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	visit := &models.CountryVisit{
-		CountryCode: body.CountryCode,
+		CountryCode: countryCode,
 		VisitedTime: t,
 		MediaURL:    body.MediaURL,
 		UserID:      user.ID,

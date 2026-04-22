@@ -1,12 +1,13 @@
 /**
- * Downloads thumbnail flag images (JPEG) from flagcdn.com for all sovereign
- * countries listed in country-codes.json. Writes files to assets/images/<code>.jpg.
- * Run from frontend dir: node scripts/download-flag-assets.mjs
+ * Downloads thumbnail flag images (JPEG) from flagcdn.com for codes in
+ * country-codes.json plus standalone map-only codes from src/map-regions.ts.
+ * Run from frontend: npx tsx scripts/download-flag-assets.ts
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
+import { MAP_ONLY_FLAG_ASSET_CODES_LOWER } from "../src/map-regions";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_ROOT = resolve(__dirname, "..");
@@ -17,12 +18,12 @@ const CONCURRENCY = 5;
 const RETRIES = 2;
 const RETRY_DELAY_MS = 500;
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function fetchWithRetry(url) {
-  let lastErr;
+async function fetchWithRetry(url: string): Promise<Buffer> {
+  let lastErr: unknown;
   for (let i = 0; i <= RETRIES; i++) {
     try {
       const res = await fetch(url);
@@ -36,17 +37,31 @@ async function fetchWithRetry(url) {
   throw lastErr;
 }
 
-async function downloadOne(code) {
+async function downloadOne(code: string): Promise<void> {
   const url = `${BASE_URL}/${code}.jpg`;
   const buf = await fetchWithRetry(url);
   const outPath = join(IMAGES_DIR, `${code}.jpg`);
   writeFileSync(outPath, buf);
 }
 
-async function run() {
-  const codes = JSON.parse(readFileSync(CODES_PATH, "utf8"));
+function readCodesArray(path: string, label: string): string[] {
+  const codes = JSON.parse(readFileSync(path, "utf8")) as unknown;
   if (!Array.isArray(codes) || codes.some((c) => typeof c !== "string" || c.length !== 2)) {
-    throw new Error("country-codes.json must be an array of 2-letter strings");
+    throw new Error(`${label} must be an array of 2-letter strings`);
+  }
+  return codes as string[];
+}
+
+async function run(): Promise<void> {
+  const sovereign = readCodesArray(CODES_PATH, "country-codes.json");
+  const seen = new Set<string>();
+  const codes: string[] = [];
+  for (const c of [...sovereign, ...MAP_ONLY_FLAG_ASSET_CODES_LOWER]) {
+    const lower = c.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      codes.push(lower);
+    }
   }
 
   if (!existsSync(IMAGES_DIR)) {
@@ -66,7 +81,7 @@ async function run() {
             console.log(`Downloaded ${done}/${total} (${code}.jpg)`);
           }
         } catch (err) {
-          console.error(`Failed ${code}: ${err.message}`);
+          console.error(`Failed ${code}: ${(err as Error).message}`);
         }
       })
     );

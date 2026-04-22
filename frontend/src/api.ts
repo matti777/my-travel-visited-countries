@@ -58,6 +58,15 @@ export default class Api {
     return sessionStorage.getItem(Api.SESSION_KEY_AUTHTOKEN);
   }
 
+  /** Clears persisted GET /countries data so the next load uses the backend. */
+  clearCountriesCache(): void {
+    try {
+      localStorage.removeItem(COUNTRIES_CACHE_KEY);
+    } catch {
+      /* ignore quota / access errors */
+    }
+  }
+
   async getCountries(): Promise<Country[]> {
     try {
       const raw = localStorage.getItem(COUNTRIES_CACHE_KEY);

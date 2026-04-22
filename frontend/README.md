@@ -81,10 +81,10 @@ To download or refresh the images (from [flagcdn.com](https://flagcdn.com/)):
 
 ```bash
 cd frontend
-node scripts/download-flag-assets.mjs
+npm run download-flags
 ```
 
-The script reads the list of country codes from `scripts/country-codes.json`. That list is kept in sync with the backend’s sovereign country list.
+The script reads sovereign codes from `scripts/country-codes.json` (kept in sync with the backend list) and standalone map-only codes from `src/map-regions.ts` (`MAP_ONLY_FLAG_ASSET_CODES_LOWER`, derived from `MAP_ONLY_REGIONS`).
 
 ---
 

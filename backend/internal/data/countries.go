@@ -141,7 +141,6 @@ var List = []models.Country{
 	{CountryCode: "OM", Name: "Oman", RegionCode: "AS"},
 	{CountryCode: "PK", Name: "Pakistan", RegionCode: "AS"},
 	{CountryCode: "PW", Name: "Palau", RegionCode: "OC"},
-	{CountryCode: "PS", Name: "Palestine", RegionCode: "AS"},
 	{CountryCode: "PA", Name: "Panama", RegionCode: "NA"},
 	{CountryCode: "PG", Name: "Papua New Guinea", RegionCode: "OC"},
 	{CountryCode: "PY", Name: "Paraguay", RegionCode: "SA"},

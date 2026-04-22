@@ -714,6 +714,10 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     return;
   }
   if (visitListTab === "statistics") {
+    const listedCodeSet = new Set(countriesList.map((c) => c.countryCode.toUpperCase()));
+    const visitsForStatistics = visitsForMap.filter((v) =>
+      listedCodeSet.has(v.countryCode.toUpperCase())
+    );
     const countryCodeToRegion = new Map<string, string>();
     const regionTotals = new Map<string, number>();
     for (const c of countriesList) {
@@ -722,7 +726,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       regionTotals.set(c.regionCode, (regionTotals.get(c.regionCode) ?? 0) + 1);
     }
     const worldTotal = countriesList.length;
-    const uniqueCodes = new Set(visitsForMap.map((v) => v.countryCode.toUpperCase()));
+    const uniqueCodes = new Set(visitsForStatistics.map((v) => v.countryCode.toUpperCase()));
     const visitedByRegion = new Map<string, number>();
     for (const code of uniqueCodes) {
       const region = countryCodeToRegion.get(code) ?? "ZZ";
@@ -1500,9 +1504,17 @@ export async function main(): Promise<void> {
       });
   }
   function onLogout(): void {
-    signOut().then(() => {
+    api.clearCountriesCache();
+    signOut().then(async () => {
       logAnalyticsEvent("logout");
       api.setAuthToken(null);
+      try {
+        countries = await api.getCountries();
+        console.log("Countries reloaded after logout", countries.length);
+      } catch {
+        countries = [];
+      }
+      refreshAppContent();
       console.log("Signed out");
     });
   }

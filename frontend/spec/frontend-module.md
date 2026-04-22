@@ -13,7 +13,30 @@ The frontend application shall follow this structure:
 
 ## Additional static assets
 
-Thumbnail sized (no more than a couple of kilobytes each) flags for all the sovereign countries in the world are to be downloaded and stored as JPEG files under `frontend/assets/images/`. The files must be named <country-code>.jpg where `country-code` is the equivalent 2-letter ISO 3166-1 alpha-2 code for the corresponding country, in lower case. These images are to be built into the app bundle so that they can be readily accessed by the client without further download requests.
+Thumbnail sized (no more than a couple of kilobytes each) flags are stored as JPEG files under `frontend/assets/images/` named `<country-code>.jpg` (`country-code` lowercase). Sovereign codes are listed in `scripts/country-codes.json` (aligned with `GET /countries`). Map-only territories that use their own flag file (not a parent’s, e.g. `eh`, `xk`, `ps`) are derived from **`src/map-regions.ts`** via **`MAP_ONLY_FLAG_ASSET_CODES_LOWER`**. Run `npm run download-flags` from the frontend directory (`tsx scripts/download-flag-assets.ts`) to fetch sovereign + map-only assets (deduplicated).
+
+## Map-only regions (svgMap)
+
+Some territories drawn by the world map library are **not** sovereign countries in `GET /countries`. Their labels, tooltip behavior, and optional ties to visit data are defined in **`src/map-regions.ts`** (`MAP_ONLY_REGIONS`). Initial entries:
+
+| Map code | Display name          | Visits / statistics                                                                 |
+| -------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `GL`     | Greenland (Denmark)   | Uses Denmark (`DK`) visits and coloring; tooltip flag is **`dk.jpg`** (no `gl` asset). |
+| `XK`     | Kosovo                | Not a country in the app; tooltip only; flag **`xk.jpg`**.                           |
+| `EH`     | Western Sahara        | Not a country in the app; tooltip only; flag **`eh.jpg`**.                           |
+| `PS`     | Palestine             | Not a country in the app; tooltip only; flag **`ps.jpg`**.                           |
+| `PR`     | Puerto Rico (USA)     | Uses **`US`** visits and fill; tooltip flag **`us.jpg`**.                            |
+| `VI`     | Virgin Islands (USA) | Uses **`US`** visits and fill; tooltip flag **`us.jpg`**.                             |
+| `VG`     | Virgin Islands (UK)   | Uses **`GB`** visits and fill; tooltip flag **`gb.jpg`**.                               |
+| `MS`     | Montserrat (UK)       | Uses **`GB`** visits and fill; tooltip flag **`gb.jpg`**.                               |
+| `GP`     | Guadeloupe (France)   | Uses **`FR`** visits and fill; tooltip flag **`fr.jpg`**.                               |
+| `MQ`     | Martinique (France)   | Uses **`FR`** visits and fill; tooltip flag **`fr.jpg`**.                               |
+| `GF`     | French Guyana (France) | Uses **`FR`** visits and fill; tooltip flag **`fr.jpg`**.                               |
+| `NC`     | New Caledonia (France) | Uses **`FR`** visits and fill; tooltip flag **`fr.jpg`**.                               |
+
+On the **Map** tab, disputed / non-listed territories without a parent visit source use **darker gray** than unvisited sovereign countries; territories that mirror a sovereign code use that code’s colors when visited, otherwise the same darker gray.
+
+The **Statistics** tab counts **only** visits whose `countryCode` exists in the canonical country list from the backend. Map-only codes never appear as stored visit codes (visits attach to sovereign parents such as `DK`, `US`, `GB`, `FR`).
 
 ## Tech Stack
 

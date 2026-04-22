@@ -1,5 +1,6 @@
 import svgMap from "svgmap";
 import "svgmap/style";
+import { MAP_ONLY_REGIONS } from "../../map-regions";
 import type { Country } from "../../types/country";
 import type { CountryVisit } from "../../types/visit";
 
@@ -14,8 +15,10 @@ const REGION_CODE_TO_COLOR: Record<string, string> = {
 };
 /** Fallback for Antarctica or unknown region. */
 const COLOR_VISITED_DEFAULT = "#40e0d0";
-/** Dark gray for unvisited countries so they stand out from ocean/background. */
+/** Dark gray for unvisited sovereign countries so they stand out from ocean/background. */
 const COLOR_NO_DATA = "#4a4a4a";
+/** Darker gray for map-only rows with no visit source, or when a parent sovereign (e.g. US) is unvisited. */
+const COLOR_NON_COUNTRY_MAP = "#2c2c2c";
 
 function getFillColorForRegion(regionCode: string): string {
   return REGION_CODE_TO_COLOR[regionCode] ?? COLOR_VISITED_DEFAULT;
@@ -42,7 +45,8 @@ export interface CreateVisitMapOptions {
 /**
  * Creates a world map inside the given parent element using svgMap.
  * Visited countries are highlighted with the app turquoise;
- * unvisited countries use a darker gray. Tooltips show Visits: N and each visit date.
+ * unvisited sovereign countries use medium gray; map-only territories (not in GET /countries)
+ * use a darker gray. Tooltips show Visits: N and each visit date where applicable.
  */
 export function createVisitMap(
   parent: HTMLElement,
@@ -70,6 +74,8 @@ export function createVisitMap(
     countryByCode.set(c.countryCode.toUpperCase(), c);
   }
 
+  const listedCodes = new Set(countries.map((c) => c.countryCode.toUpperCase()));
+
   const values: Record<string, { visited: number; color: string }> = {};
   for (const code of countryCodes) {
     const upper = code.toUpperCase();
@@ -79,9 +85,24 @@ export function createVisitMap(
     values[upper] = { visited: 1, color: fillColor };
   }
 
+  for (const [code, def] of Object.entries(MAP_ONLY_REGIONS)) {
+    if (def.visitSourceCode) {
+      const parent = def.visitSourceCode.toUpperCase();
+      const parentVals = values[parent];
+      values[code] = parentVals
+        ? { ...parentVals }
+        : { visited: 0, color: COLOR_NON_COUNTRY_MAP };
+    } else {
+      values[code] = { visited: 0, color: COLOR_NON_COUNTRY_MAP };
+    }
+  }
+
   const countryNames: Record<string, string> = {};
   for (const c of countries) {
-    countryNames[c.countryCode] = c.name;
+    countryNames[c.countryCode.toUpperCase()] = c.name;
+  }
+  for (const [code, def] of Object.entries(MAP_ONLY_REGIONS)) {
+    countryNames[code] = def.displayName;
   }
 
   // Defer so the container is in the document (parent may not be attached yet).
@@ -97,24 +118,47 @@ export function createVisitMap(
         countryID: string,
         _countryValues: Record<string, unknown>
       ): HTMLElement => {
+        const idUpper = countryID.toUpperCase();
+        const mapOnly = MAP_ONLY_REGIONS[idUpper];
+        const showVisitBlock = !!(mapOnly?.visitSourceCode || listedCodes.has(idUpper));
+        const visitDataKey = mapOnly?.visitSourceCode ?? idUpper;
+        const list = showVisitBlock ? visitsByCountry.get(visitDataKey) ?? [] : [];
+
+        const titleText =
+          countryNames[idUpper] ??
+          countryNames[countryID] ??
+          mapOnly?.displayName ??
+          countryID;
+
+        const flagImageCode = (mapOnly?.flagCode ?? idUpper).toLowerCase();
+        const showFlag = listedCodes.has(idUpper) || mapOnly !== undefined;
+
         const wrapper = document.createElement("div");
         wrapper.className = "svgMap-tooltip-content-container";
-        const flagContainer = document.createElement("div");
-        flagContainer.className =
-          "svgMap-tooltip-flag-container svgMap-tooltip-flag-container-image";
-        const img = document.createElement("img");
-        img.className = "svgMap-tooltip-flag";
-        img.src = `${baseUrl}/assets/images/${countryID.toLowerCase()}.jpg`;
-        img.alt = "";
-        flagContainer.appendChild(img);
-        wrapper.appendChild(flagContainer);
+
+        if (showFlag) {
+          const flagContainer = document.createElement("div");
+          flagContainer.className =
+            "svgMap-tooltip-flag-container svgMap-tooltip-flag-container-image";
+          const img = document.createElement("img");
+          img.className = "svgMap-tooltip-flag";
+          img.src = `${baseUrl}/assets/images/${flagImageCode}.jpg`;
+          img.alt = "";
+          flagContainer.appendChild(img);
+          wrapper.appendChild(flagContainer);
+        }
+
         const title = document.createElement("div");
         title.className = "svgMap-tooltip-title";
-        title.textContent = countryNames[countryID] ?? countryID;
+        title.textContent = titleText;
         wrapper.appendChild(title);
+
+        if (!showVisitBlock) {
+          return wrapper;
+        }
+
         const content = document.createElement("div");
         content.className = "svgMap-tooltip-content";
-        const list = visitsByCountry.get(countryID) ?? [];
         const visitsLabel = document.createElement("div");
         visitsLabel.textContent = `Visits: ${list.length}`;
         content.appendChild(visitsLabel);
