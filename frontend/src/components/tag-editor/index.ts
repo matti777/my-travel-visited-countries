@@ -1,4 +1,5 @@
 import { attachTooltip } from "Components/tooltip";
+import { logAnalyticsEvent } from "../../firebase";
 
 /** Max tags per visit — must match backend MaxTagsPerVisit / api.md. */
 export const MAX_TAGS_PER_VISIT = 10;
@@ -198,6 +199,7 @@ export function createTagEditor(): TagEditorControl {
           const j = tags.indexOf(tagRemoved);
           if (j >= 0) {
             tags.splice(j, 1);
+            logAnalyticsEvent("delete_tag", {});
           }
           syncUi();
         }
@@ -274,14 +276,14 @@ export function createTagEditor(): TagEditorControl {
         e.preventDefault();
       });
       item.addEventListener("click", () => {
-        tryAddTag(t);
+        tryAddTag(t, "predefined");
       });
       suggestionsList.appendChild(item);
       requestAnimationFrame(() => item.classList.add("visible"));
     }
   }
 
-  function tryAddTag(candidate: string): boolean {
+  function tryAddTag(candidate: string, addSource: "custom" | "predefined"): boolean {
     if (!isValidTagToken(candidate) || atCap()) {
       return false;
     }
@@ -289,6 +291,7 @@ export function createTagEditor(): TagEditorControl {
       return false;
     }
     tags.push(candidate);
+    logAnalyticsEvent("add_tag", { type: addSource });
     input.value = "";
     input.blur();
     syncUi();
@@ -299,7 +302,7 @@ export function createTagEditor(): TagEditorControl {
     if (atCap()) return;
     const raw = sanitizeTagInput(input.value);
     if (!isValidTagToken(raw)) return;
-    tryAddTag(raw);
+    tryAddTag(raw, "custom");
   }
 
   function syncUi(): void {
