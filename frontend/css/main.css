@@ -144,7 +144,7 @@ body {
 .app-modal-overlay {
   position: fixed;
   inset: 0;
-  /* Above .done-editing-float (z-index 90) so modals block the float. */
+  /* Above .visit-list-edit-float (z-index 90) so modals block the float. */
   z-index: 120;
   display: flex;
   align-items: center;
@@ -633,7 +633,7 @@ main.legal-page {
   cursor: not-allowed;
 }
 
-.done-editing-float {
+.visit-list-edit-float {
   position: fixed;
   top: 33vh;
   right: 1rem;
@@ -649,26 +649,26 @@ main.legal-page {
   transition: opacity var(--animation-duration) ease;
 }
 
-.done-editing-float.done-editing-float--visible {
+.visit-list-edit-float.visit-list-edit-float--visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.done-editing-float__inner {
+.visit-list-edit-float__inner {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.65rem;
 }
 
-.done-editing-float__text {
+.visit-list-edit-float__text {
   margin: 0;
   font-size: 0.95rem;
   color: #333;
   line-height: 1.35;
 }
 
-.done-editing-float__done {
+.visit-list-edit-float__action {
   align-self: flex-start;
 }
 
@@ -2026,6 +2026,13 @@ main.legal-page {
   }
   .welcome-view__brand {
     padding: 0 0.75rem;
+  }
+  .visit-list-edit-float {
+    top: auto;
+    right: auto;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 

@@ -50,15 +50,15 @@ This section shows a list of visited countries with section title "Your visited 
 
 This list of countries will be unique by country code, ie. it will show no duplicates. The countries will be sorted to alphabetical order.
 
-After the section title there will be a button called "Edit" which, when pressed, will:
+On the **Alphabetical** tab, list edit mode is not started from the UI (the visit-list edit float is not shown; see below). On **By continent** and **Timeline**, a floating control (see below) provides an **Edit** button. When edit mode is active, it will:
 
-- Turn into "Done" button. Tooltip for Done button should say "Click to complete editing".
+- Show a **Done** button in that floating control (replacing **Edit**). Tooltip for Done should say "Click to complete editing".
 - While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will show a "popup dialog" for confirmation, with text "Are you sure you want to delete the visit to <country name> at <visit time>?" and **No** and **Yes, delete** buttons (no separate Close control in the dialog). Pressing **Yes, delete** will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
-- When "Done" button is pressed, it turns back into "Edit" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
+- When **Done** is pressed in the floating control, edit mode ends: the float shows **Edit** again (with hint text to press Edit) and the X buttons are hidden from country cells. The list returns to its non-edit presentation (for example unique-by-country on the Alphabetical tab).
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
 - The transformation between an unique / non-unique lists shall be animated as well.
-- In "Edit" state the button's tooltip should say "Click to edit the visits list".
+- While not in edit mode, the floating **Edit** button's tooltip should say "Click to edit the visits list".
 
 Edit mode will not be available when in shared visit list routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
 
@@ -84,7 +84,7 @@ Each visited country fill color should depend on the continent they are on:
 - Oceania: Turquoise
 - Antarctica: Icy deep blue
 
-In this mode the Edit button is disabled.
+In this mode the visit-list edit float is not shown (same as Alphabetical and Statistics).
 
 **Tab 4:** Timeline
 
@@ -116,11 +116,15 @@ Clicking on a tab selects that tab and displays the corresponding content above.
 
 ---
 
-If not editing the current country visits list, this component is not visible.
+On **By continent** and **Timeline** tabs (logged-in, not shared view), a floating visit-list edit component is shown.
 
-When editing the visit list, a floating component is shown on the right side of the page, in a fixed location in the upper middle (about 1/3th screen height down from top and reasonable padding from right) part of the screen. This component has the text "Click Done when finished with editing your visits." and a Done button. The Done button does the same as the main Done button; ends the editing mode.
+- **Not in edit mode:** fixed on the **right** side of the viewport (desktop), roughly one third of the viewport height from the top, with padding from the right edge. It shows the text "Press Edit to edit the list of your visits." and an **Edit** button (tooltip: "Click to edit the visits list"). Pressing **Edit** enters edit mode.
 
-This component has a thin border, slightly rounded corners and a visible drop shadow. It appears animatedly when Edit button is pressed and hides animatedly when (either) Done button is pressed. The page "under" the component is fully interactable.
+- **In edit mode:** same placement on desktop. It shows "Click Done when finished with editing your visits." and a **Done** button (tooltip: "Click to complete editing"). Pressing **Done** leaves edit mode and returns to the idle copy and **Edit** button above.
+
+On **narrow viewports** (mobile), this component is fixed to the **bottom** of the screen, **horizontally centered**, so it does not cover the visit list.
+
+It has a thin border, slightly rounded corners and a visible drop shadow. It fades in when it becomes relevant and fades out when switching to a tab that does not use it (or when logging out). The page under the component remains interactable.
 
 While a confirmation dialog is open (for example delete visit or remove friend), the same full-screen dark overlay used by that dialog shall stack above this floating component so the float appears dimmed behind the overlay and cannot receive clicks until the dialog is dismissed.
 

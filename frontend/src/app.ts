@@ -10,7 +10,11 @@ import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
-import { createDoneEditingFloat } from "Components/done-editing-float";
+import {
+  VISIT_LIST_EDIT_FLOAT_ID,
+  createVisitListEditFloat,
+  updateVisitListEditFloat,
+} from "Components/visit-list-edit-float";
 import { confirmDialog, openModal } from "Components/modal";
 import {
   auth,
@@ -712,7 +716,6 @@ export interface RenderOptions {
   visits: CountryVisit[];
   user: User | null;
   isEditMode: boolean;
-  onEditModeToggle: () => void;
   onRefresh: () => void;
   selectedCountryCode: string;
   onSelectCountry: (code: string) => void;
@@ -1206,7 +1209,7 @@ function renderAddFriendSection(container: HTMLElement, options: RenderOptions):
 
 function renderNormalVisitedSection(container: HTMLElement, options: RenderOptions, displayList: CountryVisit[]): void {
   container.replaceChildren();
-  const { countries: countriesList, visits: visitsList, isEditMode, onEditModeToggle } = options;
+  const { countries: countriesList, visits: visitsList, isEditMode } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
   const titleRow = document.createElement("div");
@@ -1214,16 +1217,6 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   const visitedTitle = document.createElement("h1");
   visitedTitle.textContent = `Your visited countries (${uniqueVisitsByCountry(visitsList).length})`;
   titleRow.appendChild(visitedTitle);
-  const showEditToggle = options.visitListTab === "byContinent" || options.visitListTab === "timeline";
-  if (showEditToggle) {
-    const editDoneBtn = document.createElement("button");
-    editDoneBtn.type = "button";
-    editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
-    editDoneBtn.className = "edit-done-btn";
-    editDoneBtn.addEventListener("click", onEditModeToggle);
-    attachTooltip(editDoneBtn, isEditMode ? "Click to complete editing" : "Click to edit the visits list");
-    titleRow.appendChild(editDoneBtn);
-  }
   visitedSection.appendChild(titleRow);
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
@@ -1259,8 +1252,8 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
 /** Stable id for partial refresh of the visited-countries block (see #app-visited). */
 const APP_VISITED_SECTION_ID = "app-visited";
 
-function removeDoneEditingFloatFromDom(): void {
-  document.getElementById("done-editing-float")?.remove();
+function removeVisitListEditFloatFromDom(): void {
+  document.getElementById(VISIT_LIST_EDIT_FLOAT_ID)?.remove();
 }
 
 /** 4 Polaroid images: [left top, left bottom, right top, right bottom] */
@@ -1365,7 +1358,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
  */
 function renderAppContent(container: HTMLElement, options: RenderOptions): void {
   const { user, isEditMode, visits: visitsList, isSharedMode } = options;
-  removeDoneEditingFloatFromDom();
+  removeVisitListEditFloatFromDom();
   container.replaceChildren();
 
   if (isSharedMode) {
@@ -1572,6 +1565,68 @@ export async function main(): Promise<void> {
     });
   }
 
+  function queueVisitListEditFloatExit(): void {
+    const el = document.getElementById(VISIT_LIST_EDIT_FLOAT_ID);
+    if (!el) return;
+    if (!el.classList.contains("visit-list-edit-float--visible")) {
+      el.remove();
+      return;
+    }
+    const onEnd = (e: TransitionEvent): void => {
+      if (e.target !== el || e.propertyName !== "opacity") return;
+      el.removeEventListener("transitionend", onEnd);
+      el.remove();
+    };
+    el.addEventListener("transitionend", onEnd);
+    el.classList.remove("visit-list-edit-float--visible");
+  }
+
+  function enterEditModeAndRefresh(): void {
+    isEditMode = true;
+    refreshVisitListSection();
+  }
+
+  function exitEditModeAndRefresh(): void {
+    if (!isEditMode) return;
+    isEditMode = false;
+    refreshVisitListSection();
+  }
+
+  function syncVisitListEditFloat(): void {
+    const shouldShow =
+      !!currentUser &&
+      !getShareTokenFromPath() &&
+      (visitListTab === "byContinent" || visitListTab === "timeline");
+
+    if (!shouldShow) {
+      queueVisitListEditFloatExit();
+      return;
+    }
+
+    const mode = isEditMode ? "editing" : "idle";
+    const onPrimary = mode === "idle" ? enterEditModeAndRefresh : exitEditModeAndRefresh;
+
+    let el = document.getElementById(VISIT_LIST_EDIT_FLOAT_ID);
+    if (!el) {
+      el = createVisitListEditFloat({ mode, onPrimary });
+      document.body.appendChild(el);
+    } else {
+      updateVisitListEditFloat(el, { mode, onPrimary });
+    }
+
+    const primaryBtn = el.querySelector(".visit-list-edit-float__action");
+    if (primaryBtn instanceof HTMLElement) {
+      attachTooltip(
+        primaryBtn,
+        mode === "idle" ? "Click to edit the visits list" : "Click to complete editing",
+      );
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el!.classList.add("visit-list-edit-float--visible"));
+    });
+  }
+
   function refreshVisitListSection(): void {
     if (!appEl) return;
     const wrap = document.getElementById(APP_VISITED_SECTION_ID);
@@ -1585,55 +1640,7 @@ export async function main(): Promise<void> {
         ? visits
         : uniqueVisitsByCountry(visits);
     renderNormalVisitedSection(wrap, opts, displayList);
-  }
-
-  function queueDoneEditingFloatExit(): void {
-    const el = document.getElementById("done-editing-float");
-    if (!el) return;
-    if (!el.classList.contains("done-editing-float--visible")) {
-      el.remove();
-      return;
-    }
-    const onEnd = (e: TransitionEvent): void => {
-      if (e.target !== el || e.propertyName !== "opacity") return;
-      el.removeEventListener("transitionend", onEnd);
-      el.remove();
-    };
-    el.addEventListener("transitionend", onEnd);
-    el.classList.remove("done-editing-float--visible");
-  }
-
-  function exitEditModeAndRefresh(): void {
-    if (!isEditMode) return;
-    isEditMode = false;
-    refreshVisitListSection();
-    queueDoneEditingFloatExit();
-  }
-
-  function enterEditModeAndRefresh(): void {
-    isEditMode = true;
-    refreshVisitListSection();
-    ensureDoneEditingFloatMounted();
-  }
-
-  function ensureDoneEditingFloatMounted(): void {
-    if (!currentUser || getShareTokenFromPath() || !isEditMode) return;
-    let el = document.getElementById("done-editing-float");
-    if (el) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => el!.classList.add("done-editing-float--visible"));
-      });
-      return;
-    }
-    el = createDoneEditingFloat({ onDone: exitEditModeAndRefresh });
-    document.body.appendChild(el);
-    const doneBtn = el.querySelector(".done-editing-float__done");
-    if (doneBtn instanceof HTMLElement) {
-      attachTooltip(doneBtn, "Click to complete editing");
-    }
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => el!.classList.add("done-editing-float--visible"));
-    });
+    syncVisitListEditFloat();
   }
 
   function getRenderOptions(): RenderOptions {
@@ -1642,10 +1649,6 @@ export async function main(): Promise<void> {
       visits,
       user: currentUser,
       isEditMode,
-      onEditModeToggle: () => {
-        if (isEditMode) exitEditModeAndRefresh();
-        else enterEditModeAndRefresh();
-      },
       onRefresh: refreshVisitListSection,
       selectedCountryCode,
       onSelectCountry: (code: string) => {
@@ -1790,6 +1793,7 @@ export async function main(): Promise<void> {
     const scrollY = window.scrollY;
     renderAppContent(appEl, getRenderOptions());
     window.scrollTo(scrollX, scrollY);
+    syncVisitListEditFloat();
   }
 
   if (authHeaderEl) {
