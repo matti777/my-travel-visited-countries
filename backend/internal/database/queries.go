@@ -39,12 +39,69 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 		if err := doc.DataTo(&visit); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal country visit: %w", err)
 		}
+		if visit.Tags == nil {
+			visit.Tags = []string{}
+		}
 		visit.ID = doc.Ref.ID
 		visit.UserID = userID
 		visits = append(visits, visit)
 	}
 
 	return visits, nil
+}
+
+// GetCountryVisit loads a single country visit by ID under users/{userID}/country_visits.
+// Returns (nil, ErrVisitNotFound) if the document does not exist.
+func (c *Client) GetCountryVisit(ctx context.Context, visitID, userID string) (*models.CountryVisit, error) {
+	if visitID == "" || userID == "" {
+		return nil, fmt.Errorf("visitID and userID are required")
+	}
+	ref := c.Collection("users").Doc(userID).Collection("country_visits").Doc(visitID)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, ErrVisitNotFound
+		}
+		return nil, fmt.Errorf("failed to get country visit: %w", err)
+	}
+	if !snap.Exists() {
+		return nil, ErrVisitNotFound
+	}
+	var visit models.CountryVisit
+	if err := snap.DataTo(&visit); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal country visit: %w", err)
+	}
+	if visit.Tags == nil {
+		visit.Tags = []string{}
+	}
+	visit.ID = snap.Ref.ID
+	visit.UserID = userID
+	return &visit, nil
+}
+
+// ReplaceCountryVisit writes the full country visit document at users/{userID}/country_visits/{visit.ID}.
+func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryVisit) error {
+	if visit == nil || visit.ID == "" || visit.UserID == "" {
+		return fmt.Errorf("visit with id and userID is required")
+	}
+	tags := visit.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+	doc := map[string]interface{}{
+		"CountryCode": visit.CountryCode,
+		"VisitTime":   visit.VisitedTime,
+		"Tags":        tags,
+	}
+	if visit.MediaURL != nil && *visit.MediaURL != "" {
+		doc["MediaURL"] = *visit.MediaURL
+	}
+	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").Doc(visit.ID)
+	_, err := ref.Set(ctx, doc)
+	if err != nil {
+		return fmt.Errorf("failed to update country visit: %w", err)
+	}
+	return nil
 }
 
 // EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email, ImageURL. When user already exists, updates ImageURL from the token so avatar changes are reflected.
@@ -139,7 +196,7 @@ func (c *Client) GetUserByID(ctx context.Context, userID string) (*models.User, 
 }
 
 // CreateCountryVisit adds a new country visit document under users/{userID}/country_visits.
-// Document contains CountryCode, VisitTime, and optionally MediaURL (user is implied by path).
+// Document contains CountryCode, VisitTime, optional MediaURL and Tags (user is implied by path).
 func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error) {
 	if visit == nil {
 		return nil, fmt.Errorf("visit is required")
@@ -147,10 +204,15 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	if visit.UserID == "" || visit.CountryCode == "" {
 		return nil, fmt.Errorf("user_id and country_code are required")
 	}
+	tags := visit.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").NewDoc()
 	doc := map[string]interface{}{
 		"CountryCode": visit.CountryCode,
 		"VisitTime":   visit.VisitedTime,
+		"Tags":        tags,
 	}
 	if visit.MediaURL != nil && *visit.MediaURL != "" {
 		doc["MediaURL"] = *visit.MediaURL
@@ -160,6 +222,7 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 		return nil, fmt.Errorf("failed to create country visit: %w", err)
 	}
 	out := *visit
+	out.Tags = tags
 	out.ID = ref.ID
 	return &out, nil
 }

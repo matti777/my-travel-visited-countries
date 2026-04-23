@@ -136,23 +136,73 @@ export default class Api {
     return response;
   }
 
-  async putVisits(countryCode: string, visitedTime: number, mediaUrl?: string): Promise<CountryVisit> {
+  async postVisit(
+    countryCode: string,
+    visitedTime: number,
+    mediaUrl?: string,
+    tags?: string[],
+  ): Promise<CountryVisit> {
     const token = this.getAuthToken();
     if (!token) {
       throw new ApiError({ message: "Not authenticated" });
     }
-    const body: { countryCode: string; visitedTime: number; mediaUrl?: string } = { countryCode, visitedTime };
+    const body: {
+      countryCode: string;
+      visitedTime: number;
+      mediaUrl?: string;
+      tags?: string[];
+    } = { countryCode, visitedTime };
     if (mediaUrl != null && mediaUrl !== "") {
       body.mediaUrl = mediaUrl;
     }
+    if (tags != null && tags.length > 0) {
+      body.tags = tags;
+    }
     const response = (await this.performRequest("/visits", {
-      method: "PUT",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     })) as CountryVisit;
+    return response;
+  }
+
+  /** Partial PUT: include only keys you want to change; omitted keys are not sent. Use `mediaUrl: ""` to clear. */
+  async updateVisit(
+    visitId: string,
+    patch: {
+      visitedTime?: number;
+      tags?: string[];
+      mediaUrl?: string;
+    },
+  ): Promise<CountryVisit> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const body: Record<string, unknown> = {};
+    if (patch.visitedTime !== undefined) {
+      body.visitedTime = patch.visitedTime;
+    }
+    if (patch.tags !== undefined) {
+      body.tags = patch.tags;
+    }
+    if (patch.mediaUrl !== undefined) {
+      body.mediaUrl = patch.mediaUrl;
+    }
+    const response = (await this.performRequest(
+      `/visits/${encodeURIComponent(visitId)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      },
+    )) as CountryVisit;
     return response;
   }
 

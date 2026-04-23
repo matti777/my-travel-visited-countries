@@ -6,6 +6,7 @@ export interface CountryVisit {
   countryCode: string;
   visitedTime?: string;
   mediaUrl?: string;
+  tags?: string[];
   userId: string;
 }
 

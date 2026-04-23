@@ -5,7 +5,7 @@ import (
 )
 
 // RegisterRoutes registers all HTTP routes.
-// GET /countries is public; GET /visits and PUT /visits require auth middleware.
+// GET /countries is public; authenticated visit and friend routes use auth middleware.
 // Unmatched GET/HEAD requests are served from embedded static files (SPA fallback to index.html).
 func (s *Server) RegisterRoutes() {
 	s.Router.GET("/countries", func(c *gin.Context) {
@@ -25,8 +25,11 @@ func (s *Server) RegisterRoutes() {
 		protected.GET("/visits", func(c *gin.Context) {
 			s.GetListHandler(c.Request.Context(), c)
 		})
-		protected.PUT("/visits", func(c *gin.Context) {
-			s.PutVisitsHandler(c.Request.Context(), c)
+		protected.POST("/visits", func(c *gin.Context) {
+			s.PostVisitsHandler(c.Request.Context(), c)
+		})
+		protected.PUT("/visits/:id", func(c *gin.Context) {
+			s.PutVisitHandler(c.Request.Context(), c)
 		})
 		protected.DELETE("/visits/:id", func(c *gin.Context) {
 			s.DeleteVisitHandler(c.Request.Context(), c)

@@ -140,12 +140,12 @@ func (s *Server) GetListHandler(ctx context.Context, c *gin.Context) {
 	})
 }
 
-// PutVisitsHandler handles PUT /visits.
+// PostVisitsHandler handles POST /visits.
 // Creates a new country visit for the current user. Body: { "countryCode": "FI", "visitedTime": <Unix seconds> }.
 // visitedTime is required and must be between 1900-01-01 and current date (inclusive).
 // Requires auth middleware.
-func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
-	ctx, span := tracing.New(ctx, "PutVisitsHandler")
+func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PostVisitsHandler")
 	defer span.End()
 
 	log := logging.FromContext(ctx)
@@ -157,12 +157,13 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	var body struct {
-		CountryCode string  `json:"countryCode"`
-		VisitedTime *int64  `json:"visitedTime"` // Unix seconds; required
-		MediaURL    *string `json:"mediaUrl,omitempty"`
+		CountryCode string   `json:"countryCode"`
+		VisitedTime *int64   `json:"visitedTime"` // Unix seconds; required
+		MediaURL    *string  `json:"mediaUrl,omitempty"`
+		Tags        []string `json:"tags,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		log.Warn("Invalid PUT /visits body", logging.Error, err)
+		log.Warn("Invalid POST /visits body", logging.Error, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
@@ -193,10 +194,17 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
+	tags := models.DedupeTagsPreserveOrder(body.Tags)
+	if err := models.ValidateTags(tags); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	visit := &models.CountryVisit{
 		CountryCode: countryCode,
 		VisitedTime: t,
 		MediaURL:    body.MediaURL,
+		Tags:        tags,
 		UserID:      user.ID,
 	}
 
@@ -208,6 +216,95 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 	log.Info("Created country visit", logging.VisitID, created.ID, logging.UserID, user.ID)
 	c.JSON(http.StatusCreated, created)
+}
+
+// PutVisitHandler handles PUT /visits/:id — partial update per api.md.
+func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PutVisitHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+	visitID := c.Param("id")
+	if visitID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "visit id required"})
+		return
+	}
+
+	var body struct {
+		VisitedTime *int64    `json:"visitedTime"`
+		Tags        *[]string `json:"tags"`
+		MediaURL    *string   `json:"mediaUrl"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn("Invalid PUT /visits/:id body", logging.Error, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if body.VisitedTime == nil && body.Tags == nil && body.MediaURL == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one of visitedTime, tags, mediaUrl is required"})
+		return
+	}
+
+	existing, err := s.db.GetCountryVisit(ctx, visitID, user.ID)
+	if err != nil {
+		if errors.Is(err, database.ErrVisitNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		log.Error("GetCountryVisit failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load visit"})
+		return
+	}
+
+	merged := *existing
+
+	if body.VisitedTime != nil {
+		t := time.Unix(*body.VisitedTime, 0).UTC()
+		minDate := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+		now := time.Now().UTC()
+		maxDate := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, time.UTC)
+		if t.Before(minDate) || t.After(maxDate) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "visitedTime must be between 1900-01-01 and current date"})
+			return
+		}
+		merged.VisitedTime = t
+	}
+
+	if body.Tags != nil {
+		tags := models.DedupeTagsPreserveOrder(*body.Tags)
+		if err := models.ValidateTags(tags); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		merged.Tags = tags
+	}
+
+	if body.MediaURL != nil {
+		if *body.MediaURL == "" {
+			merged.MediaURL = nil
+		} else {
+			if !models.ValidateMediaURL(*body.MediaURL) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "mediaUrl must be a well-formed URL (e.g. https://...)"})
+				return
+			}
+			u := *body.MediaURL
+			merged.MediaURL = &u
+		}
+	}
+
+	if err := s.db.ReplaceCountryVisit(ctx, &merged); err != nil {
+		log.Error("ReplaceCountryVisit failed", logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update visit"})
+		return
+	}
+	log.Info("Updated country visit", logging.VisitID, merged.ID, logging.UserID, user.ID)
+	c.JSON(http.StatusOK, &merged)
 }
 
 // DeleteVisitHandler handles DELETE /visits/:id.

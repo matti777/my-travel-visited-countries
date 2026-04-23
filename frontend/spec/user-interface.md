@@ -44,27 +44,33 @@ If not logged in, this section is not visible.
 
 This section has several possible representation modes, each a "tab" which - depending on the selection in the tab control mentioned below - uses up the entire space of the section, ie. only one representation mode (or "tab") is visible at any given time.
 
+On **Alphabetical**, **By continent**, **Map**, and **Timeline** tabs (but not **Statistics**), immediately below the section title ("Your visited countries …", or the shared user's equivalent title when viewing a share link), there is a **Filter by tags** row: a text input with placeholder "Filter by tags", using the same input rules as the [tag editor component](tag-editor-component.md) (lowercase ASCII `[a-z]` only; invalid characters are stripped). When the user has entered **two or more** such characters, a **1.0 second** debounce runs (reset on each change); when it fires, the in-memory visit list is filtered so only visits that have **at least one tag** whose value **contains** the typed substring are shown (substring match). This affects the country grids, the Timeline and By continent lists, and the Map (highlighted countries and visit tooltips). Fewer than two characters means **no** tag filter is applied. Inside the input, along the **right** edge, is a faint circular **clear** control (×) that empties the field and resets the filter **immediately** without waiting for the debounce; its tooltip reads **Clear search filter**.
+
 **Tab 1:** Alphabetical list
 
 This section shows a list of visited countries with section title "Your visited countries". Below, a flowing grid of "country cells", maximum 3 cells per row. When not enough horizontal space, the layout should show only 1 or 2 cells in a row. If no visited countries are added yet, the placeholder text saying "No visited countries yet" should be shown with a slight grayed out tint.
 
 This list of countries will be unique by country code, ie. it will show no duplicates. The countries will be sorted to alphabetical order.
 
-After the section title there will be a button called "Edit" which, when pressed, will:
+On the **Alphabetical** tab, list edit mode is not started from the UI (the visit-list edit float is not shown; see below). On **By continent** and **Timeline**, a floating control (see below) provides an **Edit** button. When edit mode is active, it will:
 
-- Turn into "Done" button. Tooltip for Done button should say "Click to complete editing".
-- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
-- When "Done" button is pressed, it turns back into "Edit" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
+- Show a **Done** button in that floating control (replacing **Edit**). Tooltip for Done should say "Click to complete editing".
+- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will show a "popup dialog" for confirmation, with text "Are you sure you want to delete the visit to <country name> at <visit time>?" and **No** and **Yes, delete** buttons (no separate Close control in the dialog). Pressing **Yes, delete** will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
+- When **Done** is pressed in the floating control, edit mode ends: the float shows **Edit** again (with hint text to press Edit) and the X buttons are hidden from country cells. The list returns to its non-edit presentation (for example unique-by-country on the Alphabetical tab).
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
 - The transformation between an unique / non-unique lists shall be animated as well.
-- In "Edit" state the button's tooltip should say "Click to edit the visits list".
+- While not in edit mode, the floating **Edit** button's tooltip should say "Click to edit the visits list".
 
 Edit mode will not be available when in shared visit list routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
 
 **Tab 2:** Country lists by continent
 
 Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding. Unlike the alphabetical list, here the countries listed are not unique, but instead each visit gets its own country cell. The visits within a country are sorted by their `VisitTime`. Here the country cells will display the time of the visit, in a similar fashion as in the edit mode. A tooltip for each cell shall read "Click to view attached media" IF `MediaURL` is present. If such a cell is clicked, the media URL should be opened in a new tab. For such a cell, the visit time text should look like a link to indicate the presence of the media url.
+
+Hovering over a visit card should display a tooltip that contains title "Tags for this visit" and a list of tags added to the visit. Reuse the tag stylings from the [tag editor component](tag-editor-component.md).
+
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a button labeled **Close without saving** to dismiss without applying edits.
 
 **Tab 3:** Countries plotted on map
 
@@ -80,15 +86,17 @@ Each visited country fill color should depend on the continent they are on:
 - Oceania: Turquoise
 - Antarctica: Icy deep blue
 
-In this mode the Edit button is disabled.
+In this mode the visit-list edit float is not shown (same as Alphabetical and Statistics).
 
 **Tab 4:** Timeline
 
 Similar list to "by continent" but instead organized by year, sorted to ascending order.
 
+Hovering over a visit card shall show same tooltip as in **Tab 3:** - different depending on Edit mode or no Edit mode, with same exact functionality.
+
 **Tab 5:** Statistics
 
-This tab displays certain statistics about the number of country visits.
+This tab does **not** show the Filter by tags control. It displays certain statistics about the number of country visits.
 
 A central element is "circle graph cell" which consists of the following elements:
 
@@ -110,19 +118,23 @@ Clicking on a tab selects that tab and displays the corresponding content above.
 
 ---
 
+On **By continent** and **Timeline** tabs (logged-in, not shared view), a floating visit-list edit component is shown.
+
+- **Not in edit mode:** fixed on the **right** side of the viewport (desktop), roughly one third of the viewport height from the top, with padding from the right edge. It shows the text "Press Edit to edit the list of your visits." and an **Edit** button (tooltip: "Click to edit the visits list"). Pressing **Edit** enters edit mode.
+
+- **In edit mode:** same placement on desktop. It shows "Click Done when finished with editing your visits." and a **Done** button (tooltip: "Click to complete editing"). Pressing **Done** leaves edit mode and returns to the idle copy and **Edit** button above.
+
+On **narrow viewports** (mobile), this component is fixed to the **bottom** of the screen, **horizontally centered**, so it does not cover the visit list.
+
+It has a thin border, slightly rounded corners and a visible drop shadow. It fades in when it becomes relevant and fades out when switching to a tab that does not use it (or when logging out). The page under the component remains interactable.
+
+While a confirmation dialog is open (for example delete visit or remove friend), the same full-screen dark overlay used by that dialog shall stack above this floating component so the float appears dimmed behind the overlay and cannot receive clicks until the dialog is dismissed.
+
+---
+
 If not logged in, this section is not visible. If viewing a shared visit list, this section is not visible either.
 
-This section holds the controls to add a new visited country.
-
-- A drop-down list of all available countries. This drop-down list shall be a custom component; the items in the list shall be similar country cells as in the above list but thinner so that they wont take up space too much in the list. The list must be searchable; the search box will filter the list when characters are typed in it. The filtering of this list will be animated. When "closed", this component is a text input with placeholder text "Select country". When the text input is clicked, the list of countries opens underneath it and the input box becomes selected and can be used as the filter for country names. When ESC is pressed or the page is clicked outside of the selection box, the selection box will become "closed" again.
-
-- "Visit time" input - a textbox with placeholder text "Enter visit date". When clicked, this control opens up a date picker component, prepopulated to the current date. This date picker must allow entering the year as text input instead of using a picker component. No time component is shown. The input must be validated as `VisitTime` (see @data-models.md). It is a mandatory field so the Add button should be disabled until a valid value has been entered.
-
-- Media URL input - a textbox with placeholder text "Optional media URL". Frontend must validate this input to be a well-formed URL. An explanatory text underneath should explain that this can be used to attach media such as picture collection / video url to material taken on the trip.
-
-- Add button which shall be under (left-aligned) all the other controls in this section.
-
-- When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.
+This section holds the controls to add a new visited country. This is handled by [this reusable component](country-visit-editor-component.md).
 
 ---
 
@@ -142,7 +154,7 @@ This section provides a sharing feature. The UI presents a read-only input box w
 
 If not logged in, this section is not visible.
 
-The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button, similar to country cells in edit mode, for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made.
+The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button, similar to country cells in edit mode, for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made. The delete button shows the same confirmation dialog pattern as deleting a country visit (full-screen dark overlay, **No** and a primary confirm button—**Yes, remove**—no separate Close control), with message text "Are you sure you want to remove friend <name>?".
 
 ---
 

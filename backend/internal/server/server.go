@@ -35,6 +35,8 @@ type Database interface {
 	GetUserByShareToken(ctx context.Context, shareToken string) (*models.User, error)
 	EnsureUser(ctx context.Context, user *models.User) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
+	GetCountryVisit(ctx context.Context, visitID, userID string) (*models.CountryVisit, error)
+	ReplaceCountryVisit(ctx context.Context, visit *models.CountryVisit) error
 	DeleteCountryVisit(ctx context.Context, visitID string, userID string) error
 	GetFriendsByUser(ctx context.Context, userID string) ([]models.Friend, error)
 	AddFriend(ctx context.Context, userID string, shareToken, name, imageURL string) (models.Friend, error)
