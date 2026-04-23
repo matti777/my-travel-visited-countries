@@ -415,6 +415,12 @@ main.legal-page {
   margin-bottom: 2rem;
 }
 
+.country-visit-editor {
+  border: 1px solid rgba(0, 80, 90, 0.25);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+}
+
 .app-section__title-row {
   display: flex;
   align-items: center;

@@ -1,10 +1,11 @@
-import flatpickr from "flatpickr";
-import "flatpickr/dist/flatpickr.min.css";
 import "firebaseui/dist/firebaseui.css";
+import {
+  createCountryVisitEditor,
+  type CountryVisitEditorSubmitPayload,
+} from "Components/country-visit-editor";
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { createCountryCell } from "Components/country-cell";
-import { createCountryDropdown } from "Components/country-dropdown";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
@@ -514,6 +515,11 @@ function parseVisitDateToYMD(isoOrVisitedTime?: string | null): { year: number; 
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
+/** Unix seconds for start of day UTC from YYYY-MM-DD visit form value. */
+function isoDateToUnixSeconds(isoDate: string): number {
+  return Math.floor(new Date(isoDate + "T00:00:00Z").getTime() / 1000);
+}
+
 /**
  * Returns list of visits unique by country code (first occurrence each). Used for non-edit display.
  */
@@ -622,6 +628,7 @@ export interface RenderOptions {
   onAddFriend: () => void;
   onDeleteFriend: (shareToken: string) => void;
   onViewMediaUrl?: (visit: CountryVisit) => void;
+  onCountryVisitEditorSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
 }
 
 async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
@@ -1045,196 +1052,6 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   container.appendChild(visitedSection);
 }
 
-const VISIT_DATE_MIN = "1900-01-01";
-const MIN_DATE = new Date(1900, 0, 1);
-
-/** Parse YYYY-MM-DD to Date at local midnight (for flatpickr). */
-function parseIsoToLocalDate(isoDate: string): Date {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function isMediaUrlValid(value: string): boolean {
-  const trimmed = value.trim();
-  if (trimmed === "") return true;
-  try {
-    const u = new URL(trimmed);
-    const scheme = u.protocol.replace(/:$/, "").toLowerCase();
-    return scheme === "http" || scheme === "https";
-  } catch {
-    return false;
-  }
-}
-
-function isVisitDateValid(isoDate: string | null): boolean {
-  if (!isoDate) return false;
-  const d = new Date(isoDate + "T00:00:00Z");
-  if (Number.isNaN(d.getTime())) return false;
-  const min = new Date(VISIT_DATE_MIN + "T00:00:00Z").getTime();
-  const now = new Date();
-  const max = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-  const t = d.getTime();
-  return t >= min && t <= max;
-}
-
-/** Unix seconds for start of day UTC from YYYY-MM-DD. */
-function isoDateToUnixSeconds(isoDate: string): number {
-  return Math.floor(new Date(isoDate + "T00:00:00Z").getTime() / 1000);
-}
-
-function renderAddVisitSection(container: HTMLElement, options: RenderOptions): void {
-  const { countries: countriesList } = options;
-  const today = new Date();
-
-  const addSection = document.createElement("section");
-  addSection.className = "app-section";
-  const addTitle = document.createElement("h2");
-  addTitle.textContent = "Add a visit to a country";
-  addSection.appendChild(addTitle);
-
-  const form = document.createElement("form");
-  form.className = "add-visit-form";
-  form.addEventListener("submit", (e) => e.preventDefault());
-
-  const row = document.createElement("div");
-  row.className = "add-visit-form__row";
-  row.appendChild(
-    createCountryDropdown({
-      countries: countriesList,
-      baseUrl,
-      selectedCountryCode: options.selectedCountryCode,
-      onSelect: options.onSelectCountry,
-    }),
-  );
-  const visitTimeLabel = document.createElement("span");
-  visitTimeLabel.className = "add-visit-form__visit-time-label";
-  visitTimeLabel.textContent = "Visit date";
-  row.appendChild(visitTimeLabel);
-  const dateInput = document.createElement("input");
-  dateInput.type = "text";
-  dateInput.placeholder = "Enter visit date";
-  dateInput.name = "visitDate";
-  dateInput.className = "add-visit-form__date-input";
-  dateInput.autocomplete = "off";
-  row.appendChild(dateInput);
-  form.appendChild(row);
-  const visitTimeHint = document.createElement("p");
-  visitTimeHint.className = "add-visit-form__visit-time-hint";
-  visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
-  form.appendChild(visitTimeHint);
-
-  const mediaUrlRow = document.createElement("div");
-  mediaUrlRow.className = "add-visit-form__row";
-  const mediaUrlInput = document.createElement("input");
-  mediaUrlInput.type = "text";
-  mediaUrlInput.placeholder = "Optional media URL";
-  mediaUrlInput.name = "mediaUrl";
-  mediaUrlInput.className = "add-visit-form__media-url";
-  mediaUrlInput.autocomplete = "off";
-  mediaUrlInput.value = options.formMediaUrl;
-  mediaUrlRow.appendChild(mediaUrlInput);
-  form.appendChild(mediaUrlRow);
-  const mediaUrlHint = document.createElement("p");
-  mediaUrlHint.className = "add-visit-form__media-url-hint";
-  mediaUrlHint.textContent = "You can attach a link to media such as a picture collection or video from your trip.";
-  form.appendChild(mediaUrlHint);
-
-  const addBtnRow = document.createElement("div");
-  addBtnRow.className = "add-visit-form__add-row";
-  const addBtn = document.createElement("button");
-  addBtn.type = "submit";
-  addBtn.textContent = "Add";
-  addBtn.className = "add-visit-form__add-btn";
-  addBtn.disabled = true;
-  addBtnRow.appendChild(addBtn);
-  form.appendChild(addBtnRow);
-
-  function updateValidationUI(): void {
-    const dateValid = isVisitDateValid(options.formVisitDate);
-    const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
-    dateInput.classList.toggle("invalid", options.formVisitDate != null && !dateValid);
-    mediaUrlInput.classList.toggle("invalid", mediaUrlInput.value.trim() !== "" && !mediaUrlValid);
-    addBtn.disabled = !(options.selectedCountryCode && dateValid && mediaUrlValid);
-  }
-
-  mediaUrlInput.addEventListener("input", () => {
-    options.onFormMediaUrlChange(mediaUrlInput.value);
-    updateValidationUI();
-  });
-  mediaUrlInput.addEventListener("blur", updateValidationUI);
-
-  const defaultDate = options.formVisitDate ? parseIsoToLocalDate(options.formVisitDate) : today;
-  const fp = flatpickr(dateInput, {
-    allowInput: true,
-    dateFormat: "M j, Y",
-    defaultDate,
-    minDate: MIN_DATE,
-    maxDate: today,
-    disable: [],
-    onChange: (selectedDates) => {
-      const d = selectedDates[0];
-      if (d) {
-        const iso =
-          d.getFullYear() +
-          "-" +
-          String(d.getMonth() + 1).padStart(2, "0") +
-          "-" +
-          String(d.getDate()).padStart(2, "0");
-        options.onFormVisitDateChange(iso);
-      } else {
-        options.onFormVisitDateChange(null);
-      }
-      updateValidationUI();
-    },
-  });
-
-  fp.setDate(defaultDate, false);
-  dateInput.value = fp.input.value ?? "";
-
-  updateValidationUI();
-
-  addBtn.addEventListener("click", async () => {
-    const countryCode = options.selectedCountryCode;
-    if (!countryCode) {
-      errorToast("Please select a country");
-      return;
-    }
-    const isoDate = options.formVisitDate;
-    if (!isoDate || !isVisitDateValid(isoDate)) {
-      errorToast("Please select a valid visit date");
-      return;
-    }
-    const visitedTime = isoDateToUnixSeconds(isoDate);
-    const mediaUrl = mediaUrlInput.value.trim() || undefined;
-    try {
-      const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
-      visits = [...visits, created];
-      if (created.id) newVisitIds.add(created.id);
-      const d = parseVisitDateToYMD(isoDate);
-      logAnalyticsEvent("add_visit", {
-        country_code: countryCode,
-        year: d.year,
-        month: d.month,
-        day: d.day,
-      });
-      options.onSelectCountry("");
-      options.onFormVisitDateChange(new Date().toISOString().slice(0, 10));
-      options.onFormMediaUrlChange("");
-      options.onRefresh();
-    } catch (err) {
-      if (err instanceof ApiError && err.responseCode === 401) {
-        signOut();
-        errorToast("Session expired");
-      } else {
-        errorToast(err instanceof Error ? err.message : "Failed to add visit");
-      }
-    }
-  });
-
-  addSection.appendChild(form);
-  container.appendChild(addSection);
-}
-
 /** 4 Polaroid images: [left top, left bottom, right top, right bottom] */
 const WELCOME_POLAROID_IMAGES = [
   "welcome-polaroid-1.jpg",
@@ -1358,7 +1175,19 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   renderNormalVisitedSection(container, options, displayList);
   const addShareWrapper = document.createElement("div");
   addShareWrapper.id = "app-add-share";
-  renderAddVisitSection(addShareWrapper, options);
+  addShareWrapper.appendChild(
+    createCountryVisitEditor({
+      countries: options.countries,
+      baseUrl,
+      selectedCountryCode: options.selectedCountryCode,
+      onSelectCountry: options.onSelectCountry,
+      formVisitDate: options.formVisitDate,
+      onFormVisitDateChange: options.onFormVisitDateChange,
+      formMediaUrl: options.formMediaUrl,
+      onFormMediaUrlChange: options.onFormMediaUrlChange,
+      onSubmit: options.onCountryVisitEditorSubmit,
+    }),
+  );
   addShareWrapper.appendChild(createShareSection(options.shareToken));
   container.appendChild(addShareWrapper);
 
@@ -1603,6 +1432,34 @@ export async function main(): Promise<void> {
           day: d.day,
         });
       },
+      onCountryVisitEditorSubmit: async (payload: CountryVisitEditorSubmitPayload) => {
+        const { countryCode, isoDate, mediaUrl } = payload;
+        const visitedTime = isoDateToUnixSeconds(isoDate);
+        try {
+          const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
+          visits = [...visits, created];
+          if (created.id) newVisitIds.add(created.id);
+          const d = parseVisitDateToYMD(isoDate);
+          logAnalyticsEvent("add_visit", {
+            country_code: countryCode,
+            year: d.year,
+            month: d.month,
+            day: d.day,
+          });
+          selectedCountryCode = "";
+          formVisitDate = new Date().toISOString().slice(0, 10);
+          formMediaUrl = "";
+          refreshAppContent();
+        } catch (err) {
+          console.error("Add visit failed:", err);
+          if (err instanceof ApiError && err.responseCode === 401) {
+            signOut();
+            errorToast("Session expired");
+          } else {
+            errorToast(err instanceof Error ? err.message : "Failed to add visit");
+          }
+        }
+      },
     };
   }
 
@@ -1613,7 +1470,20 @@ export async function main(): Promise<void> {
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
     addShareWrapper.replaceChildren();
-    renderAddVisitSection(addShareWrapper, getRenderOptions());
+    const opts = getRenderOptions();
+    addShareWrapper.appendChild(
+      createCountryVisitEditor({
+        countries: opts.countries,
+        baseUrl,
+        selectedCountryCode: opts.selectedCountryCode,
+        onSelectCountry: opts.onSelectCountry,
+        formVisitDate: opts.formVisitDate,
+        onFormVisitDateChange: opts.onFormVisitDateChange,
+        formMediaUrl: opts.formMediaUrl,
+        onFormMediaUrlChange: opts.onFormMediaUrlChange,
+        onSubmit: opts.onCountryVisitEditorSubmit,
+      }),
+    );
     addShareWrapper.appendChild(createShareSection(shareToken));
     window.scrollTo(scrollX, scrollY);
   }
