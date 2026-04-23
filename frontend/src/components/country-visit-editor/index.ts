@@ -2,6 +2,7 @@ import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 import { errorToast } from "Components/toast";
 import { createCountryDropdown } from "Components/country-dropdown";
+import { createTagEditor } from "Components/tag-editor";
 import type { Country } from "../../types/country";
 
 const VISIT_DATE_MIN = "1900-01-01";
@@ -40,6 +41,7 @@ export interface CountryVisitEditorSubmitPayload {
   countryCode: string;
   isoDate: string;
   mediaUrl?: string;
+  tags: string[];
 }
 
 export interface CountryVisitEditorOptions {
@@ -57,7 +59,7 @@ export interface CountryVisitEditorOptions {
 }
 
 /**
- * Country visit editor: country dropdown, visit date (flatpickr), optional media URL, submit.
+ * Country visit editor: country dropdown, visit date (flatpickr), optional media URL, tags, submit.
  * Use a thin border via `.country-visit-editor` in CSS.
  */
 export function createCountryVisitEditor(options: CountryVisitEditorOptions): HTMLElement {
@@ -125,15 +127,20 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   form.appendChild(mediaUrlRow);
   const mediaUrlHint = document.createElement("p");
   mediaUrlHint.className = "add-visit-form__media-url-hint";
-  mediaUrlHint.textContent =
-    "You can attach a link to media such as a picture collection or video from your trip.";
+  mediaUrlHint.textContent = "You can attach a link to media such as a picture collection or video from your trip.";
   form.appendChild(mediaUrlHint);
+
+  const tagEditor = createTagEditor();
+  const tagEditorWrap = document.createElement("div");
+  tagEditorWrap.className = "add-visit-form__tag-editor-wrap";
+  tagEditorWrap.appendChild(tagEditor.element);
+  form.appendChild(tagEditorWrap);
 
   const addBtnRow = document.createElement("div");
   addBtnRow.className = "add-visit-form__add-row";
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
-  addBtn.textContent = "Add";
+  addBtn.textContent = "Add visit";
   addBtn.className = "add-visit-form__add-btn";
   addBtn.disabled = true;
   addBtnRow.appendChild(addBtn);
@@ -194,7 +201,12 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
       return;
     }
     const mediaUrl = mediaUrlInput.value.trim() || undefined;
-    await onSubmit({ countryCode: selectedCountryCode, isoDate, mediaUrl });
+    await onSubmit({
+      countryCode: selectedCountryCode,
+      isoDate,
+      mediaUrl,
+      tags: tagEditor.getTags(),
+    });
   });
 
   addSection.appendChild(form);

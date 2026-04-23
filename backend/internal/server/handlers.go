@@ -157,9 +157,10 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	var body struct {
-		CountryCode string  `json:"countryCode"`
-		VisitedTime *int64  `json:"visitedTime"` // Unix seconds; required
-		MediaURL    *string `json:"mediaUrl,omitempty"`
+		CountryCode string   `json:"countryCode"`
+		VisitedTime *int64   `json:"visitedTime"` // Unix seconds; required
+		MediaURL    *string  `json:"mediaUrl,omitempty"`
+		Tags        []string `json:"tags,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid PUT /visits body", logging.Error, err)
@@ -193,10 +194,17 @@ func (s *Server) PutVisitsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
+	tags := models.DedupeTagsPreserveOrder(body.Tags)
+	if err := models.ValidateTags(tags); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	visit := &models.CountryVisit{
 		CountryCode: countryCode,
 		VisitedTime: t,
 		MediaURL:    body.MediaURL,
+		Tags:        tags,
 		UserID:      user.ID,
 	}
 

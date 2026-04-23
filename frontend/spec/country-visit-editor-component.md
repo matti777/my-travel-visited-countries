@@ -14,6 +14,8 @@ A thin border exists around the component.
 
 - Media URL input - a textbox with placeholder text "Optional media URL". Frontend must validate this input to be a well-formed URL. An explanatory text underneath should explain that this can be used to attach media such as picture collection / video url to material taken on the trip.
 
-- Add button which shall be under (left-aligned) all the other controls in this section.
+- [Tag editor component](tag-editor-component.md)
+
+- "Add visit" (when creating new visit) / "Save visit" (when editing existing one) button which shall be under (left-aligned) all the other controls in this section.
 
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.

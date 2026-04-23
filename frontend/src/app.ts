@@ -1433,10 +1433,10 @@ export async function main(): Promise<void> {
         });
       },
       onCountryVisitEditorSubmit: async (payload: CountryVisitEditorSubmitPayload) => {
-        const { countryCode, isoDate, mediaUrl } = payload;
+        const { countryCode, isoDate, mediaUrl, tags } = payload;
         const visitedTime = isoDateToUnixSeconds(isoDate);
         try {
-          const created = await api.putVisits(countryCode, visitedTime, mediaUrl);
+          const created = await api.putVisits(countryCode, visitedTime, mediaUrl, tags);
           visits = [...visits, created];
           if (created.id) newVisitIds.add(created.id);
           const d = parseVisitDateToYMD(isoDate);

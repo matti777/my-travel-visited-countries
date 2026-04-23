@@ -20,11 +20,11 @@ POST /login: Frontend calls this right after login actions complete. Only called
 
 ### List country visits for current user
 
-GET /visits: Returns all the CountryVisit objects for the current user. The response shall contain the list of country visits as well as the user's `ShareToken` which is retrieved by reading the User object by the `UserID` from the auth token. **Authenticated**.
+GET /visits: Returns all the CountryVisit objects for the current user (`countryCode`, `visitedTime`, optional `mediaUrl`, `tags`, `id`). Each CountryVisit includes `tags` as an array of strings (empty array if none). Tag strings are lowercase ASCII letters `[a-z]` only, at least **2** characters per tag (see data-models.md). The response shall contain the list of country visits as well as the user's `ShareToken` which is retrieved by reading the User object by the `UserID` from the auth token. **Authenticated**.
 
 ### Create country visit for current user
 
-PUT /visits: Creates a new CountryVisit object for the current user. Request body must include `countryCode` and `visitedTime` (Unix seconds, required). `visitedTime` must be between 1900-01-01 and the current date (inclusive). Request body may include optional `mediaUrl` (string); when provided it must be a well-formed URL usable as a hyperlink (e.g. http or https). In this request the ID field is empty. If successful, the backend will respond with 201 Created and the response body shall contain the newly created CountryVisit, with its ID field populated. **Authenticated**.
+PUT /visits: Creates a new CountryVisit object for the current user. Request body must include `countryCode` and `visitedTime` (Unix seconds, required). `visitedTime` must be between 1900-01-01 and the current date (inclusive). Request body may include optional `mediaUrl` (string); when provided it must be a well-formed URL usable as a hyperlink (e.g. http or https). Request body may include optional `tags`, an array of strings: at most **10** tags per visit; each tag must match `[a-z]{2,}` (at least two letters). Duplicate values in `tags` are deduplicated server-side before validation (first occurrence wins). In this request the ID field is empty. If successful, the backend will respond with 201 Created and the response body shall contain the newly created CountryVisit, with its ID field populated and `tags` reflecting what was stored. **Authenticated**.
 
 ### Delete country visit
 
@@ -32,7 +32,7 @@ DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to del
 
 ### List country visits for share token
 
-GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. The response contains the visits as well as the user's name and image URL for UI purposes. **Unauthenticated**.
+GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. CountryVisit objects include `tags` as for GET /visits. The response contains the visits as well as the user's name and image URL for UI purposes. **Unauthenticated**.
 
 ### List friends
 
