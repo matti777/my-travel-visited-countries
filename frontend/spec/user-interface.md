@@ -110,6 +110,14 @@ Clicking on a tab selects that tab and displays the corresponding content above.
 
 ---
 
+If not editing the current country visits list, this component is not visible.
+
+When editing the visit list, a floating component is shown on the right side of the page, in a fixed location in the upper middle (about 1/3th screen height down from top and reasonable padding from right) part of the screen. This component has the text "Click Done when finished with editing your visits." and a Done button. The Done button does the same as the main Done button; ends the editing mode.
+
+This component has a thin border, slightly rounded corners and a visible drop shadow. It appears animatedly when Edit button is pressed and hides animatedly when (either) Done button is pressed. The page "under" the component is fully interactable.
+
+---
+
 If not logged in, this section is not visible. If viewing a shared visit list, this section is not visible either.
 
 This section holds the controls to add a new visited country. This is handled by [this reusable component](country-visit-editor-component.md).

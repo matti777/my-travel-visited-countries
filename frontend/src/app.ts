@@ -10,6 +10,7 @@ import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
+import { createDoneEditingFloat } from "Components/done-editing-float";
 import {
   auth,
   completeRedirectSignIn,
@@ -995,6 +996,7 @@ function renderAddFriendSection(container: HTMLElement, options: RenderOptions):
 }
 
 function renderNormalVisitedSection(container: HTMLElement, options: RenderOptions, displayList: CountryVisit[]): void {
+  container.replaceChildren();
   const { countries: countriesList, visits: visitsList, isEditMode, onEditModeToggle } = options;
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
@@ -1050,6 +1052,13 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   listFrame.appendChild(tabRow);
   visitedSection.appendChild(listFrame);
   container.appendChild(visitedSection);
+}
+
+/** Stable id for partial refresh of the visited-countries block (see #app-visited). */
+const APP_VISITED_SECTION_ID = "app-visited";
+
+function removeDoneEditingFloatFromDom(): void {
+  document.getElementById("done-editing-float")?.remove();
 }
 
 /** 4 Polaroid images: [left top, left bottom, right top, right bottom] */
@@ -1154,6 +1163,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
  */
 function renderAppContent(container: HTMLElement, options: RenderOptions): void {
   const { user, isEditMode, visits: visitsList, isSharedMode } = options;
+  removeDoneEditingFloatFromDom();
   container.replaceChildren();
 
   if (isSharedMode) {
@@ -1172,7 +1182,10 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     isEditMode || options.visitListTab === "byContinent" || options.visitListTab === "timeline"
       ? visitsList
       : uniqueVisitsByCountry(visitsList);
-  renderNormalVisitedSection(container, options, displayList);
+  const visitedWrap = document.createElement("div");
+  visitedWrap.id = APP_VISITED_SECTION_ID;
+  renderNormalVisitedSection(visitedWrap, options, displayList);
+  container.appendChild(visitedWrap);
   const addShareWrapper = document.createElement("div");
   addShareWrapper.id = "app-add-share";
   addShareWrapper.appendChild(
@@ -1348,6 +1361,70 @@ export async function main(): Promise<void> {
     });
   }
 
+  function refreshVisitListSection(): void {
+    if (!appEl) return;
+    const wrap = document.getElementById(APP_VISITED_SECTION_ID);
+    if (!wrap) {
+      refreshAppContent();
+      return;
+    }
+    const opts = getRenderOptions();
+    const displayList =
+      opts.isEditMode || opts.visitListTab === "byContinent" || opts.visitListTab === "timeline"
+        ? visits
+        : uniqueVisitsByCountry(visits);
+    renderNormalVisitedSection(wrap, opts, displayList);
+  }
+
+  function queueDoneEditingFloatExit(): void {
+    const el = document.getElementById("done-editing-float");
+    if (!el) return;
+    if (!el.classList.contains("done-editing-float--visible")) {
+      el.remove();
+      return;
+    }
+    const onEnd = (e: TransitionEvent): void => {
+      if (e.target !== el || e.propertyName !== "opacity") return;
+      el.removeEventListener("transitionend", onEnd);
+      el.remove();
+    };
+    el.addEventListener("transitionend", onEnd);
+    el.classList.remove("done-editing-float--visible");
+  }
+
+  function exitEditModeAndRefresh(): void {
+    if (!isEditMode) return;
+    isEditMode = false;
+    refreshVisitListSection();
+    queueDoneEditingFloatExit();
+  }
+
+  function enterEditModeAndRefresh(): void {
+    isEditMode = true;
+    refreshVisitListSection();
+    ensureDoneEditingFloatMounted();
+  }
+
+  function ensureDoneEditingFloatMounted(): void {
+    if (!currentUser || getShareTokenFromPath() || !isEditMode) return;
+    let el = document.getElementById("done-editing-float");
+    if (el) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => el!.classList.add("done-editing-float--visible"));
+      });
+      return;
+    }
+    el = createDoneEditingFloat({ onDone: exitEditModeAndRefresh });
+    document.body.appendChild(el);
+    const doneBtn = el.querySelector(".done-editing-float__done");
+    if (doneBtn instanceof HTMLElement) {
+      attachTooltip(doneBtn, "Click to complete editing");
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el!.classList.add("done-editing-float--visible"));
+    });
+  }
+
   function getRenderOptions(): RenderOptions {
     return {
       countries,
@@ -1355,10 +1432,10 @@ export async function main(): Promise<void> {
       user: currentUser,
       isEditMode,
       onEditModeToggle: () => {
-        isEditMode = !isEditMode;
-        refreshAppContent();
+        if (isEditMode) exitEditModeAndRefresh();
+        else enterEditModeAndRefresh();
       },
-      onRefresh: refreshAppContent,
+      onRefresh: refreshVisitListSection,
       selectedCountryCode,
       onSelectCountry: (code: string) => {
         selectedCountryCode = code;
@@ -1384,7 +1461,11 @@ export async function main(): Promise<void> {
         visitListTab = tab;
         const tabParam = tab === "byContinent" ? "by_continent" : tab;
         logAnalyticsEvent("select_tab", { tab: tabParam });
-        refreshAppContent();
+        if (currentUser && !getShareTokenFromPath() && document.getElementById(APP_VISITED_SECTION_ID)) {
+          refreshVisitListSection();
+        } else {
+          refreshAppContent();
+        }
       },
       onLogin,
       friends,

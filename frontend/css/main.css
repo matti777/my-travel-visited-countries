@@ -464,6 +464,45 @@ main.legal-page {
   cursor: not-allowed;
 }
 
+.done-editing-float {
+  position: fixed;
+  top: 33vh;
+  right: 1rem;
+  z-index: 90;
+  max-width: min(280px, calc(100vw - 2rem));
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-turquoise);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--animation-duration) ease;
+}
+
+.done-editing-float.done-editing-float--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.done-editing-float__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.done-editing-float__text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.35;
+}
+
+.done-editing-float__done {
+  align-self: flex-start;
+}
+
 .app-section > h1 {
   margin-top: 0;
   margin-bottom: 0.75rem;
