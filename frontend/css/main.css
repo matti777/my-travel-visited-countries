@@ -1183,6 +1183,61 @@ main.legal-page {
   margin-right: 0;
 }
 
+/* Add visit: country left; visit date + picker right-flush with media URL (mirror edit layout). */
+.add-visit-form--add .add-visit-form__row--add {
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+}
+
+.add-visit-form--add .add-visit-form__row--add > .country-dropdown {
+  flex: 0 1 320px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.add-visit-form--add .add-visit-form__visit-date-field {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 38px;
+  margin-left: auto;
+}
+
+.add-visit-form--add .add-visit-form__visit-time-label {
+  margin: 0 !important;
+  padding: 0;
+  flex-shrink: 0;
+  align-self: stretch;
+  height: auto;
+  min-height: 38px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.add-visit-form--add .add-visit-form__visit-date-field .add-visit-form__date-input,
+.add-visit-form--add .add-visit-form__visit-date-field input.flatpickr-input {
+  flex: 0 0 14.5rem;
+  width: 14.5rem !important;
+  min-width: 14.5rem;
+  max-width: 14.5rem;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
+  align-self: center;
+}
+
+.add-visit-form--add input.add-visit-form__media-url {
+  margin-right: 0;
+}
+
 @media (max-width: 639px) {
   .add-visit-form--edit .add-visit-form__row--edit {
     flex-wrap: wrap;
@@ -1202,6 +1257,30 @@ main.legal-page {
 
   .add-visit-form--edit .add-visit-form__visit-date-field .add-visit-form__date-input,
   .add-visit-form--edit .add-visit-form__visit-date-field input.flatpickr-input {
+    flex: 1 1 auto;
+    width: 100% !important;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .add-visit-form--add .add-visit-form__row--add {
+    flex-wrap: wrap;
+  }
+
+  .add-visit-form--add .add-visit-form__row--add > .country-dropdown {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .add-visit-form--add .add-visit-form__visit-date-field {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .add-visit-form--add .add-visit-form__visit-date-field .add-visit-form__date-input,
+  .add-visit-form--add .add-visit-form__visit-date-field input.flatpickr-input {
     flex: 1 1 auto;
     width: 100% !important;
     max-width: none;

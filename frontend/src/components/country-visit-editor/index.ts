@@ -84,7 +84,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     onSubmit,
   } = options;
   /** Mutable; flatpickr updates this. Do not use stale `formVisitDate` from options after init. */
-  let currentVisitDate: string | null = formVisitDate;
+  let currentVisitDate: string | null = null;
   const today = new Date();
 
   const addSection = document.createElement("section");
@@ -94,14 +94,15 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   addSection.appendChild(addTitle);
 
   const form = document.createElement("form");
-  form.className = mode === "edit" ? "add-visit-form add-visit-form--edit" : "add-visit-form";
+  form.className =
+    mode === "edit" ? "add-visit-form add-visit-form--edit" : "add-visit-form add-visit-form--add";
   form.addEventListener("submit", (e) => e.preventDefault());
 
   const row = document.createElement("div");
   row.className =
     mode === "edit"
       ? "add-visit-form__row add-visit-form__row--country-date add-visit-form__row--edit"
-      : "add-visit-form__row add-visit-form__row--country-date";
+      : "add-visit-form__row add-visit-form__row--country-date add-visit-form__row--add";
   if (mode === "edit") {
     const name =
       countryNameForEditMode ??
@@ -192,14 +193,19 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   });
   mediaUrlInput.addEventListener("blur", updateValidationUI);
 
-  const defaultDate = formVisitDate ? parseIsoToLocalDate(formVisitDate) : today;
+  const initialIso = formVisitDate;
   const fp = flatpickr(dateInput, {
     allowInput: true,
     dateFormat: "M j, Y",
-    defaultDate,
+    ...(initialIso ? { defaultDate: parseIsoToLocalDate(initialIso) } : {}),
     minDate: MIN_DATE,
     maxDate: today,
     disable: [],
+    onOpen: (_selectedDates, _dateStr, instance) => {
+      if (!currentVisitDate) {
+        instance.jumpToDate(today);
+      }
+    },
     onChange: (selectedDates) => {
       const d = selectedDates[0];
       if (d) {
@@ -219,8 +225,15 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     },
   });
 
-  fp.setDate(defaultDate, false);
-  dateInput.value = fp.input.value ?? "";
+  if (initialIso) {
+    fp.setDate(parseIsoToLocalDate(initialIso), false);
+    dateInput.value = fp.input.value ?? "";
+    currentVisitDate = initialIso;
+  } else {
+    fp.clear();
+    dateInput.value = "";
+    currentVisitDate = null;
+  }
 
   updateValidationUI();
 

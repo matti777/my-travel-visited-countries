@@ -1499,8 +1499,7 @@ export async function main(): Promise<void> {
   let isEditMode = false;
   let visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics" = "alphabetical";
   let selectedCountryCode = "";
-  const todayIso = () => new Date().toISOString().slice(0, 10);
-  let formVisitDate: string | null = todayIso();
+  let formVisitDate: string | null = null;
   let formMediaUrl = "";
 
   async function applyShareRoute(): Promise<void> {
@@ -1744,7 +1743,7 @@ export async function main(): Promise<void> {
             day: d.day,
           });
           selectedCountryCode = "";
-          formVisitDate = new Date().toISOString().slice(0, 10);
+          formVisitDate = null;
           formMediaUrl = "";
           refreshAppContent();
         } catch (err) {
