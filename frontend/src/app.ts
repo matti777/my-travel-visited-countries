@@ -49,6 +49,47 @@ let sharedUserImageUrl: string | null = null;
 
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
 
+function escapeHtmlText(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Hover content for by-continent and timeline visit cards (see user-interface.md). */
+function buildVisitListCardTooltipHtml(visit: CountryVisit): string | null {
+  const tags = visit.tags ?? [];
+  const hasTags = tags.length > 0;
+  const mediaHint = visit.mediaUrl
+    ? `<p class="visit-tooltip__media-hint">Click to view attached media</p>`
+    : "";
+
+  if (!hasTags && !visit.mediaUrl) {
+    return null;
+  }
+
+  if (!hasTags && visit.mediaUrl) {
+    return `<div class="visit-tooltip">${mediaHint}</div>`;
+  }
+
+  const pillsHtml = tags
+    .map(
+      (t) =>
+        `<span class="tag-editor__pill">` +
+        `<span class="tag-editor__pill-label">${escapeHtmlText(t)}</span></span>`,
+    )
+    .join("");
+
+  return (
+    `<div class="visit-tooltip">` +
+    `<div class="visit-tooltip__title">Tags for this visit</div>` +
+    `<div class="tag-editor__pills visit-tooltip__pills">${pillsHtml}</div>` +
+    `${mediaHint}` +
+    `</div>`
+  );
+}
+
 function getShareTokenFromPath(): string | null {
   let pathname = window.location.pathname;
   if (baseUrl && pathname.startsWith(baseUrl)) {
@@ -822,9 +863,14 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       : undefined;
     const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
     cellRef.current = cell;
+    if (showVisitTimeAlways) {
+      const tooltipHtml = buildVisitListCardTooltipHtml(visit);
+      if (tooltipHtml) {
+        attachTooltip(cell, tooltipHtml, { useHtml: true });
+      }
+    }
     if (visit.mediaUrl && showVisitTimeAlways) {
       cell.classList.add("country-cell--has-media");
-      attachTooltip(cell, "Click to view attached media");
       cell.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
         const d = parseVisitDateToYMD(visit.visitedTime);
