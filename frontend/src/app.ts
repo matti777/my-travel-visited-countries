@@ -1684,6 +1684,9 @@ export async function main(): Promise<void> {
         } else {
           refreshAppContent();
         }
+        if (tab === "map" || tab === "statistics") {
+          window.scrollTo(0, 0);
+        }
       },
       onLogin,
       friends,
