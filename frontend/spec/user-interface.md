@@ -44,6 +44,8 @@ If not logged in, this section is not visible.
 
 This section has several possible representation modes, each a "tab" which - depending on the selection in the tab control mentioned below - uses up the entire space of the section, ie. only one representation mode (or "tab") is visible at any given time.
 
+On **Alphabetical**, **By continent**, **Map**, and **Timeline** tabs (but not **Statistics**), immediately below the section title ("Your visited countries …", or the shared user's equivalent title when viewing a share link), there is a **Filter by tags** row: a text input with placeholder "Filter by tags", using the same input rules as the [tag editor component](tag-editor-component.md) (lowercase ASCII `[a-z]` only; invalid characters are stripped). When the user has entered **two or more** such characters, a **1.0 second** debounce runs (reset on each change); when it fires, the in-memory visit list is filtered so only visits that have **at least one tag** whose value **contains** the typed substring are shown (substring match). This affects the country grids, the Timeline and By continent lists, and the Map (highlighted countries and visit tooltips). Fewer than two characters means **no** tag filter is applied. Inside the input, along the **right** edge, is a faint circular **clear** control (×) that empties the field and resets the filter **immediately** without waiting for the debounce; its tooltip reads **Clear search filter**.
+
 **Tab 1:** Alphabetical list
 
 This section shows a list of visited countries with section title "Your visited countries". Below, a flowing grid of "country cells", maximum 3 cells per row. When not enough horizontal space, the layout should show only 1 or 2 cells in a row. If no visited countries are added yet, the placeholder text saying "No visited countries yet" should be shown with a slight grayed out tint.
@@ -94,7 +96,7 @@ Hovering over a visit card shall show same tooltip as in **Tab 3:** - different 
 
 **Tab 5:** Statistics
 
-This tab displays certain statistics about the number of country visits.
+This tab does **not** show the Filter by tags control. It displays certain statistics about the number of country visits.
 
 A central element is "circle graph cell" which consists of the following elements:
 

@@ -9,6 +9,7 @@ import { createCountryCell } from "Components/country-cell";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
+import { sanitizeTagInput } from "Components/tag-editor";
 import { attachTooltip } from "Components/tooltip";
 import {
   VISIT_LIST_EDIT_FLOAT_ID,
@@ -739,6 +740,114 @@ export interface RenderOptions {
   onCountryVisitEditorSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
 }
 
+const TAG_FILTER_DEBOUNCE_MS = 1000;
+
+let tagFilterInputValue = "";
+let tagFilterActiveQuery = "";
+let tagFilterDebounceTimer: number | null = null;
+
+/** Refreshes visited UI after debounced tag filter updates; assigned in main(). */
+let refreshAfterTagFilter: () => void = () => {};
+
+function applyTagFilterToVisits(list: CountryVisit[], query: string): CountryVisit[] {
+  if (query.length < 2) return list;
+  return list.filter((v) => (v.tags ?? []).some((t) => t.includes(query)));
+}
+
+function clearTagFilterDebounceTimer(): void {
+  if (tagFilterDebounceTimer !== null) {
+    window.clearTimeout(tagFilterDebounceTimer);
+    tagFilterDebounceTimer = null;
+  }
+}
+
+function scheduleTagFilterDebounce(): void {
+  clearTagFilterDebounceTimer();
+  tagFilterDebounceTimer = window.setTimeout(() => {
+    tagFilterDebounceTimer = null;
+    const next = tagFilterInputValue.length >= 2 ? tagFilterInputValue : "";
+    if (next !== tagFilterActiveQuery) {
+      tagFilterActiveQuery = next;
+      refreshAfterTagFilter();
+    }
+  }, TAG_FILTER_DEBOUNCE_MS);
+}
+
+function buildVisitDisplayList(
+  fullList: CountryVisit[],
+  visitListTab: RenderOptions["visitListTab"],
+  isEditMode: boolean,
+): CountryVisit[] {
+  const filtered = applyTagFilterToVisits(fullList, tagFilterActiveQuery);
+  if (isEditMode || visitListTab === "byContinent" || visitListTab === "timeline") {
+    return filtered;
+  }
+  return uniqueVisitsByCountry(filtered);
+}
+
+function buildFilteredVisitsForMap(fullList: CountryVisit[]): CountryVisit[] {
+  return applyTagFilterToVisits(fullList, tagFilterActiveQuery);
+}
+
+function visitedCountryTitleCount(fullList: CountryVisit[]): number {
+  if (tagFilterActiveQuery.length >= 2) {
+    const filtered = applyTagFilterToVisits(fullList, tagFilterActiveQuery);
+    return uniqueVisitsByCountry(filtered).length;
+  }
+  return uniqueVisitsByCountry(fullList).length;
+}
+
+function createTagFilterRow(): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "visit-list-tag-filter";
+  const field = document.createElement("div");
+  field.className = "visit-list-tag-filter__field";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "visit-list-tag-filter__input tag-editor__input";
+  input.placeholder = "Filter by tags";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  input.setAttribute("aria-label", "Filter by tags");
+  input.value = tagFilterInputValue;
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "visit-list-tag-filter__clear";
+  clearBtn.setAttribute("aria-label", "Clear search filter");
+  clearBtn.textContent = "×";
+  clearBtn.hidden = tagFilterInputValue.length === 0;
+  attachTooltip(clearBtn, "Clear search filter");
+
+  function syncClearVisible(): void {
+    clearBtn.hidden = tagFilterInputValue.length === 0;
+  }
+
+  input.addEventListener("input", () => {
+    tagFilterInputValue = sanitizeTagInput(input.value);
+    input.value = tagFilterInputValue;
+    syncClearVisible();
+    scheduleTagFilterDebounce();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    tagFilterInputValue = "";
+    input.value = "";
+    syncClearVisible();
+    clearTagFilterDebounceTimer();
+    if (tagFilterActiveQuery !== "") {
+      tagFilterActiveQuery = "";
+      refreshAfterTagFilter();
+    }
+    input.focus();
+  });
+
+  field.appendChild(input);
+  field.appendChild(clearBtn);
+  wrap.appendChild(field);
+  return wrap;
+}
+
 async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefresh: () => void): Promise<void> {
   if (!visit.id) return;
   try {
@@ -806,7 +915,10 @@ interface FillVisitListContentParams {
   displayList: CountryVisit[];
   countriesList: Country[];
   visitListTab: RenderOptions["visitListTab"];
+  /** Visits shown on map (tag-filtered); tooltips use this set. */
   visitsForMap: CountryVisit[];
+  /** Full RAM list for Statistics tab only (no tag filter). */
+  statisticsSourceVisits: CountryVisit[];
   isEditMode?: boolean;
   onRefresh?: () => void;
   onViewMediaUrl?: (visit: CountryVisit) => void;
@@ -819,6 +931,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     countriesList,
     visitListTab,
     visitsForMap,
+    statisticsSourceVisits,
     isEditMode = false,
     onRefresh,
     onViewMediaUrl,
@@ -837,7 +950,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
   }
   if (visitListTab === "statistics") {
     const listedCodeSet = new Set(countriesList.map((c) => c.countryCode.toUpperCase()));
-    const visitsForStatistics = visitsForMap.filter((v) =>
+    const visitsForStatistics = statisticsSourceVisits.filter((v) =>
       listedCodeSet.has(v.countryCode.toUpperCase())
     );
     const countryCodeToRegion = new Map<string, string>();
@@ -1135,10 +1248,18 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   const title = document.createElement("h1");
   title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
   visitedSection.appendChild(title);
-  const displayList =
-    options.visitListTab === "byContinent" || options.visitListTab === "timeline"
-      ? sharedVisitsList
-      : sortedVisitsAlphabetically(uniqueVisitsByCountry(sharedVisitsList), countriesList);
+  if (options.visitListTab !== "statistics") {
+    visitedSection.appendChild(createTagFilterRow());
+  }
+
+  let displayList = buildVisitDisplayList(sharedVisitsList, options.visitListTab, false);
+  if (
+    options.visitListTab !== "byContinent" &&
+    options.visitListTab !== "timeline"
+  ) {
+    displayList = sortedVisitsAlphabetically(displayList, countriesList);
+  }
+
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
   fillVisitListContent({
@@ -1146,7 +1267,8 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     displayList,
     countriesList,
     visitListTab: options.visitListTab,
-    visitsForMap: sharedVisitsList,
+    visitsForMap: buildFilteredVisitsForMap(sharedVisitsList),
+    statisticsSourceVisits: sharedVisitsList,
     onViewMediaUrl: options.onViewMediaUrl,
   });
   const tabRow = createVisitListTabRow(options.visitListTab, options.onVisitListTabChange);
@@ -1215,9 +1337,12 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   const titleRow = document.createElement("div");
   titleRow.className = "app-section__title-row";
   const visitedTitle = document.createElement("h1");
-  visitedTitle.textContent = `Your visited countries (${uniqueVisitsByCountry(visitsList).length})`;
+  visitedTitle.textContent = `Your visited countries (${visitedCountryTitleCount(visitsList)})`;
   titleRow.appendChild(visitedTitle);
   visitedSection.appendChild(titleRow);
+  if (options.visitListTab !== "statistics") {
+    visitedSection.appendChild(createTagFilterRow());
+  }
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
   fillVisitListContent({
@@ -1225,7 +1350,8 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
     displayList,
     countriesList,
     visitListTab: options.visitListTab,
-    visitsForMap: visitsList,
+    visitsForMap: buildFilteredVisitsForMap(visitsList),
+    statisticsSourceVisits: visitsList,
     isEditMode,
     onRefresh: options.onRefresh,
     onViewMediaUrl: options.onViewMediaUrl,
@@ -1373,10 +1499,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
     return;
   }
 
-  const displayList =
-    isEditMode || options.visitListTab === "byContinent" || options.visitListTab === "timeline"
-      ? visitsList
-      : uniqueVisitsByCountry(visitsList);
+  const displayList = buildVisitDisplayList(visitsList, options.visitListTab, isEditMode);
   const visitedWrap = document.createElement("div");
   visitedWrap.id = APP_VISITED_SECTION_ID;
   renderNormalVisitedSection(visitedWrap, options, displayList);
@@ -1635,10 +1758,7 @@ export async function main(): Promise<void> {
       return;
     }
     const opts = getRenderOptions();
-    const displayList =
-      opts.isEditMode || opts.visitListTab === "byContinent" || opts.visitListTab === "timeline"
-        ? visits
-        : uniqueVisitsByCountry(visits);
+    const displayList = buildVisitDisplayList(visits, opts.visitListTab, opts.isEditMode);
     renderNormalVisitedSection(wrap, opts, displayList);
     syncVisitListEditFloat();
   }
@@ -1798,6 +1918,15 @@ export async function main(): Promise<void> {
     window.scrollTo(scrollX, scrollY);
     syncVisitListEditFloat();
   }
+
+  refreshAfterTagFilter = () => {
+    if (!appEl) return;
+    if (currentUser && !getShareTokenFromPath() && document.getElementById(APP_VISITED_SECTION_ID)) {
+      refreshVisitListSection();
+    } else {
+      refreshAppContent();
+    }
+  };
 
   if (authHeaderEl) {
     const unsubscribe = subscribeToAuthStateChanged(async (user) => {

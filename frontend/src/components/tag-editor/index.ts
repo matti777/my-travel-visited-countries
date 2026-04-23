@@ -72,7 +72,7 @@ export interface TagEditorControl {
   setTags(tags: string[]): void;
 }
 
-function sanitizeTagInput(raw: string): string {
+export function sanitizeTagInput(raw: string): string {
   return raw
     .toLowerCase()
     .split("")
