@@ -4,27 +4,38 @@
  */
 export interface MapOnlyRegionDef {
   displayName: string;
-  /** Use this sovereign country's visits when hovering the map region (e.g. GL → DK). */
+  /**
+   * Host ISO code for overseas / dependent territories: map color and tooltips follow this country.
+   * When the host has no visit in the current (e.g. filtered) set, the territory uses unvisited sovereign
+   * gray — not the darkest “non-country” map color.
+   * Omit for disputed or non-sovereign map-only areas (Kosovo, Palestine, Western Sahara): those use
+   * the darkest map-only gray only.
+   */
   visitSourceCode?: string;
-  /** assets/images/<flagCode>.jpg — omit to use the map region code lowercased. */
-  flagCode?: string;
+  /** Flag asset basename: `assets/images/<flagCode>.jpg`. */
+  flagCode: string;
 }
 
-/** Uppercase svgMap ids → metadata */
+/** Uppercase svgMap ids → metadata (svgMap regions not returned by GET /countries). */
 export const MAP_ONLY_REGIONS: Record<string, MapOnlyRegionDef> = {
+  /* Disputed / non-sovereign map-only — darkest gray on map only; no visitSourceCode. */
+  XK: {
+    displayName: "Kosovo",
+    flagCode: "xk",
+  },
+  EH: {
+    displayName: "Western Sahara",
+    flagCode: "eh",
+  },
+  PS: {
+    displayName: "Palestine",
+    flagCode: "ps",
+  },
+  /* Overseas / dependent territories — follow host country for fill; never the disputed-only dark gray. */
   GL: {
     displayName: "Greenland (Denmark)",
     visitSourceCode: "DK",
     flagCode: "dk",
-  },
-  XK: {
-    displayName: "Kosovo",
-  },
-  EH: {
-    displayName: "Western Sahara",
-  },
-  PS: {
-    displayName: "Palestine",
   },
   PR: {
     displayName: "Puerto Rico (USA)",
@@ -73,12 +84,10 @@ export const MAP_ONLY_REGIONS: Record<string, MapOnlyRegionDef> = {
  * (map-only regions that do not borrow a parent flag via `flagCode`).
  * Used with {@link MAP_ONLY_REGIONS} by `scripts/download-flag-assets.ts`.
  */
-export const MAP_ONLY_FLAG_ASSET_CODES_LOWER: readonly string[] = Object.entries(
-  MAP_ONLY_REGIONS
-)
+export const MAP_ONLY_FLAG_ASSET_CODES_LOWER: readonly string[] = Object.entries(MAP_ONLY_REGIONS)
   .filter(([code, def]) => {
     const lower = code.toLowerCase();
-    const assetName = (def.flagCode ?? lower).toLowerCase();
+    const assetName = def.flagCode.toLowerCase();
     return assetName === lower;
   })
   .map(([code]) => code.toLowerCase());

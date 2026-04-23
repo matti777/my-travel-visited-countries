@@ -1,6 +1,6 @@
 import svgMap from "svgmap";
 import "svgmap/style";
-import { MAP_ONLY_REGIONS } from "../../map-regions";
+import { MAP_ONLY_REGIONS, type MapOnlyRegionDef } from "../../map-regions";
 import type { Country } from "../../types/country";
 import type { CountryVisit } from "../../types/visit";
 
@@ -15,10 +15,27 @@ const REGION_CODE_TO_COLOR: Record<string, string> = {
 };
 /** Fallback for Antarctica or unknown region. */
 const COLOR_VISITED_DEFAULT = "#40e0d0";
-/** Dark gray for unvisited sovereign countries so they stand out from ocean/background. */
-const COLOR_NO_DATA = "#4a4a4a";
-/** Darker gray for map-only rows with no visit source, or when a parent sovereign (e.g. US) is unvisited. */
+/**
+ * Default fill for sovereign states with no matching visit — matches svg-map.css `.svgMap-country`
+ * fallback (`#E2E2E2`). Used for every API-listed country until overwritten by visits or map-only rules.
+ */
+const COLOR_UNVISITED_SOVEREIGN = "#E2E2E2";
+/**
+ * Darkest gray: **only** for map-only disputed rows without `visitSourceCode` in {@link MAP_ONLY_REGIONS}
+ * (Palestine PS, Kosovo XK, Western Sahara EH). Must not be used for normal unvisited sovereign countries.
+ */
 const COLOR_NON_COUNTRY_MAP = "#2c2c2c";
+
+function parentHasFilteredVisit(visits: CountryVisit[], parentIso: string): boolean {
+  const p = parentIso.toUpperCase();
+  return visits.some((v) => v.countryCode.toUpperCase() === p);
+}
+
+/** Host ISO set → overseas territory; omitted or empty → disputed-only dark gray (XK, EH, PS). */
+function isOverseasTerritory(def: MapOnlyRegionDef): boolean {
+  const v = def.visitSourceCode?.trim();
+  return Boolean(v);
+}
 
 function getFillColorForRegion(regionCode: string): string {
   return REGION_CODE_TO_COLOR[regionCode] ?? COLOR_VISITED_DEFAULT;
@@ -44,9 +61,10 @@ export interface CreateVisitMapOptions {
 
 /**
  * Creates a world map inside the given parent element using svgMap.
- * Visited countries are highlighted with the app turquoise;
- * unvisited sovereign countries use medium gray; map-only territories (not in GET /countries)
- * use a darker gray. Tooltips show Visits: N and each visit date where applicable.
+ * Visited countries are highlighted by continent color; unvisited sovereign countries use light neutral gray.
+ * Map-only regions: overseas territories ({@link MAP_ONLY_REGIONS} with `visitSourceCode`) follow their
+ * host country when it appears in the filtered visit list; otherwise they match unvisited sovereign gray.
+ * Only PS, XK, EH use the darkest gray; overseas territories otherwise use {@link COLOR_UNVISITED_SOVEREIGN}.
  */
 export function createVisitMap(
   parent: HTMLElement,
@@ -77,6 +95,12 @@ export function createVisitMap(
   const listedCodes = new Set(countries.map((c) => c.countryCode.toUpperCase()));
 
   const values: Record<string, { visited: number; color: string }> = {};
+
+  for (const c of countries) {
+    const upper = c.countryCode.toUpperCase();
+    values[upper] = { visited: 0, color: COLOR_UNVISITED_SOVEREIGN };
+  }
+
   for (const code of countryCodes) {
     const upper = code.toUpperCase();
     const country = countryByCode.get(upper);
@@ -86,14 +110,24 @@ export function createVisitMap(
   }
 
   for (const [code, def] of Object.entries(MAP_ONLY_REGIONS)) {
-    if (def.visitSourceCode) {
-      const parent = def.visitSourceCode.toUpperCase();
-      const parentVals = values[parent];
-      values[code] = parentVals
-        ? { ...parentVals }
-        : { visited: 0, color: COLOR_NON_COUNTRY_MAP };
+    if (isOverseasTerritory(def)) continue;
+    values[code] = { visited: 0, color: COLOR_NON_COUNTRY_MAP };
+  }
+
+  for (const [code, def] of Object.entries(MAP_ONLY_REGIONS)) {
+    if (!isOverseasTerritory(def)) continue;
+    const parent = def.visitSourceCode!.trim().toUpperCase();
+    if (!parentHasFilteredVisit(visits, parent)) {
+      values[code] = { visited: 0, color: COLOR_UNVISITED_SOVEREIGN };
+      continue;
+    }
+    const parentVals = values[parent];
+    if (parentVals) {
+      values[code] = { visited: parentVals.visited, color: parentVals.color };
     } else {
-      values[code] = { visited: 0, color: COLOR_NON_COUNTRY_MAP };
+      const country = countryByCode.get(parent);
+      const fillColor = getFillColorForRegion(country?.regionCode ?? "");
+      values[code] = { visited: 1, color: fillColor };
     }
   }
 
@@ -113,6 +147,9 @@ export function createVisitMap(
       countryNames,
       showZoomReset: true,
       flagURL: `${baseUrl}/assets/images/{0}.jpg`,
+      colorNoData: COLOR_UNVISITED_SOVEREIGN,
+      colorMin: COLOR_UNVISITED_SOVEREIGN,
+      colorMax: COLOR_VISITED_DEFAULT,
       onGetTooltip: (
         _tooltipDiv: HTMLElement,
         countryID: string,
@@ -130,7 +167,7 @@ export function createVisitMap(
           mapOnly?.displayName ??
           countryID;
 
-        const flagImageCode = (mapOnly?.flagCode ?? idUpper).toLowerCase();
+        const flagImageCode = mapOnly ? mapOnly.flagCode.toLowerCase() : idUpper.toLowerCase();
         const showFlag = listedCodes.has(idUpper) || mapOnly !== undefined;
 
         const wrapper = document.createElement("div");
@@ -193,8 +230,8 @@ export function createVisitMap(
         },
         applyData: "visited",
         values,
-        colorNoData: COLOR_NO_DATA,
-        colorMin: COLOR_NO_DATA,
+        colorNoData: COLOR_UNVISITED_SOVEREIGN,
+        colorMin: COLOR_UNVISITED_SOVEREIGN,
         colorMax: COLOR_VISITED_DEFAULT,
       },
     });
