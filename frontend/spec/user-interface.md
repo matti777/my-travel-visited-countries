@@ -53,7 +53,7 @@ This list of countries will be unique by country code, ie. it will show no dupli
 After the section title there will be a button called "Edit" which, when pressed, will:
 
 - Turn into "Done" button. Tooltip for Done button should say "Click to complete editing".
-- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
+- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will show a "popup dialog" for confirmation, with text "Are you sure you want to delete the visit to <country name> at <visit time>?" and **No** and **Yes, delete** buttons (no separate Close control in the dialog). Pressing **Yes, delete** will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
 - When "Done" button is pressed, it turns back into "Edit" button and hides the X buttons from country cells. The list turns back into a unique list of countries by their country code.
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
@@ -67,6 +67,8 @@ Edit mode will not be available when in shared visit list routing mode; instead,
 Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding. Unlike the alphabetical list, here the countries listed are not unique, but instead each visit gets its own country cell. The visits within a country are sorted by their `VisitTime`. Here the country cells will display the time of the visit, in a similar fashion as in the edit mode. A tooltip for each cell shall read "Click to view attached media" IF `MediaURL` is present. If such a cell is clicked, the media URL should be opened in a new tab. For such a cell, the visit time text should look like a link to indicate the presence of the media url.
 
 Hovering over a visit card should display a tooltip that contains title "Tags for this visit" and a list of tags added to the visit. Reuse the tag stylings from the [tag editor component](tag-editor-component.md).
+
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a button labeled **Close without saving** to dismiss without applying edits.
 
 **Tab 3:** Countries plotted on map
 
@@ -88,7 +90,7 @@ In this mode the Edit button is disabled.
 
 Similar list to "by continent" but instead organized by year, sorted to ascending order.
 
-Hovering over a visit card shall show same tooltip as in **Tab 3:**.
+Hovering over a visit card shall show same tooltip as in **Tab 3:** - different depending on Edit mode or no Edit mode, with same exact functionality.
 
 **Tab 5:** Statistics
 
@@ -120,6 +122,8 @@ When editing the visit list, a floating component is shown on the right side of 
 
 This component has a thin border, slightly rounded corners and a visible drop shadow. It appears animatedly when Edit button is pressed and hides animatedly when (either) Done button is pressed. The page "under" the component is fully interactable.
 
+While a confirmation dialog is open (for example delete visit or remove friend), the same full-screen dark overlay used by that dialog shall stack above this floating component so the float appears dimmed behind the overlay and cannot receive clicks until the dialog is dismissed.
+
 ---
 
 If not logged in, this section is not visible. If viewing a shared visit list, this section is not visible either.
@@ -144,7 +148,7 @@ This section provides a sharing feature. The UI presents a read-only input box w
 
 If not logged in, this section is not visible.
 
-The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button, similar to country cells in edit mode, for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made.
+The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button, similar to country cells in edit mode, for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made. The delete button shows the same confirmation dialog pattern as deleting a country visit (full-screen dark overlay, **No** and a primary confirm button—**Yes, remove**—no separate Close control), with message text "Are you sure you want to remove friend <name>?".
 
 ---
 

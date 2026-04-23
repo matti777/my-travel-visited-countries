@@ -3,6 +3,7 @@ import "flatpickr/dist/flatpickr.min.css";
 import { errorToast } from "Components/toast";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createTagEditor } from "Components/tag-editor";
+import { createCountryCell } from "Components/country-cell";
 import type { Country } from "../../types/country";
 
 const VISIT_DATE_MIN = "1900-01-01";
@@ -49,12 +50,16 @@ export interface CountryVisitEditorOptions {
   baseUrl: string;
   /** Section heading; default "Add a visit to a country". */
   title?: string;
+  mode?: "add" | "edit";
+  /** When mode is "edit", the country selection is locked and this is shown. */
+  countryNameForEditMode?: string;
   selectedCountryCode: string;
   onSelectCountry: (code: string) => void;
   formVisitDate: string | null;
   onFormVisitDateChange: (value: string | null) => void;
   formMediaUrl: string;
   onFormMediaUrlChange: (value: string) => void;
+  initialTags?: string[];
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
 }
 
@@ -66,15 +71,20 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   const {
     countries: countriesList,
     baseUrl,
-    title = "Add a visit to a country",
+    mode = "add",
+    title = mode === "edit" ? "Edit your visit" : "Add a visit to a country",
+    countryNameForEditMode,
     selectedCountryCode,
     onSelectCountry,
     formVisitDate,
     onFormVisitDateChange,
     formMediaUrl,
     onFormMediaUrlChange,
+    initialTags,
     onSubmit,
   } = options;
+  /** Mutable; flatpickr updates this. Do not use stale `formVisitDate` from options after init. */
+  let currentVisitDate: string | null = formVisitDate;
   const today = new Date();
 
   const addSection = document.createElement("section");
@@ -84,35 +94,47 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   addSection.appendChild(addTitle);
 
   const form = document.createElement("form");
-  form.className = "add-visit-form";
+  form.className = mode === "edit" ? "add-visit-form add-visit-form--edit" : "add-visit-form";
   form.addEventListener("submit", (e) => e.preventDefault());
 
   const row = document.createElement("div");
-  row.className = "add-visit-form__row";
-  row.appendChild(
-    createCountryDropdown({
-      countries: countriesList,
-      baseUrl,
-      selectedCountryCode,
-      onSelect: onSelectCountry,
-    }),
-  );
+  row.className =
+    mode === "edit"
+      ? "add-visit-form__row add-visit-form__row--country-date add-visit-form__row--edit"
+      : "add-visit-form__row add-visit-form__row--country-date";
+  if (mode === "edit") {
+    const name =
+      countryNameForEditMode ??
+      countriesList.find((c) => c.countryCode === selectedCountryCode)?.name ??
+      selectedCountryCode;
+    const cell = createCountryCell(selectedCountryCode, name, baseUrl, { variant: "compact" });
+    const lockedWrap = document.createElement("div");
+    lockedWrap.className = "add-visit-form__country-locked";
+    lockedWrap.appendChild(cell);
+    row.appendChild(lockedWrap);
+  } else {
+    row.appendChild(
+      createCountryDropdown({
+        countries: countriesList,
+        baseUrl,
+        selectedCountryCode,
+        onSelect: onSelectCountry,
+      }),
+    );
+  }
   const visitTimeLabel = document.createElement("span");
   visitTimeLabel.className = "add-visit-form__visit-time-label";
   visitTimeLabel.textContent = "Visit date";
-  row.appendChild(visitTimeLabel);
   const dateInput = document.createElement("input");
   dateInput.type = "text";
   dateInput.placeholder = "Enter visit date";
   dateInput.name = "visitDate";
   dateInput.className = "add-visit-form__date-input";
   dateInput.autocomplete = "off";
-  row.appendChild(dateInput);
-  form.appendChild(row);
-  const visitTimeHint = document.createElement("p");
-  visitTimeHint.className = "add-visit-form__visit-time-hint";
-  visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
-  form.appendChild(visitTimeHint);
+  const dateField = document.createElement("div");
+  dateField.className = "add-visit-form__visit-date-field";
+  dateField.appendChild(visitTimeLabel);
+  dateField.appendChild(dateInput);
 
   const mediaUrlRow = document.createElement("div");
   mediaUrlRow.className = "add-visit-form__row";
@@ -124,6 +146,13 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   mediaUrlInput.autocomplete = "off";
   mediaUrlInput.value = formMediaUrl;
   mediaUrlRow.appendChild(mediaUrlInput);
+
+  row.appendChild(dateField);
+  form.appendChild(row);
+  const visitTimeHint = document.createElement("p");
+  visitTimeHint.className = "add-visit-form__visit-time-hint";
+  visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
+  form.appendChild(visitTimeHint);
   form.appendChild(mediaUrlRow);
   const mediaUrlHint = document.createElement("p");
   mediaUrlHint.className = "add-visit-form__media-url-hint";
@@ -135,21 +164,24 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   tagEditorWrap.className = "add-visit-form__tag-editor-wrap";
   tagEditorWrap.appendChild(tagEditor.element);
   form.appendChild(tagEditorWrap);
+  if (initialTags && initialTags.length > 0) {
+    tagEditor.setTags(initialTags);
+  }
 
   const addBtnRow = document.createElement("div");
   addBtnRow.className = "add-visit-form__add-row";
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
-  addBtn.textContent = "Add visit";
+  addBtn.textContent = mode === "edit" ? "Save visit" : "Add visit";
   addBtn.className = "add-visit-form__add-btn";
   addBtn.disabled = true;
   addBtnRow.appendChild(addBtn);
   form.appendChild(addBtnRow);
 
   function updateValidationUI(): void {
-    const dateValid = isVisitDateValid(formVisitDate);
+    const dateValid = isVisitDateValid(currentVisitDate);
     const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
-    dateInput.classList.toggle("invalid", formVisitDate != null && !dateValid);
+    dateInput.classList.toggle("invalid", currentVisitDate != null && !dateValid);
     mediaUrlInput.classList.toggle("invalid", mediaUrlInput.value.trim() !== "" && !mediaUrlValid);
     addBtn.disabled = !(selectedCountryCode && dateValid && mediaUrlValid);
   }
@@ -177,8 +209,10 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
           String(d.getMonth() + 1).padStart(2, "0") +
           "-" +
           String(d.getDate()).padStart(2, "0");
+        currentVisitDate = iso;
         onFormVisitDateChange(iso);
       } else {
+        currentVisitDate = null;
         onFormVisitDateChange(null);
       }
       updateValidationUI();
@@ -195,7 +229,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
       errorToast("Please select a country");
       return;
     }
-    const isoDate = formVisitDate;
+    const isoDate = currentVisitDate;
     if (!isoDate || !isVisitDateValid(isoDate)) {
       errorToast("Please select a valid visit date");
       return;

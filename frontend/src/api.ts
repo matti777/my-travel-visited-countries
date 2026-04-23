@@ -169,7 +169,7 @@ export default class Api {
     return response;
   }
 
-  /** PATCH-style partial update; omit keys to leave fields unchanged. Use `mediaUrl: ""` to clear. */
+  /** Partial PUT: include only keys you want to change; omitted keys are not sent. Use `mediaUrl: ""` to clear. */
   async updateVisit(
     visitId: string,
     patch: {

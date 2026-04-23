@@ -69,6 +69,7 @@ const HINT_TEXT = "You can define tags to describe your trip.";
 export interface TagEditorControl {
   element: HTMLElement;
   getTags(): string[];
+  setTags(tags: string[]): void;
 }
 
 function sanitizeTagInput(raw: string): string {
@@ -184,7 +185,7 @@ export function createTagEditor(): TagEditorControl {
         pill.classList.add("tag-editor__pill--removing");
 
         let finalized = false;
-        let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+        let fallbackTimer: number | null = null;
 
         function finalizeRemove(): void {
           if (finalized) {
@@ -354,6 +355,17 @@ export function createTagEditor(): TagEditorControl {
     element: root,
     getTags(): string[] {
       return [...tags];
+    },
+    setTags(nextTags: string[]): void {
+      tags.splice(0, tags.length);
+      for (const t of nextTags ?? []) {
+        const raw = sanitizeTagInput(`${t ?? ""}`);
+        if (!isValidTagToken(raw)) continue;
+        if (tags.includes(raw)) continue;
+        if (tags.length >= MAX_TAGS_PER_VISIT) break;
+        tags.push(raw);
+      }
+      syncUi();
     },
   };
 }

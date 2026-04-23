@@ -5,7 +5,7 @@
 :root {
   --color-turquoise: #40e0d0;
   --color-turquoise-light: #b8f0eb;
-  --animation-duration: 0.4s;
+  --animation-duration: 0.3s;
   /** Placeholder text on text-like inputs (single tone app-wide). */
   --input-placeholder-color: #bdbdbd;
 }
@@ -139,6 +139,170 @@ body {
   padding: 0.35rem 0.75rem;
   font-family: inherit;
   cursor: pointer;
+}
+
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above .done-editing-float (z-index 90) so modals block the float. */
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.52);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--animation-duration) ease,
+    visibility 0s linear var(--animation-duration);
+}
+
+.app-modal-overlay.app-modal-overlay--visible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--animation-duration) ease;
+}
+
+.app-modal-overlay.app-modal-overlay--closing {
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
+  transition: opacity var(--animation-duration) ease;
+}
+
+.app-modal-panel {
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.24);
+  transform: translateY(14px) scale(0.98);
+  opacity: 0;
+  transition:
+    transform var(--animation-duration) ease,
+    opacity var(--animation-duration) ease;
+  position: relative;
+  padding: 1rem 1.1rem 1.05rem;
+}
+
+.app-modal-overlay.app-modal-overlay--visible .app-modal-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.app-modal-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.app-modal-title {
+  margin: 0.1rem 2.9rem 0.75rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.app-modal-panel--no-close .app-modal-title {
+  margin-right: 0;
+}
+
+.app-modal-body {
+  margin: 0;
+  min-width: 0;
+}
+
+.app-modal-footer {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.app-modal-footer--plain {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (max-width: 520px) {
+  .app-modal-overlay {
+    align-items: flex-start;
+    padding: 0.5rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-modal-panel {
+    width: min(100%, calc(100vw - 1rem));
+    max-height: min(
+      calc(100vh - 1rem),
+      calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+    );
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-confirm__actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: stretch;
+  }
+
+  .app-confirm__actions .app-confirm__btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-confirm__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .app-confirm__actions .app-confirm__btn {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+.app-confirm__message {
+  margin: 0;
+  color: #222;
+  overflow-wrap: anywhere;
+}
+
+.app-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.app-confirm__btn {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.app-confirm__btn--primary {
+  background: #fff;
+}
+
+.app-confirm__btn--danger {
+  border-color: #c00;
+  color: #a00;
+  font-weight: 700;
 }
 
 .link-accounts__body {
@@ -424,6 +588,11 @@ main.legal-page {
   margin-bottom: 2rem;
 }
 
+/* Allow edit row to shrink inside modal / narrow containers */
+.app-modal-body .country-visit-editor .add-visit-form--edit {
+  min-width: 0;
+}
+
 .country-visit-editor {
   border: 1px solid rgba(0, 80, 90, 0.25);
   border-radius: 6px;
@@ -532,6 +701,10 @@ main.legal-page {
   min-height: 56px;
   height: auto;
   padding: 0.4rem 0.5rem;
+}
+
+.country-cell--edit-clickable {
+  cursor: pointer;
 }
 
 .country-cell img {
@@ -928,6 +1101,105 @@ main.legal-page {
   align-items: stretch;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.add-visit-form__country-locked {
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+.add-visit-form__visit-date-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Edit visit dialog: country — gap — "Visit date" — date input; one line, heights aligned to country cell (38px). */
+.add-visit-form--edit .add-visit-form__row--edit {
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.add-visit-form--edit .add-visit-form__country-locked {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  min-width: 0;
+  width: fit-content;
+  max-width: fit-content;
+}
+
+.add-visit-form--edit .add-visit-form__country-locked .country-cell.country-cell--compact {
+  width: fit-content;
+  min-width: 0;
+  max-width: none;
+}
+
+.add-visit-form--edit .add-visit-form__visit-date-field {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 38px;
+}
+
+.add-visit-form--edit .add-visit-form__visit-time-label {
+  margin: 0 !important;
+  padding: 0;
+  flex-shrink: 0;
+  align-self: stretch;
+  height: auto;
+  min-height: 38px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+/* Match .country-cell--compact height (38px); fixed width for Flatpickr display */
+.add-visit-form--edit .add-visit-form__visit-date-field .add-visit-form__date-input,
+.add-visit-form--edit .add-visit-form__visit-date-field input.flatpickr-input {
+  flex: 0 0 14.5rem;
+  width: 14.5rem !important;
+  min-width: 14.5rem;
+  max-width: 14.5rem;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
+  align-self: center;
+}
+
+@media (max-width: 639px) {
+  .add-visit-form--edit .add-visit-form__row--edit {
+    flex-wrap: wrap;
+  }
+
+  .add-visit-form--edit .add-visit-form__country-locked {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .add-visit-form--edit .add-visit-form__visit-date-field {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .add-visit-form--edit .add-visit-form__visit-date-field .add-visit-form__date-input,
+  .add-visit-form--edit .add-visit-form__visit-date-field input.flatpickr-input {
+    flex: 1 1 auto;
+    width: 100% !important;
+    max-width: none;
+    min-width: 0;
+  }
 }
 
 .add-visit-form__row .country-dropdown {

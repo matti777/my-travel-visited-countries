@@ -11,6 +11,7 @@ import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { attachTooltip } from "Components/tooltip";
 import { createDoneEditingFloat } from "Components/done-editing-float";
+import { confirmDialog, openModal } from "Components/modal";
 import {
   auth,
   completeRedirectSignIn,
@@ -562,6 +563,68 @@ function isoDateToUnixSeconds(isoDate: string): number {
   return Math.floor(new Date(isoDate + "T00:00:00Z").getTime() / 1000);
 }
 
+function tagsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort();
+  const sb = [...b].sort();
+  return sa.every((t, i) => t === sb[i]);
+}
+
+/** Build PUT body fields only for changes; omit keys the backend should leave unchanged. */
+function buildVisitUpdatePatch(
+  visit: CountryVisit,
+  payload: CountryVisitEditorSubmitPayload,
+): { visitedTime?: number; tags?: string[]; mediaUrl?: string } {
+  const patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string } = {};
+  const newUnix = isoDateToUnixSeconds(payload.isoDate);
+  const oldUnix = visit.visitedTime
+    ? Math.floor(new Date(visit.visitedTime).getTime() / 1000)
+    : NaN;
+  if (Number.isNaN(oldUnix) || newUnix !== oldUnix) {
+    patch.visitedTime = newUnix;
+  }
+  const newTags = payload.tags ?? [];
+  const oldTags = visit.tags ?? [];
+  if (!tagsEqual(newTags, oldTags)) {
+    patch.tags = newTags;
+  }
+  const newMedia = (payload.mediaUrl ?? "").trim();
+  const oldMedia = (visit.mediaUrl ?? "").trim();
+  if (newMedia !== oldMedia) {
+    patch.mediaUrl = newMedia;
+  }
+  return patch;
+}
+
+/**
+ * Merge PUT response into local visit. `patch` is the body we sent so we can apply a cleared
+ * `mediaUrl` when the backend omits the key from JSON (`omitempty`).
+ */
+function mergeVisitAfterPut(
+  prev: CountryVisit,
+  put: CountryVisit,
+  patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string },
+): CountryVisit {
+  const base: CountryVisit = {
+    ...prev,
+    visitedTime: put.visitedTime ?? prev.visitedTime,
+    tags: put.tags ?? [],
+    userId: put.userId || prev.userId,
+    id: prev.id ?? put.id,
+    countryCode: prev.countryCode,
+  };
+  if (patch.mediaUrl !== undefined) {
+    return {
+      ...base,
+      mediaUrl: patch.mediaUrl === "" ? undefined : patch.mediaUrl,
+    };
+  }
+  return {
+    ...base,
+    mediaUrl: put.mediaUrl !== undefined ? put.mediaUrl : prev.mediaUrl,
+  };
+}
+
 /**
  * Returns list of visits unique by country code (first occurrence each). Used for non-edit display.
  */
@@ -701,6 +764,13 @@ async function handleDeleteVisit(visit: CountryVisit, cell: HTMLElement, onRefre
       errorToast(err instanceof Error ? err.message : "Failed to delete visit");
     }
   }
+}
+
+function unixSecondsToIsoDate(visitedTime?: string | null): string | null {
+  if (!visitedTime) return null;
+  const d = new Date(visitedTime);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
 }
 
 function createVisitListTabRow(
@@ -856,20 +926,113 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           onDelete:
             withEdit && visit.id && onRefresh
               ? () => {
-                  if (cellRef.current) handleDeleteVisit(visit, cellRef.current, onRefresh);
+                  void (async () => {
+                    const ok = await confirmDialog({
+                      title: "Confirm deletion",
+                      message: `Are you sure you want to delete the visit to ${name} at ${formatVisitTime(visit.visitedTime)}?`,
+                      danger: true,
+                      confirmText: "Yes, delete",
+                      cancelText: "No",
+                    });
+                    if (!ok) return;
+                    if (cellRef.current) await handleDeleteVisit(visit, cellRef.current, onRefresh);
+                  })();
                 }
               : undefined,
         }
       : undefined;
     const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
     cellRef.current = cell;
+    if (showVisitTimeAlways && isEditMode) {
+      cell.classList.add("country-cell--edit-clickable");
+    }
     if (showVisitTimeAlways) {
-      const tooltipHtml = buildVisitListCardTooltipHtml(visit);
-      if (tooltipHtml) {
-        attachTooltip(cell, tooltipHtml, { useHtml: true });
+      if (isEditMode) {
+        attachTooltip(cell, "Click to edit this visit");
+        cell.addEventListener("click", (e) => {
+          if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
+          if (!visit.id) return;
+
+          let editorCountry = visit.countryCode;
+          let editorIsoDate = unixSecondsToIsoDate(visit.visitedTime) ?? new Date().toISOString().slice(0, 10);
+          let editorMediaUrl = visit.mediaUrl ?? "";
+          const editorTags = visit.tags ?? [];
+
+          const body = document.createElement("div");
+          let closeModal: (() => void) | null = null;
+          const editor = createCountryVisitEditor({
+            mode: "edit",
+            title: `Edit your visit to ${name}`,
+            countryNameForEditMode: name,
+            countries: countriesList,
+            baseUrl,
+            selectedCountryCode: editorCountry,
+            onSelectCountry: (code) => {
+              editorCountry = code;
+            },
+            formVisitDate: editorIsoDate,
+            onFormVisitDateChange: (v) => {
+              editorIsoDate = v ?? editorIsoDate;
+            },
+            formMediaUrl: editorMediaUrl,
+            onFormMediaUrlChange: (v) => {
+              editorMediaUrl = v;
+            },
+            initialTags: editorTags,
+            onSubmit: async (payload) => {
+              if (!visit.id) return;
+              try {
+                const patch = buildVisitUpdatePatch(visit, payload);
+                const patchKeys = Object.keys(patch) as (keyof typeof patch)[];
+                if (patchKeys.length === 0) {
+                  closeModal?.();
+                  return;
+                }
+                const updated = await api.updateVisit(visit.id, patch);
+                visits = visits.map((v) =>
+                  v.id === visit.id ? mergeVisitAfterPut(v, updated, patch) : v,
+                );
+                onRefresh?.();
+                closeModal?.();
+              } catch (err) {
+                if (err instanceof ApiError && err.responseCode === 401) {
+                  signOut();
+                  errorToast("Session expired");
+                } else {
+                  errorToast(err instanceof Error ? err.message : "Failed to update visit");
+                }
+              }
+            },
+          });
+          body.appendChild(editor);
+
+          const footer = document.createElement("div");
+          footer.className = "app-confirm__actions";
+          const closeBtn = document.createElement("button");
+          closeBtn.type = "button";
+          closeBtn.className = "app-confirm__btn";
+          closeBtn.textContent = "Close without saving";
+          closeBtn.setAttribute("aria-label", "Close without saving");
+          footer.appendChild(closeBtn);
+
+          const { close } = openModal({
+            ariaLabel: `Edit visit to ${name}`,
+            body,
+            footer,
+            showCloseButton: false,
+            footerPlain: true,
+          });
+          closeModal = () => close("programmatic");
+          closeBtn.addEventListener("click", () => close("closeButton"));
+        });
+      } else {
+        const tooltipHtml = buildVisitListCardTooltipHtml(visit);
+        if (tooltipHtml) {
+          attachTooltip(cell, tooltipHtml, { useHtml: true });
+        }
       }
     }
-    if (visit.mediaUrl && showVisitTimeAlways) {
+    if (visit.mediaUrl && showVisitTimeAlways && !isEditMode) {
       cell.classList.add("country-cell--has-media");
       cell.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
@@ -901,7 +1064,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     requestAnimationFrame(() => grid.classList.add("visible"));
     for (const visit of sortedList) {
       const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-      addCellToGrid(grid, visit, name, isEditMode);
+      addCellToGrid(grid, visit, name, false);
     }
     contentArea.appendChild(grid);
     return;
@@ -1051,23 +1214,16 @@ function renderNormalVisitedSection(container: HTMLElement, options: RenderOptio
   const visitedTitle = document.createElement("h1");
   visitedTitle.textContent = `Your visited countries (${uniqueVisitsByCountry(visitsList).length})`;
   titleRow.appendChild(visitedTitle);
-  const editDoneBtn = document.createElement("button");
-  editDoneBtn.type = "button";
-  editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
-  editDoneBtn.className = "edit-done-btn";
-  editDoneBtn.disabled = options.visitListTab === "map" || options.visitListTab === "statistics";
-  editDoneBtn.addEventListener("click", onEditModeToggle);
-  attachTooltip(
-    editDoneBtn,
-    options.visitListTab === "map"
-      ? "Edit is not available in Map view"
-      : options.visitListTab === "statistics"
-        ? "Edit is not available in Statistics view"
-        : isEditMode
-          ? "Click to complete editing"
-          : "Click to edit the visits list",
-  );
-  titleRow.appendChild(editDoneBtn);
+  const showEditToggle = options.visitListTab === "byContinent" || options.visitListTab === "timeline";
+  if (showEditToggle) {
+    const editDoneBtn = document.createElement("button");
+    editDoneBtn.type = "button";
+    editDoneBtn.textContent = isEditMode ? "Done" : "Edit";
+    editDoneBtn.className = "edit-done-btn";
+    editDoneBtn.addEventListener("click", onEditModeToggle);
+    attachTooltip(editDoneBtn, isEditMode ? "Click to complete editing" : "Click to edit the visits list");
+    titleRow.appendChild(editDoneBtn);
+  }
   visitedSection.appendChild(titleRow);
   const contentArea = document.createElement("div");
   contentArea.className = "visit-list-content";
@@ -1306,7 +1462,17 @@ function renderFriendsListSection(container: HTMLElement, options: RenderOptions
       deleteBtn.setAttribute("aria-label", "Remove friend");
       deleteBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        onDeleteFriend(friend.shareToken);
+        void (async () => {
+          const ok = await confirmDialog({
+            title: "Confirm removal",
+            message: `Are you sure you want to remove friend ${friend.name}?`,
+            danger: true,
+            confirmText: "Yes, remove",
+            cancelText: "No",
+          });
+          if (!ok) return;
+          onDeleteFriend(friend.shareToken);
+        })();
       });
       attachTooltip(deleteBtn, `Click to remove ${friend.name} as friend`);
       cell.appendChild(deleteBtn);
@@ -1504,6 +1670,10 @@ export async function main(): Promise<void> {
       onGoHome: navigateHome,
       visitListTab,
       onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => {
+        const supportsEditing = tab === "byContinent" || tab === "timeline";
+        if (!supportsEditing) {
+          exitEditModeAndRefresh();
+        }
         visitListTab = tab;
         const tabParam = tab === "byContinent" ? "by_continent" : tab;
         logAnalyticsEvent("select_tab", { tab: tabParam });
