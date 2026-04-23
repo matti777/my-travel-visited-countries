@@ -136,7 +136,7 @@ export default class Api {
     return response;
   }
 
-  async putVisits(
+  async postVisit(
     countryCode: string,
     visitedTime: number,
     mediaUrl?: string,
@@ -159,13 +159,50 @@ export default class Api {
       body.tags = tags;
     }
     const response = (await this.performRequest("/visits", {
-      method: "PUT",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     })) as CountryVisit;
+    return response;
+  }
+
+  /** PATCH-style partial update; omit keys to leave fields unchanged. Use `mediaUrl: ""` to clear. */
+  async updateVisit(
+    visitId: string,
+    patch: {
+      visitedTime?: number;
+      tags?: string[];
+      mediaUrl?: string;
+    },
+  ): Promise<CountryVisit> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const body: Record<string, unknown> = {};
+    if (patch.visitedTime !== undefined) {
+      body.visitedTime = patch.visitedTime;
+    }
+    if (patch.tags !== undefined) {
+      body.tags = patch.tags;
+    }
+    if (patch.mediaUrl !== undefined) {
+      body.mediaUrl = patch.mediaUrl;
+    }
+    const response = (await this.performRequest(
+      `/visits/${encodeURIComponent(visitId)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      },
+    )) as CountryVisit;
     return response;
   }
 

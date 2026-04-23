@@ -50,6 +50,60 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 	return visits, nil
 }
 
+// GetCountryVisit loads a single country visit by ID under users/{userID}/country_visits.
+// Returns (nil, ErrVisitNotFound) if the document does not exist.
+func (c *Client) GetCountryVisit(ctx context.Context, visitID, userID string) (*models.CountryVisit, error) {
+	if visitID == "" || userID == "" {
+		return nil, fmt.Errorf("visitID and userID are required")
+	}
+	ref := c.Collection("users").Doc(userID).Collection("country_visits").Doc(visitID)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, ErrVisitNotFound
+		}
+		return nil, fmt.Errorf("failed to get country visit: %w", err)
+	}
+	if !snap.Exists() {
+		return nil, ErrVisitNotFound
+	}
+	var visit models.CountryVisit
+	if err := snap.DataTo(&visit); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal country visit: %w", err)
+	}
+	if visit.Tags == nil {
+		visit.Tags = []string{}
+	}
+	visit.ID = snap.Ref.ID
+	visit.UserID = userID
+	return &visit, nil
+}
+
+// ReplaceCountryVisit writes the full country visit document at users/{userID}/country_visits/{visit.ID}.
+func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryVisit) error {
+	if visit == nil || visit.ID == "" || visit.UserID == "" {
+		return fmt.Errorf("visit with id and userID is required")
+	}
+	tags := visit.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+	doc := map[string]interface{}{
+		"CountryCode": visit.CountryCode,
+		"VisitTime":   visit.VisitedTime,
+		"Tags":        tags,
+	}
+	if visit.MediaURL != nil && *visit.MediaURL != "" {
+		doc["MediaURL"] = *visit.MediaURL
+	}
+	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").Doc(visit.ID)
+	_, err := ref.Set(ctx, doc)
+	if err != nil {
+		return fmt.Errorf("failed to update country visit: %w", err)
+	}
+	return nil
+}
+
 // EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email, ImageURL. When user already exists, updates ImageURL from the token so avatar changes are reflected.
 // Only POST /login should call this; auth middleware does not.
 func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {

@@ -1563,7 +1563,7 @@ export async function main(): Promise<void> {
         const { countryCode, isoDate, mediaUrl, tags } = payload;
         const visitedTime = isoDateToUnixSeconds(isoDate);
         try {
-          const created = await api.putVisits(countryCode, visitedTime, mediaUrl, tags);
+          const created = await api.postVisit(countryCode, visitedTime, mediaUrl, tags);
           visits = [...visits, created];
           if (created.id) newVisitIds.add(created.id);
           const d = parseVisitDateToYMD(isoDate);

@@ -2,7 +2,7 @@
 
 This document defines the REST API routes used by the application. The data models described by @data-models.md shall be used as message payloads.
 
-All routes are currently **unauthenticated** (see @backend-module.md). Authentication will be introduced later.
+Each route below is labeled **Authenticated** or **Unauthenticated**. **Authenticated** routes require a valid Firebase ID token unless stated otherwise in @backend-module.md.
 
 When ever there is an array being returned and it has no values, it should return an empty array instead of null.
 
@@ -22,9 +22,15 @@ POST /login: Frontend calls this right after login actions complete. Only called
 
 GET /visits: Returns all the CountryVisit objects for the current user (`countryCode`, `visitedTime`, optional `mediaUrl`, `tags`, `id`). Each CountryVisit includes `tags` as an array of strings (empty array if none). Tag strings are lowercase ASCII letters `[a-z]` only, at least **2** characters per tag (see data-models.md). The response shall contain the list of country visits as well as the user's `ShareToken` which is retrieved by reading the User object by the `UserID` from the auth token. **Authenticated**.
 
-### Create country visit for current user
+### Create country visit
 
-PUT /visits: Creates a new CountryVisit object for the current user. Request body must include `countryCode` and `visitedTime` (Unix seconds, required). `visitedTime` must be between 1900-01-01 and the current date (inclusive). Request body may include optional `mediaUrl` (string); when provided it must be a well-formed URL usable as a hyperlink (e.g. http or https). Request body may include optional `tags`, an array of strings: at most **10** tags per visit; each tag must match `[a-z]{2,}` (at least two letters). Duplicate values in `tags` are deduplicated server-side before validation (first occurrence wins). In this request the ID field is empty. If successful, the backend will respond with 201 Created and the response body shall contain the newly created CountryVisit, with its ID field populated and `tags` reflecting what was stored. **Authenticated**.
+POST /visits: Creates a new CountryVisit object for the current user. Request body must include `countryCode` and `visitedTime` (Unix seconds, required). `visitedTime` must be between 1900-01-01 and the current date (inclusive). Request body may include optional `mediaUrl` (string); when provided it must be a well-formed URL usable as a hyperlink (e.g. http or https). Request body may include optional `tags`, an array of strings: at most **10** tags per visit; each tag must match `[a-z]{2,}` (at least two letters). Duplicate values in `tags` are deduplicated server-side before validation (first occurrence wins). In this request the ID field is empty. If successful, the backend will respond with 201 Created and the response body shall contain the newly created CountryVisit, with its ID field populated and `tags` reflecting what was stored. **Authenticated**.
+
+### Update country visit
+
+PUT /visits/<visit-id>: Updates an existing CountryVisit for the current user. **Authenticated**. Only the owner's visit may be updated; `countryCode` is not part of the request (it is fixed at creation; use a new visit for a different country).
+
+The body is a **partial** JSON object: any combination of `visitedTime` (Unix seconds), `tags`, and `mediaUrl`. **Omitted** fields keep their existing stored values (omission does not clear a field). When `visitedTime` is present, it must be between 1900-01-01 and the current date (inclusive), same as create. When `tags` is present, the same rules apply as in "Create country visit" (deduplication server-side before validation, at most **10** tags, each matching `[a-z]{2,}`). When `mediaUrl` is present and non-empty, it must be a well-formed URL (e.g. http or https). Validation failures yield **400 Bad Request**. On success, **200 OK** with the full **CountryVisit** in the body (`id`, `countryCode`, `visitedTime`, `tags`, `mediaUrl`). If the visit does not exist or does not belong to the current user, respond with **404 Not Found** (same status in both cases).
 
 ### Delete country visit
 
