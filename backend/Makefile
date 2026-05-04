@@ -16,7 +16,13 @@ FRONTEND_DIR := ../frontend
 .PHONY: list build test vet clean deploy
 
 list:
-	@grep '^[^#[:space:]].*:' Makefile
+	@echo "Backend Makefile targets (run from backend/):"
+	@echo "  list    - print this help"
+	@echo "  build   - compile the Go server binary to $(BINARY)"
+	@echo "  test    - run go test ./..."
+	@echo "  vet     - run go vet ./..."
+	@echo "  clean   - run go clean and remove files under bin/"
+	@echo "  deploy  - build frontend, docker image, push to Artifact Registry, deploy to Cloud Run"
 
 build:
 	go build -o $(BINARY) $(MAIN)
