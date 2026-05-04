@@ -230,7 +230,6 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     dateInput.value = fp.input.value ?? "";
     currentVisitDate = initialIso;
   } else {
-    fp.clear();
     dateInput.value = "";
     currentVisitDate = null;
   }

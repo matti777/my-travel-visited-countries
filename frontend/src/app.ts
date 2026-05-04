@@ -1777,6 +1777,7 @@ export async function main(): Promise<void> {
       },
       formVisitDate,
       onFormVisitDateChange: (value: string | null) => {
+        if (value === formVisitDate) return;
         formVisitDate = value;
         refreshAddFormAndShare();
       },
