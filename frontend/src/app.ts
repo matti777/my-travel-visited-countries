@@ -1246,7 +1246,10 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
   const title = document.createElement("h1");
-  title.textContent = sharedUserNameVal ? `${sharedUserNameVal}'s visited countries` : "Shared visit list";
+  const sharedTitleCount = visitedCountryTitleCount(sharedVisitsList);
+  title.textContent = sharedUserNameVal
+    ? `${sharedUserNameVal}'s visited countries (${sharedTitleCount})`
+    : `Shared visit list (${sharedTitleCount})`;
   visitedSection.appendChild(title);
   if (options.visitListTab !== "statistics") {
     visitedSection.appendChild(createTagFilterRow());
