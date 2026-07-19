@@ -1153,29 +1153,65 @@ main.about-page {
 
 .visit-list-map-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
   min-height: 420px;
   width: 100%;
+  height: 100%;
 }
 
 .visit-list-map-shell__pane {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex: 1 1 auto;
+  align-self: stretch;
   width: 100%;
+  height: 100%;
   min-height: 420px;
 }
 
 .visit-list-map,
 .visits-map {
-  min-height: 420px;
+  position: relative;
+  flex: 1 1 auto;
   width: 100%;
+  height: 100%;
+  min-height: 420px;
+  max-width: 100%;
+  margin-inline: auto;
   overflow: hidden;
   border-radius: 4px;
 }
 
-/* ~20% taller than svgMap default 2:1 (padding-top 50% → 60%). */
+.visits-map.svgMap-wrapper,
+.visit-list-map.svgMap-wrapper,
+.visits-map .svgMap-container,
+.visit-list-map .svgMap-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.visits-map .svgMap-map-container,
+.visit-list-map .svgMap-map-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .visits-globe {
   position: relative;
+  flex: 1 1 auto;
   width: 100%;
-  aspect-ratio: 5 / 3;
-  min-height: 0;
+  height: 100%;
+  min-height: 420px;
+  max-width: 100%;
+  margin-inline: auto;
   overflow: hidden;
   border-radius: 4px;
   background: transparent;
@@ -1212,7 +1248,6 @@ main.about-page {
 
 .visits-globe:fullscreen,
 .visits-globe:-webkit-full-screen {
-  aspect-ratio: auto;
   width: 100%;
   height: 100%;
   border-radius: 0;
@@ -1279,11 +1314,27 @@ main.about-page {
 }
 
 /* Ocean: transparent so page background shows (override svgMap default #d9ecff). */
+/* Clip/pan viewport = full shell (not a short aspect band). */
 .visit-list-map .svgMap-map-wrapper,
 .visits-map .svgMap-map-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding-top: 0;
+  min-height: 1px;
   background-color: transparent;
-  /* 20% taller than library default padding-top: 50% */
-  padding-top: 60%;
+  overflow: hidden;
+}
+
+/* SVG fills the wrapper; viewBox + meet keeps content full-width and Y-centered. */
+.visit-list-map .svgMap-map-image,
+.visits-map .svgMap-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
 
 .visit-map-tooltip__visit-link {

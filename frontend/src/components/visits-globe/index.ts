@@ -8,6 +8,8 @@ export type CreateVisitsGlobeOptions = VisitsVizOptions;
 export type { VisitsVizHandle };
 
 const AUTO_ROTATE_SPEED = -0.12; /* negative = opposite equatorial direction */
+/** Initial camera distance; slightly farther so the globe fits without side clipping. */
+const INITIAL_CAMERA_ALTITUDE = 2.15;
 const POLYGON_ALPHA = 0.3;
 const POLYGON_HOVER_ALPHA = 0.5;
 
@@ -302,7 +304,7 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
         .objectAltitude(POLYGON_ALTITUDE)
         .objectFacesSurface(true)
         .objectThreeObject(createPinObject)
-        .pointOfView({ altitude: 1.85 })
+        .pointOfView({ altitude: INITIAL_CAMERA_ALTITUDE })
         .polygonsTransitionDuration(0)
         .onPolygonHover((polygon: object | null) => {
           if (!polygon) {

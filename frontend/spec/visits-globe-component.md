@@ -28,6 +28,7 @@ Same `VisitsVizOptions` as [visits-map-component.md](visits-map-component.md). `
 
 ## Controls
 
+- Initial camera altitude ~2.15 (slightly pulled back so the globe fits without side clipping)
 - Drag rotate, scroll zoom (OrbitControls)
 - Slow equatorial auto-rotate (`autoRotate`, low negative `autoRotateSpeed` for westward spin)
 - Auto-rotate resumes after user interaction (OrbitControls default)
