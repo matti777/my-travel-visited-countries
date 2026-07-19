@@ -1048,22 +1048,190 @@ main.legal-page {
   color: #333;
 }
 
-.visit-list-map {
-  min-height: 350px;
+.visit-list-map-shell {
+  position: relative;
+  min-height: 420px;
+  width: 100%;
+}
+
+.visit-list-map-shell__pane {
+  width: 100%;
+  min-height: 420px;
+}
+
+.visit-list-map,
+.visits-map {
+  min-height: 420px;
   width: 100%;
   overflow: hidden;
   border-radius: 4px;
 }
 
+/* ~20% taller than svgMap default 2:1 (padding-top 50% → 60%). */
+.visits-globe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.visits-globe__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.visits-globe__fs-btn {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 7;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 80, 90, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  padding: 0.35rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.visits-globe__fs-btn:hover {
+  background: rgba(64, 224, 208, 0.15);
+}
+
+.visits-globe:fullscreen,
+.visits-globe:-webkit-full-screen {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: #0d1a24;
+}
+
+.visits-globe:fullscreen .visits-globe__canvas,
+.visits-globe:-webkit-full-screen .visits-globe__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* Per-country hover tooltip (same content as 2D svgMap tooltips). */
+.visits-globe__tooltip {
+  position: absolute;
+  z-index: 8;
+  max-width: 16rem;
+  padding: 0;
+  border-radius: 2px;
+  border-bottom: 1px solid #111;
+  background: #fff;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  display: block;
+}
+
+.visits-globe__tooltip[hidden] {
+  display: none !important;
+}
+
+.visits-globe__tooltip .svgMap-tooltip-content-container {
+  padding: 10px 20px;
+}
+
+.visits-globe__tooltip .svgMap-tooltip-title {
+  white-space: nowrap;
+  font-size: 18px;
+  line-height: 28px;
+  padding: 0 0 8px;
+  text-align: center;
+}
+
+.visits-globe__tooltip .svgMap-tooltip-content {
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+  color: #777;
+  margin: -5px 0 0;
+}
+
+.visits-globe__tooltip .svgMap-tooltip-flag-container {
+  text-align: center;
+  margin: 2px 0 5px;
+}
+
+.visits-globe__tooltip .svgMap-tooltip-flag {
+  display: block;
+  margin: auto;
+  width: auto;
+  height: 32px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
 /* Ocean: transparent so page background shows (override svgMap default #d9ecff). */
-.visit-list-map .svgMap-map-wrapper {
+.visit-list-map .svgMap-map-wrapper,
+.visits-map .svgMap-map-wrapper {
   background-color: transparent;
+  /* 20% taller than library default padding-top: 50% */
+  padding-top: 60%;
 }
 
 .visit-map-tooltip__visit-link {
   color: var(--color-turquoise);
   text-decoration: underline;
   cursor: pointer;
+}
+
+.visit-list-map-shell__toggle {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  z-index: 6;
+  display: inline-flex;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 80, 90, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.visit-list-map-shell__toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.visit-list-map-shell__toggle-btn + .visit-list-map-shell__toggle-btn {
+  border-left: 1px solid rgba(0, 80, 90, 0.25);
+}
+
+.visit-list-map-shell__toggle-btn:hover:not(:disabled):not(
+  .visit-list-map-shell__toggle-btn--active
+) {
+  background: rgba(64, 224, 208, 0.15);
+}
+
+.visit-list-map-shell__toggle-btn--active {
+  background: var(--color-turquoise-light);
+  color: #0a6e6e;
+}
+
+.visit-list-map-shell__toggle-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .visit-list-by-continent {
@@ -2376,6 +2544,7 @@ main.legal-page {
 
 @media (hover: none) {
   .svgMap-tooltip,
+  .visits-globe__tooltip,
   .tooltip {
     display: none !important;
   }

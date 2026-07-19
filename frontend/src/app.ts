@@ -1,4 +1,3 @@
-import "firebaseui/dist/firebaseui.css";
 import {
   createCountryVisitEditor,
   type CountryVisitEditorSubmitPayload,
@@ -9,7 +8,6 @@ import { openUserSettingsDialog } from "Components/user-settings-dialog";
 import { createCountryCell } from "Components/country-cell";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
-import { createVisitMap } from "Components/visit-map";
 import { sanitizeTagInput } from "Components/tag-editor";
 import {
   buildCountryVisitInfoTooltipHtml,
@@ -36,7 +34,6 @@ import type { CountryVisit } from "./types/visit";
 import type firebase from "firebase/compat/app";
 import firebaseApp from "firebase/compat/app";
 import "firebase/compat/auth";
-import * as firebaseui from "firebaseui";
 
 type User = firebase.User;
 
@@ -323,7 +320,7 @@ function renderLinkAccountsOverlay(state: PendingAccountLink): void {
     backBtn.textContent = "Back to sign in";
     backBtn.addEventListener("click", () => {
       closeLinkAccountsOverlay();
-      startFirebaseUi();
+      void startFirebaseUi();
     });
     body.appendChild(backBtn);
     return;
@@ -399,11 +396,15 @@ function renderLinkAccountsOverlay(state: PendingAccountLink): void {
   }
 }
 
-function startFirebaseUi(): void {
+async function startFirebaseUi(): Promise<void> {
   ensureAuthCredentialFromJsonPolyfill();
   const { container } = ensureFirebaseUiOverlay();
+  const [firebaseui] = await Promise.all([
+    import("firebaseui"),
+    import("firebaseui/dist/firebaseui.css"),
+  ]);
   if (!firebaseUi) {
-    firebaseUi = new (firebaseui as any).auth.AuthUI(auth);
+    firebaseUi = new firebaseui.auth.AuthUI(auth);
   }
   console.log("[auth] startFirebaseUi: start");
   firebaseUi.start(container, {
@@ -471,7 +472,7 @@ function startFirebaseUi(): void {
           console.error("Failed to fetch sign-in methods:", e);
           errorToast("Sign in failed");
           // Fall back to the normal sign-in UI.
-          startFirebaseUi();
+          void startFirebaseUi();
           return;
         }
       },
@@ -924,13 +925,20 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
 
   if (visitListTab === "map") {
     const uniqueCodes = [...new Set(displayList.map((v) => v.countryCode))];
-    createVisitMap(contentArea, {
-      countryCodes: uniqueCodes,
-      countries: countriesList,
-      visits: visitsForMap,
-      baseUrl,
-      onViewMediaUrl,
-    });
+    void import("Components/visit-list-map-shell")
+      .then(({ createVisitListMapShell }) => {
+        if (!contentArea.isConnected) return;
+        createVisitListMapShell(contentArea, {
+          countryCodes: uniqueCodes,
+          countries: countriesList,
+          visits: visitsForMap,
+          baseUrl,
+          onViewMediaUrl,
+        });
+      })
+      .catch((err) => {
+        console.error("failed to load map view:", err);
+      });
     return;
   }
   if (visitListTab === "statistics") {

@@ -15,9 +15,17 @@ The frontend application shall follow this structure:
 
 Thumbnail sized (no more than a couple of kilobytes each) flags are stored as JPEG files under `frontend/assets/images/` named `<country-code>.jpg` (`country-code` lowercase). Sovereign codes are listed in `scripts/country-codes.json` (aligned with `GET /countries`). Map-only territories that use their own flag file (not a parent’s, e.g. `eh`, `xk`, `ps`) are derived from **`src/map-regions.ts`** via **`MAP_ONLY_FLAG_ASSET_CODES_LOWER`**. Run `npm run download-flags` from the frontend directory (`tsx scripts/download-flag-assets.ts`) to fetch sovereign + map-only assets (deduplicated).
 
-## Map-only regions (svgMap)
+## Map visualization components
 
-Some territories drawn by the world map library are **not** sovereign countries in `GET /countries`. Their labels, tooltip behavior, and optional ties to visit data are defined in **`src/map-regions.ts`** (`MAP_ONLY_REGIONS`). Initial entries:
+- [visits-map](visits-map-component.md) — 2D Mercator (`svgmap`), `Components/visits-map`
+- [visits-globe](visits-globe-component.md) — 3D Globe.GL, `Components/visits-globe`
+- Map tab shell: `Components/visit-list-map-shell` (2D/3D toggle; lazy-loads svgMap + globe)
+- Shared colors/tooltips: `Components/visits-map-shared`
+- Dependency: `globe.gl` (MIT). Vendored textures + GeoJSON under `public/assets/globe/` (see README there).
+
+## Map-only regions (svgMap / globe)
+
+Some territories drawn by the world map libraries are **not** sovereign countries in `GET /countries`. Their labels, tooltip behavior, and optional ties to visit data are defined in **`src/map-regions.ts`** (`MAP_ONLY_REGIONS`). Initial entries:
 
 | Map code | Display name          | Visits / statistics                                                                 |
 | -------- | --------------------- | ------------------------------------------------------------------------------------- |
@@ -48,7 +56,7 @@ The **Statistics** tab counts **only** visits whose `countryCode` exists in the 
 
 ## User Authentication
 
-The application provides Login (or Log out, when logged in) buttons in the top right corner. Pressing Login provides the user with a Firebase Authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the Log out button; clicking the name or avatar opens the [user settings dialog](user-settings-dialog.md). Pressing Log out shall take the proper steps of logging the user out of Firebase Authentication.
+The application provides Login (or Log out, when logged in) buttons in the top right corner. Pressing Login dynamically loads FirebaseUI and shows an authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the Log out button; clicking the name or avatar opens the [user settings dialog](user-settings-dialog.md). Pressing Log out shall take the proper steps of logging the user out of Firebase Authentication.
 
 This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.
 
@@ -91,3 +99,4 @@ Implement Typescript types that adhere to the models defined in @data-models.md.
 The user interface for the application is defined in @user-interface.md.
 
 Modal confirmation dialogs (`Components/modal`) use a full-screen overlay whose stacking order sits above the edit-mode floating “Done” hint so overlays block interaction with controls behind them, including that float (see @user-interface.md).
+

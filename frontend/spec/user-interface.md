@@ -76,7 +76,9 @@ While in edit mode, the tooltip shall show "Click to edit this visit". This will
 
 **Tab 3:** Countries plotted on map
 
-Displays a world map with the visited countries highlighted. The world map should be a free, ready made 3rd party eg from Google which provides this functionality. If a visit listed here has a `MediaURL` set, that visit should look like a link and have a tooltip about the link like in Tab 2. It also needs to be clickable and open the link in a new tab.
+Displays visited countries on a map visualization. A lower-right **2D | 3D** toggle switches projection (tooltips: "Flat Mercator view" / "Globe view"). **2D** is the default on load and when remounting the tab. Both modes are lazy-loaded: **2D** loads [visits-map](visits-map-component.md) (svgMap) when the Map tab mounts; **3D** loads [visits-globe](visits-globe-component.md) (globe.gl) only when first selected.
+
+If a visit listed here has a `MediaURL` set, that visit should look like a link and have a tooltip about the link like in Tab 2. It also needs to be clickable and open the link in a new tab.
 
 Each visited country fill color should depend on the continent they are on:
 
@@ -87,6 +89,8 @@ Each visited country fill color should depend on the continent they are on:
 - Asia: Light yellow
 - Oceania: Turquoise
 - Antarctica: Icy deep blue
+
+In 3D, visited countries are extruded polygons on a textured globe (same continent colors), with slow equatorial auto-rotate plus drag/zoom. A **Fullscreen** control (upper right) expands the globe; Esc exits.
 
 In this mode the visit-list edit float is not shown (same as Alphabetical and Statistics).
 
@@ -175,3 +179,4 @@ Centered on the bottom should be a large "Login" button whose functionality must
 --
 
 At the very bottom of the page there are links to Privacy Policy / Terms of Service pages.
+
