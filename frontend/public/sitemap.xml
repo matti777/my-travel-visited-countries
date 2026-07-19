@@ -6,6 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>__APP_PUBLIC_URL__/about.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>__APP_PUBLIC_URL__/privacy.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
@@ -16,3 +21,4 @@
     <priority>0.3</priority>
   </url>
 </urlset>
+

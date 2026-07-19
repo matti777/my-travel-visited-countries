@@ -178,5 +178,6 @@ Centered on the bottom should be a large "Login" button whose functionality must
 
 --
 
-At the very bottom of the page there are links to Privacy Policy / Terms of Service pages.
+At the very bottom of the page there are links to About, Privacy Policy, and Terms of Service (About leftmost). The About page (`/about.html`) welcomes new users with plain-language copy and the same travel polaroids as the logged-out splash.
+
 
