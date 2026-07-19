@@ -65,7 +65,7 @@ Logger should check request context for `current_user` object and log its ID (as
 
 ## Serving static frontend files
 
-The backend must also serve the frontend static files. The files are found in `backend/static/` directory. These files are to be included with the //go:embed mechanism. The files are to be served so that "/" points to index.html, other files are served with their relative paths.
+The backend must also serve the frontend static files. The files are found in `backend/static/` directory. These files are to be included with `//go:embed all:static` (the `all:` prefix is required so Vite chunks whose names start with `_`, e.g. `_commonjsHelpers-*.js`, are embedded). The files are to be served so that "/" points to index.html, other files are served with their relative paths.
 
 Caching rules:
 
@@ -143,3 +143,4 @@ The backend is deployed to **GCP Cloud Run** as a container. The following must 
 
 7. **Verify**
    - Open the Cloud Run service URL and call app endpoints (e.g. `GET /countries`, `GET /visits?user_id=test`).
+
