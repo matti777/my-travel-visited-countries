@@ -7,10 +7,14 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // MaxTagsPerVisit is the maximum number of tags allowed on a CountryVisit (see api.md).
 const MaxTagsPerVisit = 10
+
+// MaxNotesLength is the maximum number of Unicode characters allowed in Notes.
+const MaxNotesLength = 1000
 
 var tagTokenPattern = regexp.MustCompile(`^[a-z]{2,}$`)
 
@@ -25,6 +29,9 @@ type CountryVisit struct {
 
 	// MediaURL is an optional well-formed URL for a hyperlink (e.g. picture collection or video). Stored in Firestore as MediaURL.
 	MediaURL *string `firestore:"MediaURL" json:"mediaUrl,omitempty"`
+
+	// Notes is an optional free-form string (max MaxNotesLength characters). Stored in Firestore as Notes.
+	Notes string `firestore:"Notes" json:"notes,omitempty"`
 
 	// Tags are optional lowercase [a-z] strings (min length 2); stored in Firestore as Tags.
 	Tags []string `firestore:"Tags" json:"tags"`
@@ -86,6 +93,14 @@ func ValidateTags(tags []string) error {
 	return nil
 }
 
+// ValidateNotes returns an error if notes exceeds MaxNotesLength Unicode characters.
+func ValidateNotes(notes string) error {
+	if utf8.RuneCountInString(notes) > MaxNotesLength {
+		return fmt.Errorf("notes must be at most %d characters", MaxNotesLength)
+	}
+	return nil
+}
+
 // CountryVisitResponse is the response wrapper for GET /visits.
 type CountryVisitResponse struct {
 	Visits     []CountryVisit `json:"visits"`
@@ -98,3 +113,4 @@ type ShareVisitsResponse struct {
 	UserName string         `json:"userName"`
 	ImageUrl string         `json:"imageUrl"`
 }
+

@@ -68,3 +68,4 @@ deploy:
 		--min-instances=0 \
 		--max-instances=1; \
 	echo "Deployment complete."; \
+

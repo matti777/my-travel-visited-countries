@@ -6,6 +6,7 @@ export interface CountryVisit {
   countryCode: string;
   visitedTime?: string;
   mediaUrl?: string;
+  notes?: string;
   tags?: string[];
   userId: string;
 }
@@ -20,3 +21,4 @@ export interface ShareVisitsResponse {
   userName: string;
   imageUrl?: string;
 }
+

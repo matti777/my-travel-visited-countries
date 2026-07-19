@@ -579,8 +579,8 @@ function tagsEqual(a: string[], b: string[]): boolean {
 function buildVisitUpdatePatch(
   visit: CountryVisit,
   payload: CountryVisitEditorSubmitPayload,
-): { visitedTime?: number; tags?: string[]; mediaUrl?: string } {
-  const patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string } = {};
+): { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string } {
+  const patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string } = {};
   const newUnix = isoDateToUnixSeconds(payload.isoDate);
   const oldUnix = visit.visitedTime
     ? Math.floor(new Date(visit.visitedTime).getTime() / 1000)
@@ -598,17 +598,22 @@ function buildVisitUpdatePatch(
   if (newMedia !== oldMedia) {
     patch.mediaUrl = newMedia;
   }
+  const newNotes = (payload.notes ?? "").trim();
+  const oldNotes = (visit.notes ?? "").trim();
+  if (newNotes !== oldNotes) {
+    patch.notes = newNotes;
+  }
   return patch;
 }
 
 /**
  * Merge PUT response into local visit. `patch` is the body we sent so we can apply a cleared
- * `mediaUrl` when the backend omits the key from JSON (`omitempty`).
+ * `mediaUrl` / `notes` when the backend omits the key from JSON (`omitempty`).
  */
 function mergeVisitAfterPut(
   prev: CountryVisit,
   put: CountryVisit,
-  patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string },
+  patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string },
 ): CountryVisit {
   const base: CountryVisit = {
     ...prev,
@@ -618,16 +623,30 @@ function mergeVisitAfterPut(
     id: prev.id ?? put.id,
     countryCode: prev.countryCode,
   };
+  let next: CountryVisit = base;
   if (patch.mediaUrl !== undefined) {
-    return {
-      ...base,
+    next = {
+      ...next,
       mediaUrl: patch.mediaUrl === "" ? undefined : patch.mediaUrl,
     };
+  } else {
+    next = {
+      ...next,
+      mediaUrl: put.mediaUrl !== undefined ? put.mediaUrl : prev.mediaUrl,
+    };
   }
-  return {
-    ...base,
-    mediaUrl: put.mediaUrl !== undefined ? put.mediaUrl : prev.mediaUrl,
-  };
+  if (patch.notes !== undefined) {
+    next = {
+      ...next,
+      notes: patch.notes === "" ? undefined : patch.notes,
+    };
+  } else {
+    next = {
+      ...next,
+      notes: put.notes !== undefined ? put.notes : prev.notes,
+    };
+  }
+  return next;
 }
 
 /**
@@ -724,6 +743,8 @@ export interface RenderOptions {
   onFormVisitDateChange: (value: string | null) => void;
   formMediaUrl: string;
   onFormMediaUrlChange: (value: string) => void;
+  formNotes: string;
+  onFormNotesChange: (value: string) => void;
   shareToken: string | null;
   isSharedMode: boolean;
   sharedVisits: CountryVisit[];
@@ -1072,6 +1093,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           let editorCountry = visit.countryCode;
           let editorIsoDate = unixSecondsToIsoDate(visit.visitedTime) ?? new Date().toISOString().slice(0, 10);
           let editorMediaUrl = visit.mediaUrl ?? "";
+          let editorNotes = visit.notes ?? "";
           const editorTags = visit.tags ?? [];
 
           const body = document.createElement("div");
@@ -1093,6 +1115,10 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
             formMediaUrl: editorMediaUrl,
             onFormMediaUrlChange: (v) => {
               editorMediaUrl = v;
+            },
+            formNotes: editorNotes,
+            onFormNotesChange: (v) => {
+              editorNotes = v;
             },
             initialTags: editorTags,
             onSubmit: async (payload) => {
@@ -1519,6 +1545,8 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       onFormVisitDateChange: options.onFormVisitDateChange,
       formMediaUrl: options.formMediaUrl,
       onFormMediaUrlChange: options.onFormMediaUrlChange,
+      formNotes: options.formNotes,
+      onFormNotesChange: options.onFormNotesChange,
       onSubmit: options.onCountryVisitEditorSubmit,
     }),
   );
@@ -1620,6 +1648,7 @@ export async function main(): Promise<void> {
   let selectedCountryCode = "";
   let formVisitDate: string | null = null;
   let formMediaUrl = "";
+  let formNotes = "";
 
   async function applyShareRoute(): Promise<void> {
     const token = getShareTokenFromPath();
@@ -1788,6 +1817,10 @@ export async function main(): Promise<void> {
       onFormMediaUrlChange: (value: string) => {
         formMediaUrl = value;
       },
+      formNotes,
+      onFormNotesChange: (value: string) => {
+        formNotes = value;
+      },
       shareToken,
       isSharedMode: !!getShareTokenFromPath(),
       sharedVisits,
@@ -1859,10 +1892,16 @@ export async function main(): Promise<void> {
         });
       },
       onCountryVisitEditorSubmit: async (payload: CountryVisitEditorSubmitPayload) => {
-        const { countryCode, isoDate, mediaUrl, tags } = payload;
+        const { countryCode, isoDate, mediaUrl, tags, notes } = payload;
         const visitedTime = isoDateToUnixSeconds(isoDate);
         try {
-          const created = await api.postVisit(countryCode, visitedTime, mediaUrl, tags);
+          const created = await api.postVisit(
+            countryCode,
+            visitedTime,
+            mediaUrl,
+            tags,
+            notes,
+          );
           visits = [...visits, created];
           if (created.id) newVisitIds.add(created.id);
           const d = parseVisitDateToYMD(isoDate);
@@ -1875,6 +1914,7 @@ export async function main(): Promise<void> {
           selectedCountryCode = "";
           formVisitDate = null;
           formMediaUrl = "";
+          formNotes = "";
           refreshAppContent();
         } catch (err) {
           console.error("Add visit failed:", err);
@@ -1907,6 +1947,8 @@ export async function main(): Promise<void> {
         onFormVisitDateChange: opts.onFormVisitDateChange,
         formMediaUrl: opts.formMediaUrl,
         onFormMediaUrlChange: opts.onFormMediaUrlChange,
+        formNotes: opts.formNotes,
+        onFormNotesChange: opts.onFormNotesChange,
         onSubmit: opts.onCountryVisitEditorSubmit,
       }),
     );

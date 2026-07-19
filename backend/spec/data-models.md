@@ -40,6 +40,7 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code depicting the country visited. Mandatory.
 - `VisitTime`: Time of the visit. Timestamp. Mandatory.
 - `MediaURL`: Media URL to photos etc. related to the visit. Optional.
+- `Notes`: A free-form string field. Max length 1000 characters. Optional (can be empty). When displayed, supports Markdown formatting.
 - `Tags`: A list of string tags added to the visit. Optional (can be empty).
 
 The CountryVisit collection in Firestore shall be nested under the corresponding User object.

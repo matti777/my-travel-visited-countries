@@ -8,6 +8,11 @@ import type { Country } from "../../types/country";
 
 const VISIT_DATE_MIN = "1900-01-01";
 const MIN_DATE = new Date(1900, 0, 1);
+const MAX_NOTES_LENGTH = 1000;
+
+const NOTES_PLACEHOLDER =
+  "Optional trip notes; itinerary, best sights, people met, et cetera. " +
+  "Markdown formatting supported!";
 
 /** Parse YYYY-MM-DD to Date at local midnight (for flatpickr). */
 function parseIsoToLocalDate(isoDate: string): Date {
@@ -33,15 +38,60 @@ function isVisitDateValid(isoDate: string | null): boolean {
   if (Number.isNaN(d.getTime())) return false;
   const min = new Date(VISIT_DATE_MIN + "T00:00:00Z").getTime();
   const now = new Date();
-  const max = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+  const max = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  ).getTime();
   const t = d.getTime();
   return t >= min && t <= max;
+}
+
+function truncateNotes(value: string): string {
+  if (value.length <= MAX_NOTES_LENGTH) {
+    return value;
+  }
+  return value.slice(0, MAX_NOTES_LENGTH);
+}
+
+function lerpChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+function lerpRgb(
+  from: [number, number, number],
+  to: [number, number, number],
+  t: number,
+): string {
+  const clamped = Math.min(1, Math.max(0, t));
+  return (
+    `rgb(${lerpChannel(from[0], to[0], clamped)}, ` +
+    `${lerpChannel(from[1], to[1], clamped)}, ` +
+    `${lerpChannel(from[2], to[2], clamped)})`
+  );
+}
+
+/** Counter color: green @ 0, yellow @ 750, deep red @ 1000. */
+function notesCountColor(length: number): string {
+  const green: [number, number, number] = [0, 128, 0];
+  const yellow: [number, number, number] = [230, 184, 0];
+  const deepRed: [number, number, number] = [139, 0, 0];
+  const x = Math.min(MAX_NOTES_LENGTH, Math.max(0, length));
+  if (x <= 750) {
+    return lerpRgb(green, yellow, x / 750);
+  }
+  return lerpRgb(yellow, deepRed, (x - 750) / 250);
 }
 
 export interface CountryVisitEditorSubmitPayload {
   countryCode: string;
   isoDate: string;
   mediaUrl?: string;
+  notes?: string;
   tags: string[];
 }
 
@@ -59,13 +109,15 @@ export interface CountryVisitEditorOptions {
   onFormVisitDateChange: (value: string | null) => void;
   formMediaUrl: string;
   onFormMediaUrlChange: (value: string) => void;
+  formNotes: string;
+  onFormNotesChange: (value: string) => void;
   initialTags?: string[];
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
 }
 
 /**
- * Country visit editor: country dropdown, visit date (flatpickr), optional media URL, tags, submit.
- * Use a thin border via `.country-visit-editor` in CSS.
+ * Country visit editor: country dropdown, visit date (flatpickr), optional media URL,
+ * free-form notes, tags, submit. Use a thin border via `.country-visit-editor` in CSS.
  */
 export function createCountryVisitEditor(options: CountryVisitEditorOptions): HTMLElement {
   const {
@@ -80,6 +132,8 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     onFormVisitDateChange,
     formMediaUrl,
     onFormMediaUrlChange,
+    formNotes,
+    onFormNotesChange,
     initialTags,
     onSubmit,
   } = options;
@@ -152,13 +206,48 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   form.appendChild(row);
   const visitTimeHint = document.createElement("p");
   visitTimeHint.className = "add-visit-form__visit-time-hint";
-  visitTimeHint.textContent = "Visit date is required and must be between Jan 1, 1900 and today.";
+  visitTimeHint.textContent =
+    "Visit date is required and must be between Jan 1, 1900 and today.";
   form.appendChild(visitTimeHint);
   form.appendChild(mediaUrlRow);
   const mediaUrlHint = document.createElement("p");
   mediaUrlHint.className = "add-visit-form__media-url-hint";
-  mediaUrlHint.textContent = "You can attach a link to media such as a picture collection or video from your trip.";
+  mediaUrlHint.textContent =
+    "You can attach a link to media such as a picture collection or video from your trip.";
   form.appendChild(mediaUrlHint);
+
+  const notesWrap = document.createElement("div");
+  notesWrap.className = "add-visit-form__notes-wrap";
+  const notesFieldId = `add-visit-form-notes-${mode}-${Math.random().toString(36).slice(2, 9)}`;
+  const notesLabel = document.createElement("label");
+  notesLabel.className = "add-visit-form__notes-label";
+  notesLabel.htmlFor = notesFieldId;
+  const notesLabelText = document.createElement("span");
+  notesLabelText.className = "add-visit-form__notes-label-text";
+  notesLabelText.textContent = "Free-form trip notes ";
+  const notesCount = document.createElement("span");
+  notesCount.className = "add-visit-form__notes-count";
+  notesLabel.appendChild(notesLabelText);
+  notesLabel.appendChild(notesCount);
+  const notesInput = document.createElement("textarea");
+  notesInput.id = notesFieldId;
+  notesInput.name = "notes";
+  notesInput.className = "add-visit-form__notes-input";
+  notesInput.rows = 4;
+  notesInput.maxLength = MAX_NOTES_LENGTH;
+  notesInput.placeholder = NOTES_PLACEHOLDER;
+  notesInput.value = truncateNotes(formNotes);
+  notesWrap.appendChild(notesLabel);
+  notesWrap.appendChild(notesInput);
+  form.appendChild(notesWrap);
+
+  function updateNotesCounter(): void {
+    const len = notesInput.value.length;
+    notesCount.textContent = `[${len} / ${MAX_NOTES_LENGTH}]`;
+    notesCount.style.color = notesCountColor(len);
+  }
+
+  updateNotesCounter();
 
   const tagEditor = createTagEditor();
   const tagEditorWrap = document.createElement("div");
@@ -182,9 +271,13 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   function updateValidationUI(): void {
     const dateValid = isVisitDateValid(currentVisitDate);
     const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
+    const notesValid = notesInput.value.length <= MAX_NOTES_LENGTH;
     dateInput.classList.toggle("invalid", currentVisitDate != null && !dateValid);
-    mediaUrlInput.classList.toggle("invalid", mediaUrlInput.value.trim() !== "" && !mediaUrlValid);
-    addBtn.disabled = !(selectedCountryCode && dateValid && mediaUrlValid);
+    mediaUrlInput.classList.toggle(
+      "invalid",
+      mediaUrlInput.value.trim() !== "" && !mediaUrlValid,
+    );
+    addBtn.disabled = !(selectedCountryCode && dateValid && mediaUrlValid && notesValid);
   }
 
   mediaUrlInput.addEventListener("input", () => {
@@ -192,6 +285,16 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     updateValidationUI();
   });
   mediaUrlInput.addEventListener("blur", updateValidationUI);
+
+  notesInput.addEventListener("input", () => {
+    const truncated = truncateNotes(notesInput.value);
+    if (truncated !== notesInput.value) {
+      notesInput.value = truncated;
+    }
+    onFormNotesChange(notesInput.value);
+    updateNotesCounter();
+    updateValidationUI();
+  });
 
   const initialIso = formVisitDate;
   const fp = flatpickr(dateInput, {
@@ -246,11 +349,17 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
       errorToast("Please select a valid visit date");
       return;
     }
+    if (notesInput.value.length > MAX_NOTES_LENGTH) {
+      errorToast("Notes must be at most 1000 characters");
+      return;
+    }
     const mediaUrl = mediaUrlInput.value.trim() || undefined;
+    const notes = notesInput.value.trim() || undefined;
     await onSubmit({
       countryCode: selectedCountryCode,
       isoDate,
       mediaUrl,
+      notes,
       tags: tagEditor.getTags(),
     });
   });

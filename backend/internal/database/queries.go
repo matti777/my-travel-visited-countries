@@ -96,6 +96,9 @@ func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryV
 	if visit.MediaURL != nil && *visit.MediaURL != "" {
 		doc["MediaURL"] = *visit.MediaURL
 	}
+	if visit.Notes != "" {
+		doc["Notes"] = visit.Notes
+	}
 	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").Doc(visit.ID)
 	_, err := ref.Set(ctx, doc)
 	if err != nil {
@@ -216,6 +219,9 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	}
 	if visit.MediaURL != nil && *visit.MediaURL != "" {
 		doc["MediaURL"] = *visit.MediaURL
+	}
+	if visit.Notes != "" {
+		doc["Notes"] = visit.Notes
 	}
 	_, err := ref.Set(ctx, doc)
 	if err != nil {
@@ -339,3 +345,4 @@ func (c *Client) DeleteFriendByShareToken(ctx context.Context, userID, shareToke
 	}
 	return nil
 }
+

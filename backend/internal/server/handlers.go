@@ -160,6 +160,7 @@ func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
 		CountryCode string   `json:"countryCode"`
 		VisitedTime *int64   `json:"visitedTime"` // Unix seconds; required
 		MediaURL    *string  `json:"mediaUrl,omitempty"`
+		Notes       *string  `json:"notes,omitempty"`
 		Tags        []string `json:"tags,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -194,6 +195,15 @@ func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
+	notes := ""
+	if body.Notes != nil {
+		notes = *body.Notes
+	}
+	if err := models.ValidateNotes(notes); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	tags := models.DedupeTagsPreserveOrder(body.Tags)
 	if err := models.ValidateTags(tags); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -204,6 +214,7 @@ func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
 		CountryCode: countryCode,
 		VisitedTime: t,
 		MediaURL:    body.MediaURL,
+		Notes:       notes,
 		Tags:        tags,
 		UserID:      user.ID,
 	}
@@ -240,14 +251,17 @@ func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
 		VisitedTime *int64    `json:"visitedTime"`
 		Tags        *[]string `json:"tags"`
 		MediaURL    *string   `json:"mediaUrl"`
+		Notes       *string   `json:"notes"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid PUT /visits/:id body", logging.Error, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	if body.VisitedTime == nil && body.Tags == nil && body.MediaURL == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one of visitedTime, tags, mediaUrl is required"})
+	if body.VisitedTime == nil && body.Tags == nil && body.MediaURL == nil && body.Notes == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "at least one of visitedTime, tags, mediaUrl, notes is required",
+		})
 		return
 	}
 
@@ -296,6 +310,14 @@ func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
 			u := *body.MediaURL
 			merged.MediaURL = &u
 		}
+	}
+
+	if body.Notes != nil {
+		if err := models.ValidateNotes(*body.Notes); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		merged.Notes = *body.Notes
 	}
 
 	if err := s.db.ReplaceCountryVisit(ctx, &merged); err != nil {
@@ -450,3 +472,4 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
+

@@ -141,6 +141,7 @@ export default class Api {
     visitedTime: number,
     mediaUrl?: string,
     tags?: string[],
+    notes?: string,
   ): Promise<CountryVisit> {
     const token = this.getAuthToken();
     if (!token) {
@@ -151,12 +152,16 @@ export default class Api {
       visitedTime: number;
       mediaUrl?: string;
       tags?: string[];
+      notes?: string;
     } = { countryCode, visitedTime };
     if (mediaUrl != null && mediaUrl !== "") {
       body.mediaUrl = mediaUrl;
     }
     if (tags != null && tags.length > 0) {
       body.tags = tags;
+    }
+    if (notes != null && notes !== "") {
+      body.notes = notes;
     }
     const response = (await this.performRequest("/visits", {
       method: "POST",
@@ -169,13 +174,14 @@ export default class Api {
     return response;
   }
 
-  /** Partial PUT: include only keys you want to change; omitted keys are not sent. Use `mediaUrl: ""` to clear. */
+  /** Partial PUT: include only keys you want to change; omitted keys are not sent. Use `mediaUrl: ""` or `notes: ""` to clear. */
   async updateVisit(
     visitId: string,
     patch: {
       visitedTime?: number;
       tags?: string[];
       mediaUrl?: string;
+      notes?: string;
     },
   ): Promise<CountryVisit> {
     const token = this.getAuthToken();
@@ -191,6 +197,9 @@ export default class Api {
     }
     if (patch.mediaUrl !== undefined) {
       body.mediaUrl = patch.mediaUrl;
+    }
+    if (patch.notes !== undefined) {
+      body.notes = patch.notes;
     }
     const response = (await this.performRequest(
       `/visits/${encodeURIComponent(visitId)}`,
@@ -300,3 +309,4 @@ export default class Api {
 }
 
 export let api = new Api();
+
