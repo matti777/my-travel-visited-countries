@@ -121,7 +121,12 @@ function positionTooltip(tooltip: HTMLDivElement, anchor: HTMLElement): Placemen
   return placement;
 }
 
-function show(anchor: HTMLElement, text: string, useHtml = false): void {
+function show(
+  anchor: HTMLElement,
+  text: string,
+  useHtml = false,
+  afterContent?: (tooltip: HTMLElement) => void,
+): void {
   clearHideTimeout();
   if (currentAnchor && currentAnchor !== anchor) {
     currentAnchor.removeAttribute("aria-describedby");
@@ -132,6 +137,7 @@ function show(anchor: HTMLElement, text: string, useHtml = false): void {
     if (useHtml) contentEl.innerHTML = text;
     else contentEl.textContent = text;
   }
+  afterContent?.(tooltip);
   tooltip.removeAttribute("data-placement");
   tooltip.classList.remove("tooltip--visible");
   tooltip.hidden = false;
@@ -181,21 +187,26 @@ function hideImmediately(): void {
  * Show after 1s delay on hover/focus, hide on leave/blur or pointerdown/click on the anchor
  * (avoids a stuck tooltip when the anchor triggers navigation). Fades in (opacity 0->1).
  * @param options.useHtml - when true, content is set as HTML instead of plain text
+ * @param options.afterContent - called after content is set, before positioning
  */
 export function attachTooltip(
   anchor: HTMLElement,
   text: string,
-  options?: { useHtml?: boolean },
+  options?: {
+    useHtml?: boolean;
+    afterContent?: (tooltip: HTMLElement) => void;
+  },
 ): () => void {
   if (window.matchMedia("(hover: none)").matches) {
     return () => {};
   }
   const useHtml = options?.useHtml ?? false;
+  const afterContent = options?.afterContent;
   const scheduleShow = () => {
     clearShowTimeout();
     showTimeout = setTimeout(() => {
       showTimeout = null;
-      show(anchor, text, useHtml);
+      show(anchor, text, useHtml, afterContent);
     }, SHOW_DELAY_MS);
   };
   const cancelShow = () => {
@@ -228,3 +239,4 @@ export function attachTooltip(
     anchor.removeEventListener("click", hideImmediately);
   };
 }
+

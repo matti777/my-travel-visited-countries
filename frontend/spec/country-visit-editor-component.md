@@ -14,11 +14,12 @@ A thin border exists around the component.
 
 - Media URL input - a textbox with placeholder text "Optional media URL". Frontend must validate this input to be a well-formed URL. An explanatory text underneath should explain that this can be used to attach media such as picture collection / video url to material taken on the trip.
 
-- Free-form trip notes - a textarea between Media URL and Tags. Title above the field: `Free-form trip notes [x / 1000]` where `x` is the current character count; only the `[x / 1000]` portion changes color (green at 0, yellow at 750, deep red at 1000; linear RGB interpolation between those points), updated on every character change. Placeholder: `Optional trip notes; itinerary, best sights, people met, et cetera. Markdown formatting supported!`. Default height is 4 rows; vertically resizable up to 10 rows of text (layout grows/shrinks with the textarea); not resizable on mobile. Hard limit 1000 characters (truncate on paste/input); Add/Save stays disabled if length somehow exceeds 1000. Notes are only shown in this add/edit editor (not elsewhere in the UI yet).
+- Free-form trip notes - a textarea between Media URL and Tags. Title above the field: `Free-form trip notes [x / 1000]` where `x` is the current character count; only the `[x / 1000]` portion changes color (green at 0, yellow at 750, deep red at 1000; linear RGB interpolation between those points), updated on every character change. Placeholder: `Optional trip notes; itinerary, best sights, people met, et cetera. Markdown formatting supported!`. Default height is 4 rows; vertically resizable up to 10 rows of text (layout grows/shrinks with the textarea); not resizable on mobile. Hard limit 1000 characters (truncate on paste/input); Add/Save stays disabled if length somehow exceeds 1000. Saved notes also appear (as Markdown) in the [country visit info tooltip](country-visit-info-tooltip-component.md) when hovering a visit card.
 
 - [Tag editor component](tag-editor-component.md)
 
 - "Add visit" (when creating new visit) / "Save visit" (when editing existing one) button which shall be under (left-aligned) all the other controls in this section.
 
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.
+
 

@@ -10,6 +10,10 @@ import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { createVisitMap } from "Components/visit-map";
 import { sanitizeTagInput } from "Components/tag-editor";
+import {
+  buildCountryVisitInfoTooltipHtml,
+  fitCountryVisitInfoTooltipToViewport,
+} from "Components/country-visit-info-tooltip";
 import { attachTooltip } from "Components/tooltip";
 import {
   VISIT_LIST_EDIT_FLOAT_ID,
@@ -54,47 +58,6 @@ let sharedUserName: string | null = null;
 let sharedUserImageUrl: string | null = null;
 
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
-
-function escapeHtmlText(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Hover content for by-continent and timeline visit cards (see user-interface.md). */
-function buildVisitListCardTooltipHtml(visit: CountryVisit): string | null {
-  const tags = visit.tags ?? [];
-  const hasTags = tags.length > 0;
-  const mediaHint = visit.mediaUrl
-    ? `<p class="visit-tooltip__media-hint">Click to view attached media</p>`
-    : "";
-
-  if (!hasTags && !visit.mediaUrl) {
-    return null;
-  }
-
-  if (!hasTags && visit.mediaUrl) {
-    return `<div class="visit-tooltip">${mediaHint}</div>`;
-  }
-
-  const pillsHtml = tags
-    .map(
-      (t) =>
-        `<span class="tag-editor__pill">` +
-        `<span class="tag-editor__pill-label">${escapeHtmlText(t)}</span></span>`,
-    )
-    .join("");
-
-  return (
-    `<div class="visit-tooltip">` +
-    `<div class="visit-tooltip__title">Tags for this visit</div>` +
-    `<div class="tag-editor__pills visit-tooltip__pills">${pillsHtml}</div>` +
-    `${mediaHint}` +
-    `</div>`
-  );
-}
 
 function getShareTokenFromPath(): string | null {
   let pathname = window.location.pathname;
@@ -1168,9 +1131,12 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           closeBtn.addEventListener("click", () => close("closeButton"));
         });
       } else {
-        const tooltipHtml = buildVisitListCardTooltipHtml(visit);
+        const tooltipHtml = buildCountryVisitInfoTooltipHtml(visit);
         if (tooltipHtml) {
-          attachTooltip(cell, tooltipHtml, { useHtml: true });
+          attachTooltip(cell, tooltipHtml, {
+            useHtml: true,
+            afterContent: fitCountryVisitInfoTooltipToViewport,
+          });
         }
       }
     }

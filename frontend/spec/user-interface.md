@@ -30,7 +30,7 @@ All animations shall have a duration of 0.4 seconds.
 
 Any input validation errors should add a red border around the input component and disable the Add button until the errors have been resolved.
 
-Any tooltips should be represented as a custom component instead of any "alt" text etc. The component should mainly be placed on top of the component that the tooltip belongs to, but if it wont fit, it should be placed on the side where there is room. The color theme of the tooltip component must match the look and feel of the rest of the application.
+Any tooltips should be represented as a custom component instead of any "alt" text etc. The component should mainly be placed on top of the component that the tooltip belongs to, but if it wont fit, it should be placed on the side where there is room. The color theme of the tooltip component must match the look and feel of the rest of the application. Visit-card hover content (notes, tags, media hint) is built by the [country visit info tooltip](country-visit-info-tooltip-component.md); placement uses the shared tooltip shell.
 
 ## Page structure
 
@@ -70,7 +70,7 @@ Edit mode will not be available when in shared visit list routing mode; instead,
 
 Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding. Unlike the alphabetical list, here the countries listed are not unique, but instead each visit gets its own country cell. The visits within a country are sorted by their `VisitTime`. Here the country cells will display the time of the visit, in a similar fashion as in the edit mode. A tooltip for each cell shall read "Click to view attached media" IF `MediaURL` is present. If such a cell is clicked, the media URL should be opened in a new tab. For such a cell, the visit time text should look like a link to indicate the presence of the media url.
 
-Hovering over a visit card should display a tooltip that contains title "Tags for this visit" and a list of tags added to the visit. Reuse the tag stylings from the [tag editor component](tag-editor-component.md).
+Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](country-visit-info-tooltip-component.md).
 
 While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a button labeled **Close without saving** to dismiss without applying edits.
 
@@ -94,7 +94,7 @@ In this mode the visit-list edit float is not shown (same as Alphabetical and St
 
 Similar list to "by continent" but instead organized by year, sorted to ascending order.
 
-Hovering over a visit card shall show same tooltip as in **Tab 3:** - different depending on Edit mode or no Edit mode, with same exact functionality.
+Hovering over a visit card uses the same tooltips as **Tab 2** (info tooltip when not editing; "Click to edit this visit" in edit mode), with the same functionality.
 
 **Tab 5:** Statistics
 

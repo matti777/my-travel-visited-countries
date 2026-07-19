@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^22.10.0",
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
@@ -25,9 +26,11 @@
     "vite-plugin-static-copy": "^3.2.0"
   },
   "dependencies": {
+    "dompurify": "^3.4.12",
     "firebase": "^11.0.0",
     "firebaseui": "^6.1.0",
     "flatpickr": "^4.6.13",
+    "marked": "^18.0.6",
     "notyf": "^3.10.0",
     "svgmap": "^2.19.2"
   }
