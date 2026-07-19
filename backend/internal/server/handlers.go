@@ -40,6 +40,90 @@ func (s *Server) PostLoginHandler(ctx context.Context, c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// GetSettingsHandler handles GET /settings for the authenticated user.
+func (s *Server) GetSettingsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "GetSettingsHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("GET /settings: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+
+	dbUser, err := s.db.GetUserByID(ctx, user.ID)
+	if err != nil {
+		log.Error("GET /settings: GetUserByID failed", logging.UserID, user.ID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch settings"})
+		return
+	}
+	if dbUser == nil {
+		log.Warn("GET /settings: user not found", logging.UserID, user.ID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+		return
+	}
+
+	c.JSON(http.StatusOK, dbUser.EffectiveSettings())
+}
+
+// PutSettingsHandler handles PUT /settings for the authenticated user.
+func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PutSettingsHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("PUT /settings: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+
+	var body struct {
+		Sharing *struct {
+			ShareMediaURL *bool `json:"shareMediaUrl"`
+			ShareNotes    *bool `json:"shareNotes"`
+			ShareTags     *bool `json:"shareTags"`
+		} `json:"sharing"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn("Invalid PUT /settings body", logging.Error, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if body.Sharing == nil ||
+		body.Sharing.ShareMediaURL == nil ||
+		body.Sharing.ShareNotes == nil ||
+		body.Sharing.ShareTags == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "sharing.shareMediaUrl, sharing.shareNotes, and sharing.shareTags are required",
+		})
+		return
+	}
+
+	settings := models.UserSettings{
+		Sharing: models.SharingSettings{
+			ShareMediaURL: *body.Sharing.ShareMediaURL,
+			ShareNotes:    *body.Sharing.ShareNotes,
+			ShareTags:     *body.Sharing.ShareTags,
+		},
+	}
+	if err := s.db.UpdateUserSettings(ctx, user.ID, settings); err != nil {
+		if errors.Is(err, database.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+			return
+		}
+		log.Error("PUT /settings: UpdateUserSettings failed", logging.UserID, user.ID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update settings"})
+		return
+	}
+
+	log.Info("Updated user settings", logging.UserID, user.ID)
+	c.JSON(http.StatusOK, settings)
+}
+
 // GetCountriesHandler handles GET /countries.
 // Returns the bundled list of all sovereign countries (in-memory Go slice).
 func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
@@ -80,6 +164,22 @@ func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
 	}
 	if visits == nil {
 		visits = []models.CountryVisit{}
+	}
+	settings := user.EffectiveSettings()
+	if !settings.Sharing.ShareMediaURL ||
+		!settings.Sharing.ShareNotes ||
+		!settings.Sharing.ShareTags {
+		for i := range visits {
+			if !settings.Sharing.ShareMediaURL {
+				visits[i].MediaURL = nil
+			}
+			if !settings.Sharing.ShareNotes {
+				visits[i].Notes = ""
+			}
+			if !settings.Sharing.ShareTags {
+				visits[i].Tags = []string{}
+			}
+		}
 	}
 	c.JSON(http.StatusOK, models.ShareVisitsResponse{
 		Visits:   visits,
@@ -472,4 +572,3 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
-

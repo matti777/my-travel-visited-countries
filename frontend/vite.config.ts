@@ -53,6 +53,7 @@ export default defineConfig({
       "/share/visits": { target: "http://localhost:8080", changeOrigin: true },
       "/visits": { target: "http://localhost:8080", changeOrigin: true },
       "/friends": { target: "http://localhost:8080", changeOrigin: true },
+      "/settings": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
   build: {

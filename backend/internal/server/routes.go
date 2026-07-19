@@ -34,6 +34,12 @@ func (s *Server) RegisterRoutes() {
 		protected.DELETE("/visits/:id", func(c *gin.Context) {
 			s.DeleteVisitHandler(c.Request.Context(), c)
 		})
+		protected.GET("/settings", func(c *gin.Context) {
+			s.GetSettingsHandler(c.Request.Context(), c)
+		})
+		protected.PUT("/settings", func(c *gin.Context) {
+			s.PutSettingsHandler(c.Request.Context(), c)
+		})
 		protected.GET("/friends", func(c *gin.Context) {
 			s.GetFriendsHandler(c.Request.Context(), c)
 		})

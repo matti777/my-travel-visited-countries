@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	ErrVisitNotFound        = errors.New("visit not found")
-	ErrFriendAlreadyExists  = errors.New("friend already exists")
-	ErrFriendNotFound       = errors.New("friend not found")
+	ErrVisitNotFound       = errors.New("visit not found")
+	ErrFriendAlreadyExists = errors.New("friend already exists")
+	ErrFriendNotFound      = errors.New("friend not found")
+	ErrUserNotFound        = errors.New("user not found")
 )
 
 // GetCountryVisitsByUser retrieves all country visits for a user. userID is the auth User ID (Firestore document ID).
@@ -107,7 +108,7 @@ func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryV
 	return nil
 }
 
-// EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email, ImageURL. When user already exists, updates ImageURL from the token so avatar changes are reflected.
+// EnsureUser gets or creates the user document with document ID = user.ID (auth token UserID). On create, stores ShareToken, Name, Email, ImageURL, and default Settings. When user already exists, updates ImageURL from the token so avatar changes are reflected.
 // Only POST /login should call this; auth middleware does not.
 func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	if user == nil || user.ID == "" {
@@ -118,10 +119,18 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			shareToken := uuid.New().String()
+			defaults := models.DefaultUserSettings()
 			doc := map[string]interface{}{
 				"ShareToken": shareToken,
 				"Name":       user.Name,
 				"Email":      user.Email,
+				"Settings": map[string]interface{}{
+					"Sharing": map[string]interface{}{
+						"ShareMediaURL": defaults.Sharing.ShareMediaURL,
+						"ShareNotes":    defaults.Sharing.ShareNotes,
+						"ShareTags":     defaults.Sharing.ShareTags,
+					},
+				},
 			}
 			if user.ImageURL != "" {
 				doc["ImageURL"] = user.ImageURL
@@ -142,6 +151,33 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 		return fmt.Errorf("failed to update user ImageURL: %w", err)
 	}
 	return nil
+}
+
+// applyUserSettingsDefaults sets DefaultUserSettings when Settings was absent in Firestore.
+// If Settings exists but Sharing.ShareTags is missing, defaults ShareTags to true.
+func applyUserSettingsDefaults(u *models.User, data map[string]interface{}) {
+	if u == nil {
+		return
+	}
+	if u.Settings == nil {
+		s := models.DefaultUserSettings()
+		u.Settings = &s
+		return
+	}
+	if data == nil {
+		return
+	}
+	settingsRaw, ok := data["Settings"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	sharingRaw, ok := settingsRaw["Sharing"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	if _, has := sharingRaw["ShareTags"]; !has {
+		u.Settings.Sharing.ShareTags = true
+	}
 }
 
 // GetUserByShareToken looks up the User document by ShareToken. Returns (nil, nil) if not found.
@@ -170,6 +206,7 @@ func (c *Client) GetUserByShareToken(ctx context.Context, shareToken string) (*m
 	}
 	u.ID = docSnap.Ref.ID
 	u.UserID = u.ID
+	applyUserSettingsDefaults(&u, docSnap.Data())
 	return &u, nil
 }
 
@@ -195,6 +232,7 @@ func (c *Client) GetUserByID(ctx context.Context, userID string) (*models.User, 
 	}
 	u.ID = snap.Ref.ID
 	u.UserID = u.ID
+	applyUserSettingsDefaults(&u, snap.Data())
 	return &u, nil
 }
 
@@ -346,3 +384,31 @@ func (c *Client) DeleteFriendByShareToken(ctx context.Context, userID, shareToke
 	return nil
 }
 
+// UpdateUserSettings replaces Settings on users/{userID}. Returns ErrUserNotFound if missing.
+func (c *Client) UpdateUserSettings(
+	ctx context.Context,
+	userID string,
+	settings models.UserSettings,
+) error {
+	if userID == "" {
+		return fmt.Errorf("userID is required")
+	}
+	ref := c.Collection("users").Doc(userID)
+	_, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	_, err = ref.Update(ctx, []firestore.Update{
+		{Path: "Settings", Value: settings},
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("failed to update user settings: %w", err)
+	}
+	return nil
+}

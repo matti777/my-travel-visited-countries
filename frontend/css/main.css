@@ -295,14 +295,32 @@ body {
   cursor: pointer;
 }
 
+/* Primary: filled turquoise (Save / confirm). */
 .app-confirm__btn--primary {
+  background: var(--color-turquoise-light);
+  border-color: var(--color-turquoise);
+  color: #222;
+  font-weight: 600;
+}
+
+/* Secondary: outline only (e.g. Close without saving). */
+.app-confirm__btn--secondary {
   background: #fff;
+  border-color: #b0b0b0;
+  color: #444;
+  font-weight: 400;
+}
+
+.app-confirm__btn--secondary:hover {
+  border-color: #888;
+  background: #fafafa;
 }
 
 .app-confirm__btn--danger {
   border-color: #c00;
   color: #a00;
   font-weight: 700;
+  background: #fff;
 }
 
 .link-accounts__body {
@@ -1664,6 +1682,181 @@ main.legal-page {
   padding: 0.35rem 0.75rem;
   font-family: inherit;
   cursor: pointer;
+}
+
+/* Auth header: clickable name + avatar opens settings */
+.auth-header__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.auth-header__identity img {
+  border-radius: 50%;
+  display: block;
+}
+
+.auth-header__identity-tooltip-hint {
+  margin-top: 0.35rem;
+  font-weight: 700;
+}
+
+/* User settings dialog (modal body) */
+/* Keep settings modal fully on-screen (incl. mobile / safe areas). */
+.app-modal-panel:has(.user-settings-dialog) {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(
+    calc(100vh - 2rem),
+    calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+  );
+  overflow: hidden;
+}
+
+.app-modal-panel:has(.user-settings-dialog) .app-modal-title,
+.app-modal-panel:has(.user-settings-dialog) .app-modal-footer {
+  flex-shrink: 0;
+}
+
+.app-modal-panel:has(.user-settings-dialog) .app-modal-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.user-settings-dialog {
+  border: 1px solid rgba(0, 80, 90, 0.25);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.user-settings-dialog__intro {
+  margin: 0 0 0.85rem;
+  color: #333;
+  overflow-wrap: anywhere;
+}
+
+.user-settings-dialog__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0 0 0.85rem;
+  cursor: pointer;
+  color: #222;
+  min-width: 0;
+}
+
+.user-settings-dialog__label-text {
+  line-height: 1.35;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.user-settings-dialog__checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--color-turquoise);
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition:
+    background-color var(--animation-duration) ease,
+    border-color var(--animation-duration) ease,
+    box-shadow var(--animation-duration) ease;
+}
+
+.user-settings-dialog__checkbox::before {
+  content: "";
+  width: 0.32rem;
+  height: 0.62rem;
+  border: solid #0a6e6e;
+  border-width: 0 2.5px 2.5px 0;
+  /* Optical center: border checkmarks sit low after rotate */
+  transform: rotate(45deg) scale(0) translate(-10%, -18%);
+  transform-origin: center;
+  transition: transform 0.15s ease-out;
+}
+
+.user-settings-dialog__checkbox:checked {
+  background: var(--color-turquoise-light);
+  border-color: var(--color-turquoise);
+  box-shadow: inset 0 0 0 1px rgba(10, 110, 110, 0.15);
+}
+
+.user-settings-dialog__checkbox:checked::before {
+  transform: rotate(45deg) scale(1) translate(-10%, -18%);
+}
+
+.user-settings-dialog__checkbox:focus-visible {
+  outline: 2px solid var(--color-turquoise);
+  outline-offset: 2px;
+}
+
+.user-settings-dialog__checkbox:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.user-settings-dialog__save-row {
+  padding-top: 0.75rem;
+}
+
+.user-settings-dialog__save-btn {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-settings-dialog__save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Match edit-visit spacing above "Close without saving" (footerPlain zeros this). */
+.app-modal-body:has(.user-settings-dialog) + .app-modal-footer--plain {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .app-modal-panel:has(.user-settings-dialog) {
+    width: min(100%, calc(100vw - 1rem));
+    max-height: min(
+      calc(100vh - 1rem),
+      calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+    );
+  }
+
+  .user-settings-dialog {
+    padding: 0.85rem 1rem;
+  }
+
+  .user-settings-dialog__save-btn {
+    max-width: 100%;
+  }
 }
 
 /* Country dropdown (custom component) */

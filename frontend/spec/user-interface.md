@@ -34,7 +34,7 @@ Any tooltips should be represented as a custom component instead of any "alt" te
 
 ## Page structure
 
-Top bar: name of logged in user + avatar image, if available. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
+Top bar: name of logged in user + avatar image, if available. When logged in, the name and avatar are clickable (`cursor: pointer`, not a button) and open the [user settings dialog](user-settings-dialog.md); their tooltip shows the user email with “Click to edit settings” underneath. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
 
 If showing a shared visits list, a "Home" button is displayed to the left of other top bar contents, with ample padding. Pressing this will remove the html fragment from the URL and show the normal page routing. This button shall not be shown in normal page routing mode.
 
@@ -72,7 +72,7 @@ Similar listing to what Tab 1 describes but the countries are listed under 'subt
 
 Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](country-visit-info-tooltip-component.md).
 
-While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a button labeled **Close without saving** to dismiss without applying edits.
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a secondary (outline) button labeled **Close without saving** to dismiss without applying edits; **Save visit** remains the primary action.
 
 **Tab 3:** Countries plotted on map
 

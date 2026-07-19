@@ -2,6 +2,7 @@ import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
 import type { Friend, FriendsResponse } from "./types/friend";
 import type { CountryVisit, ShareVisitsResponse, VisitsResponse } from "./types/visit";
+import type { UserSettings } from "./types/settings";
 
 
 const COUNTRIES_CACHE_KEY = "app:countries:cache";
@@ -114,6 +115,34 @@ export default class Api {
       visits: response?.visits ?? [],
       shareToken: response?.shareToken,
     };
+  }
+
+  async getSettings(): Promise<UserSettings> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const response = (await this.performRequest("/settings", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })) as UserSettings;
+    return response;
+  }
+
+  async updateSettings(settings: UserSettings): Promise<UserSettings> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const response = (await this.performRequest("/settings", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(settings),
+    })) as UserSettings;
+    return response;
   }
 
   async getFriends(): Promise<{ friends: Friend[] }> {

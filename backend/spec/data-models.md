@@ -25,6 +25,11 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `Name`: User name from the auth token
 - `Email`: User email from the auth token
 - `ImageURL`: User's image URL; extracted from the authentication token and stored at login (on user creation).
+- `Settings`: A subobject with following properties:
+  - `Sharing`: A subobject with following properties:
+    - `ShareMediaURL`: A boolean indicating whether or not to display any MediaURL for shared country visits
+    - `ShareNotes`: A boolean indicating whether or not to display any Notes for shared country visits
+    - `ShareTags`: A boolean indicating whether or not to display any Tags for shared country visits
 
 ### Country model
 

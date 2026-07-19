@@ -16,7 +16,7 @@ GET /countries: Returns all the available countries as a list of Country objects
 
 ### Login
 
-POST /login: Frontend calls this right after login actions complete. Only called when user has initiated login by pressing the "Login" button and the login sequence towards Firebase Authentication has completed. The backend checks for existing user by that `UserID` and creates one if not found, allocating the `ShareToken` at the same time. ImageURL is extracted from the authentication token and stored on the User document (on creation). No other request shall read/write to User model to avoid unnecessary database access unless otherwise stated. The response is success-only (e.g. empty JSON body); the friends list is obtained via GET /friends. **Authenticated**
+POST /login: Frontend calls this right after login actions complete. Only called when user has initiated login by pressing the "Login" button and the login sequence towards Firebase Authentication has completed. The backend checks for existing user by that `UserID` and creates one if not found, allocating the `ShareToken` at the same time and default user `Settings` (sharing flags true). ImageURL is extracted from the authentication token and stored on the User document (on creation). No other request shall read/write to User model to avoid unnecessary database access unless otherwise stated (exceptions: GET /visits for ShareToken; GET/PUT /settings; GET /share/visits reads Settings for filtering). The response is success-only (e.g. empty JSON body); the friends list is obtained via GET /friends. **Authenticated**
 
 ### List country visits for current user
 
@@ -38,7 +38,16 @@ DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to del
 
 ### List country visits for share token
 
-GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. CountryVisit objects include `tags` as for GET /visits. The response contains the visits as well as the user's name and image URL for UI purposes. **Unauthenticated**.
+GET /share/visits/<share-token>: Uses the share token to retrieve the country visits for a certain user with matching `ShareToken`. CountryVisit objects include `tags` as for GET /visits. When the owner's Settings.Sharing.ShareMediaURL is false, `mediaUrl` is omitted/cleared on each visit; when ShareNotes is false, `notes` is omitted/cleared; when ShareTags is false, `tags` is an empty array. Missing Settings defaults all three flags to true. The response contains the visits as well as the user's name and image URL for UI purposes. **Unauthenticated**.
+
+
+### Get user settings
+
+GET /settings: Returns the current user's settings only (auth `UserID`). Response body: `{ "sharing": { "shareMediaUrl": bool, "shareNotes": bool, "shareTags": bool } }`. If the User document has no `Settings`, all three flags default to **true**. A missing `ShareTags` key on an existing Settings object also defaults to **true**. **Authenticated**.
+
+### Update user settings
+
+PUT /settings: Replaces the current user's sharing settings. Request body must include all three booleans under `sharing` (`shareMediaUrl`, `shareNotes`, `shareTags`). Writes only to the authenticated user's User document. On success **200 OK** with the stored settings. **400** if the body is invalid or any boolean is omitted. **404** if the user document is missing (complete login first). **Authenticated**.
 
 ### List friends
 

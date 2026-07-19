@@ -20,4 +20,38 @@ type User struct {
 
 	// ImageURL is the user's profile image URL from the token; stored at login.
 	ImageURL string `firestore:"ImageURL" json:"-"`
+
+	// Settings is optional on older documents; nil means apply DefaultUserSettings().
+	Settings *UserSettings `firestore:"Settings" json:"-"`
+}
+
+// UserSettings holds per-user preferences (see data-models.md).
+type UserSettings struct {
+	Sharing SharingSettings `firestore:"Sharing" json:"sharing"`
+}
+
+// SharingSettings controls what is exposed on shared visit lists.
+type SharingSettings struct {
+	ShareMediaURL bool `firestore:"ShareMediaURL" json:"shareMediaUrl"`
+	ShareNotes    bool `firestore:"ShareNotes" json:"shareNotes"`
+	ShareTags     bool `firestore:"ShareTags" json:"shareTags"`
+}
+
+// DefaultUserSettings returns sharing defaults when Settings is absent (all true).
+func DefaultUserSettings() UserSettings {
+	return UserSettings{
+		Sharing: SharingSettings{
+			ShareMediaURL: true,
+			ShareNotes:    true,
+			ShareTags:     true,
+		},
+	}
+}
+
+// EffectiveSettings returns stored Settings or defaults when Settings is nil.
+func (u *User) EffectiveSettings() UserSettings {
+	if u == nil || u.Settings == nil {
+		return DefaultUserSettings()
+	}
+	return *u.Settings
 }

@@ -5,6 +5,7 @@ import {
 } from "Components/country-visit-editor";
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
+import { openUserSettingsDialog } from "Components/user-settings-dialog";
 import { createCountryCell } from "Components/country-cell";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
@@ -1115,7 +1116,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           footer.className = "app-confirm__actions";
           const closeBtn = document.createElement("button");
           closeBtn.type = "button";
-          closeBtn.className = "app-confirm__btn";
+          closeBtn.className = "app-confirm__btn app-confirm__btn--secondary";
           closeBtn.textContent = "Close without saving";
           closeBtn.setAttribute("aria-label", "Close without saving");
           footer.appendChild(closeBtn);
@@ -1645,6 +1646,7 @@ export async function main(): Promise<void> {
         onLogout,
         !!getShareTokenFromPath(),
         navigateHome,
+        openSettings,
       );
     }
     refreshAppContent();
@@ -1670,6 +1672,15 @@ export async function main(): Promise<void> {
       errorToast(err instanceof Error ? err.message : "Sign in failed");
       });
   }
+  function openSettings(): void {
+    openUserSettingsDialog({
+      api,
+      onUnauthorized: () => {
+        void signOut();
+      },
+    });
+  }
+
   function onLogout(): void {
     api.clearCountriesCache();
     signOut().then(async () => {
@@ -1969,7 +1980,7 @@ export async function main(): Promise<void> {
               errorToast("Failed to complete login");
             }
             sessionStorage.removeItem("login:initiated");
-            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, navigateHome);
+            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, navigateHome, openSettings);
             refreshAppContent();
             return;
           }
@@ -2008,7 +2019,7 @@ export async function main(): Promise<void> {
         friends = [];
       }
       const showHome = !!getShareTokenFromPath();
-      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, navigateHome);
+      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, navigateHome, openSettings);
       refreshAppContent();
     });
     void unsubscribe;

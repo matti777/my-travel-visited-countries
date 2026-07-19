@@ -144,7 +144,7 @@ export async function confirmDialog(options: {
 
     const noBtn = document.createElement("button");
     noBtn.type = "button";
-    noBtn.className = "app-confirm__btn";
+    noBtn.className = "app-confirm__btn app-confirm__btn--secondary";
     noBtn.textContent = options.cancelText ?? "No";
 
     const yesBtn = document.createElement("button");
