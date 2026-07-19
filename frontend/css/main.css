@@ -946,6 +946,8 @@ main.about-page {
 .visit-list-frame {
   max-width: 680px;
   margin-bottom: 0.75rem;
+  container-type: inline-size;
+  container-name: visit-list;
 }
 
 /* Content: border on left, top, right only; no border between content and tab row. */
@@ -960,7 +962,9 @@ main.about-page {
 .visit-list-tabs {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: stretch;
+  justify-content: center;
   width: 100%;
   padding-top: 0;
   gap: 0;
@@ -1011,21 +1015,25 @@ main.about-page {
 }
 
 .visit-list-tabs__tab {
-  flex: 1;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
   padding: 0.4rem 0.75rem;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 400;
   cursor: pointer;
-  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-top: none;
   border-radius: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.55);
   color: #333;
+  white-space: nowrap;
   transition: background-color var(--animation-duration) ease-out;
 }
 
 .visit-list-tabs__tab:hover:not(.visit-list-tabs__tab--active) {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 /* Selected tab: border only on left, right, bottom; continuous with content. No top border = no line between tab and content. */
@@ -1048,6 +1056,48 @@ main.about-page {
 }
 .visit-list-tabs__tab--active:hover {
   background: #8ee6df;
+}
+
+/* Narrow frame (e.g. iPhone SE): wrap tabs onto extra rows; keep each label on one line. */
+@container visit-list (max-width: 34rem) {
+  .visit-list-tabs::before,
+  .visit-list-tabs::after {
+    display: none;
+  }
+
+  .visit-list-content {
+    border-bottom: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 0.35rem;
+  }
+
+  .visit-list-tabs {
+    gap: 0.25rem;
+  }
+
+  .visit-list-tabs__tab {
+    flex: 0 0 auto;
+    width: max-content;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .visit-list-tabs__tab:hover:not(.visit-list-tabs__tab--active) {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .visit-list-tabs__tab--active {
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 6px;
+    background: var(--color-turquoise-light);
+  }
+
+  .visit-list-tabs__tab--active:first-child,
+  .visit-list-tabs__tab--active:last-child,
+  .visit-list-tabs__tab--active:only-child {
+    border-radius: 6px;
+  }
 }
 
 /* Statistics tab: grid of circle graph cells */

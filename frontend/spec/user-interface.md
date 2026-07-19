@@ -120,7 +120,7 @@ Tabbed control (with Tab 1 being the default selection) which lists the selectab
 - "Timeline"
 - "Statistics"
 
-Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it.
+Clicking on a tab selects that tab and displays the corresponding content above. The tab control shall take as much horizontal space as the list control above it. When the tabs do not fit on one row (narrow viewports), they wrap onto additional rows; each tab label stays on a single line.
 
 ---
 
