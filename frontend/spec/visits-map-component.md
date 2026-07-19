@@ -24,7 +24,7 @@ createVisitsMap(parent: HTMLElement, options: VisitsVizOptions): VisitsVizHandle
 - Unvisited sovereign countries: light gray `#E2E2E2`.
 - Disputed map-only without `visitSourceCode` (XK, EH, PS): darkest gray `#2c2c2c` — see [frontend-module.md](frontend-module.md) / `MAP_ONLY_REGIONS`.
 - Map creation waits until the container has non-zero size (avoids svgMap `SVGMatrix` inverse errors when height is not yet laid out).
-- `.svgMap-map-wrapper` fills the map shell (zoom/pan clip at shell edges). The Mercator SVG uses `preserveAspectRatio="xMidYMid meet"` so content spans the full width and stays vertically centered in taller viewports.
+- `.svgMap-map-wrapper` fills the map shell (zoom/pan clip at shell edges). After create, svg-pan-zoom `resize` / `fit` / `center` align the Mercator content so its vertical center matches the shell’s center Y (full width via fit-to-width).
 - Zoom / pan / reset via svgMap controls.
 - Hover tooltips: flag, title, visit list; media links call `onViewMediaUrl` when present.
 
