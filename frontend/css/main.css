@@ -1160,6 +1160,16 @@ main.about-page {
   min-height: 420px;
   width: 100%;
   height: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.visit-list-map-shell,
+.visit-list-map-shell * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .visit-list-map-shell__pane {
@@ -1228,7 +1238,7 @@ main.about-page {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
-  z-index: 7;
+  z-index: 12;
   border-radius: 6px;
   border: 1px solid rgba(0, 80, 90, 0.35);
   background: rgba(255, 255, 255, 0.92);
@@ -1240,24 +1250,47 @@ main.about-page {
   color: #444;
   cursor: pointer;
   line-height: 1.2;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.visits-globe__fs-btn:hover {
-  background: rgba(64, 224, 208, 0.15);
+@media (hover: hover) and (pointer: fine) {
+  .visits-globe__fs-btn:hover {
+    background: rgba(64, 224, 208, 0.15);
+  }
 }
 
 .visits-globe:fullscreen,
-.visits-globe:-webkit-full-screen {
+.visits-globe:-webkit-full-screen,
+.visits-globe--immersive {
   width: 100%;
   height: 100%;
   border-radius: 0;
   background: #0d1a24;
 }
 
+/* iOS / Apple: CSS viewport cover (native Element fullscreen is partial/unreliable). */
+.visits-globe--immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+}
+
 .visits-globe:fullscreen .visits-globe__canvas,
-.visits-globe:-webkit-full-screen .visits-globe__canvas {
+.visits-globe:-webkit-full-screen .visits-globe__canvas,
+.visits-globe--immersive .visits-globe__canvas {
   position: absolute;
   inset: 0;
+}
+
+body.visits-globe-immersive-open {
+  overflow: hidden;
 }
 
 /* Per-country hover tooltip (same content as 2D svgMap tooltips). */
@@ -1347,13 +1380,16 @@ main.about-page {
   position: absolute;
   right: 0.65rem;
   bottom: 0.65rem;
-  z-index: 6;
+  z-index: 12;
   display: inline-flex;
   border-radius: 6px;
   border: 1px solid rgba(0, 80, 90, 0.35);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
   overflow: hidden;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .visit-list-map-shell__toggle-btn {
@@ -1366,16 +1402,21 @@ main.about-page {
   color: #444;
   cursor: pointer;
   line-height: 1.2;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .visit-list-map-shell__toggle-btn + .visit-list-map-shell__toggle-btn {
   border-left: 1px solid rgba(0, 80, 90, 0.25);
 }
 
-.visit-list-map-shell__toggle-btn:hover:not(:disabled):not(
-  .visit-list-map-shell__toggle-btn--active
-) {
-  background: rgba(64, 224, 208, 0.15);
+@media (hover: hover) and (pointer: fine) {
+  .visit-list-map-shell__toggle-btn:hover:not(:disabled):not(
+    .visit-list-map-shell__toggle-btn--active
+  ) {
+    background: rgba(64, 224, 208, 0.15);
+  }
 }
 
 .visit-list-map-shell__toggle-btn--active {

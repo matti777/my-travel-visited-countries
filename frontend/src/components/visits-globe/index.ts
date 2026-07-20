@@ -63,6 +63,22 @@ function fullscreenElement(): Element | null {
   return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
 }
 
+/**
+ * iPhone/iPad (and iPadOS desktop-UA): Element.requestFullscreen is only partially
+ * supported / unreliable for arbitrary elements — use CSS immersive instead.
+ * @see https://caniuse.com/mdn-api_element_requestfullscreen (Safari on iOS: partial)
+ */
+function isAppleTouchDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+function usesCssImmersiveExpand(): boolean {
+  return isAppleTouchDevice();
+}
+
 async function requestFullscreen(el: HTMLElement): Promise<void> {
   const anyEl = el as HTMLElement & {
     webkitRequestFullscreen?: () => Promise<void> | void;
@@ -83,6 +99,15 @@ async function exitFullscreen(): Promise<void> {
   } else if (doc.webkitExitFullscreen) {
     await doc.webkitExitFullscreen();
   }
+}
+
+/** Keep overlay controls from being eaten by globe/map pointer handlers. */
+function guardOverlayControl(el: HTMLElement): void {
+  const stop = (e: Event) => {
+    e.stopPropagation();
+  };
+  el.addEventListener("pointerdown", stop);
+  el.addEventListener("touchstart", stop, { passive: true });
 }
 
 /**
@@ -190,25 +215,53 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
 
   const isGlobeFullscreen = () => fullscreenElement() === root;
 
+  let immersive = false;
+
+  const resizeGlobeToRoot = () => {
+    if (!world || disposed) return;
+    world.width(Math.max(1, root.clientWidth));
+    world.height(Math.max(1, root.clientHeight || Math.round(root.clientWidth * 0.6)));
+  };
+
+  const isExpanded = () => immersive || isGlobeFullscreen();
+
   const syncFullscreenButton = () => {
-    const on = isGlobeFullscreen();
+    const on = isExpanded();
     root.classList.toggle("visits-globe--fullscreen", on);
+    root.classList.toggle("visits-globe--immersive", immersive);
     fsBtn.textContent = on ? "Exit fullscreen" : "Fullscreen";
     fsBtn.title = on ? "Exit fullscreen" : "Fullscreen";
     fsBtn.setAttribute("aria-label", fsBtn.title);
   };
 
+  const setImmersive = (on: boolean) => {
+    immersive = on;
+    root.classList.toggle("visits-globe--immersive", on);
+    document.body.classList.toggle("visits-globe-immersive-open", on);
+    syncFullscreenButton();
+    resizeGlobeToRoot();
+  };
+
   const onFullscreenChange = () => {
     syncFullscreenButton();
-    if (world && !disposed) {
-      world.width(Math.max(1, root.clientWidth));
-      world.height(Math.max(1, root.clientHeight || Math.round(root.clientWidth * 0.6)));
+    resizeGlobeToRoot();
+  };
+
+  const onImmersiveKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Escape" && immersive) {
+      setImmersive(false);
     }
   };
 
-  const onFsClick = () => {
+  const onFsClick = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
     void (async () => {
       try {
+        if (usesCssImmersiveExpand()) {
+          setImmersive(!immersive);
+          return;
+        }
         if (isGlobeFullscreen()) {
           await exitFullscreen();
         } else {
@@ -216,13 +269,19 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
         }
       } catch (err) {
         console.error("fullscreen toggle failed:", err);
+        // Fallback if native fullscreen rejects (e.g. unsupported element).
+        if (!usesCssImmersiveExpand() && !isGlobeFullscreen()) {
+          setImmersive(true);
+        }
       }
     })();
   };
 
+  guardOverlayControl(fsBtn);
   fsBtn.addEventListener("click", onFsClick);
   document.addEventListener("fullscreenchange", onFullscreenChange);
   document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+  document.addEventListener("keydown", onImmersiveKeydown);
 
   const asset = (name: string) => `${baseUrl}/assets/globe/${name}`;
 
@@ -363,6 +422,10 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
       fsBtn.removeEventListener("click", onFsClick);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener("keydown", onImmersiveKeydown);
+      if (immersive) {
+        setImmersive(false);
+      }
       if (isGlobeFullscreen()) {
         void exitFullscreen().catch((err) => {
           console.error("failed to exit fullscreen on dispose:", err);
@@ -385,4 +448,5 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
     },
   };
 }
+
 

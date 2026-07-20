@@ -90,7 +90,7 @@ Each visited country fill color should depend on the continent they are on:
 - Oceania: Turquoise
 - Antarctica: Icy deep blue
 
-In 3D, visited countries are extruded polygons on a textured globe (same continent colors), with slow equatorial auto-rotate plus drag/zoom. A **Fullscreen** control (upper right) expands the globe; Esc exits.
+In 3D, visited countries are extruded polygons on a textured globe (same continent colors), with slow equatorial auto-rotate plus drag/zoom. A **Fullscreen** control (upper right) expands the globe (native fullscreen where available; CSS immersive cover on iOS/iPadOS); Esc exits. Long-press on the map shell must not select text.
 
 In this mode the visit-list edit float is not shown (same as Alphabetical and Statistics).
 

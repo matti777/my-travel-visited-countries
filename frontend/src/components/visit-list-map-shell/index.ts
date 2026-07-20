@@ -49,6 +49,14 @@ export function createVisitListMapShell(
   toggle.appendChild(btn3d);
   shell.appendChild(toggle);
 
+  const stopMapPointer = (e: Event) => {
+    e.stopPropagation();
+  };
+  for (const btn of [btn2d, btn3d]) {
+    btn.addEventListener("pointerdown", stopMapPointer);
+    btn.addEventListener("touchstart", stopMapPointer, { passive: true });
+  }
+
   let mode: MapMode = "2d";
   let active: VisitsVizHandle | null = null;
   let disposed = false;
@@ -134,4 +142,5 @@ export function createVisitListMapShell(
     },
   };
 }
+
 

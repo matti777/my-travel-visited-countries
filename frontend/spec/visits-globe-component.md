@@ -32,7 +32,7 @@ Same `VisitsVizOptions` as [visits-map-component.md](visits-map-component.md). `
 - Drag rotate, scroll zoom (OrbitControls)
 - Slow equatorial auto-rotate (`autoRotate`, low negative `autoRotateSpeed` for westward spin)
 - Auto-rotate resumes after user interaction (OrbitControls default)
-- **Fullscreen** button (upper right): enters element fullscreen on the globe root; button becomes **Exit fullscreen** while active. Browser **Esc** (and the button) exit fullscreen.
+- **Fullscreen** button (upper right): on non-Apple platforms, uses the Element Fullscreen API. On iPhone/iPad (Safari Fullscreen API only partially supported for arbitrary elements), uses a fixed CSS immersive overlay covering the viewport instead. Button becomes **Exit fullscreen** while expanded; **Esc** (and the button) exit.
 
 ## Tooltips
 
