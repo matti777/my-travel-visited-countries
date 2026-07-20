@@ -26,6 +26,8 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `Email`: User email from the auth token
 - `ImageURL`: User's image URL; extracted from the authentication token and stored at login (on user creation).
 - `Settings`: A subobject with following properties:
+  - `HomeCountryCode`: 2-letter country code for home country. Optional.
+  - `Description`: Traveller description. Max 1000 characters. Rendered as Markdown. Optional.
   - `Sharing`: A subobject with following properties:
     - `ShareMediaURL`: A boolean indicating whether or not to display any MediaURL for shared country visits
     - `ShareNotes`: A boolean indicating whether or not to display any Notes for shared country visits

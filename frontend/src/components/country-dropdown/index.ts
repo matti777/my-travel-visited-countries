@@ -6,6 +6,14 @@ export interface CountryDropdownOptions {
   baseUrl: string;
   selectedCountryCode: string;
   onSelect: (countryCode: string) => void;
+  /** When true, allow clearing selection (empty = unset). */
+  clearable?: boolean;
+}
+
+export interface CountryDropdownHandle {
+  element: HTMLElement;
+  setSelected(countryCode: string): void;
+  getSelected(): string;
 }
 
 function filterCountries(countries: Country[], query: string): Country[] {
@@ -21,9 +29,13 @@ function filterCountries(countries: Country[], query: string): Country[] {
  * Creates a custom dropdown: single text input with placeholder "Select country".
  * When the input is focused/clicked, the list opens underneath and the input is used as the filter.
  * ESC or click outside closes the list.
+ * See frontend/spec/country-dropdown-component.md.
  */
-export function createCountryDropdown(options: CountryDropdownOptions): HTMLElement {
-  const { countries, baseUrl, selectedCountryCode, onSelect } = options;
+export function createCountryDropdown(
+  options: CountryDropdownOptions,
+): CountryDropdownHandle {
+  const { countries, baseUrl, onSelect, clearable = false } = options;
+  let selectedCode = options.selectedCountryCode ?? "";
   const root = document.createElement("div");
   root.className = "country-dropdown";
 
@@ -38,10 +50,17 @@ export function createCountryDropdown(options: CountryDropdownOptions): HTMLElem
   input.setAttribute("aria-haspopup", "listbox");
   input.setAttribute("aria-label", "Select country");
   input.autocomplete = "off";
-  if (selectedCountryCode) {
-    const c = countries.find((x) => x.countryCode === selectedCountryCode);
-    input.value = c ? c.name : selectedCountryCode;
+
+  function syncInputFromSelection(): void {
+    if (!selectedCode) {
+      input.value = "";
+      return;
+    }
+    const c = countries.find((x) => x.countryCode === selectedCode);
+    input.value = c ? c.name : selectedCode;
   }
+
+  syncInputFromSelection();
   root.appendChild(input);
 
   const panel = document.createElement("div");
@@ -61,6 +80,24 @@ export function createCountryDropdown(options: CountryDropdownOptions): HTMLElem
     const filterQuery = getFilterQuery();
     const filtered = filterCountries(countries, filterQuery);
     listContainer.replaceChildren();
+
+    if (clearable && selectedCode) {
+      const clearItem = document.createElement("div");
+      clearItem.className =
+        "country-dropdown__item country-dropdown__item--enter country-dropdown__item--clear";
+      clearItem.setAttribute("role", "option");
+      clearItem.textContent = "Clear selection";
+      clearItem.addEventListener("click", () => {
+        selectedCode = "";
+        input.value = "";
+        onSelect("");
+        setOpen(false);
+        input.focus();
+      });
+      listContainer.appendChild(clearItem);
+      requestAnimationFrame(() => clearItem.classList.add("visible"));
+    }
+
     for (const c of filtered) {
       const item = document.createElement("div");
       item.className = "country-dropdown__item country-dropdown__item--enter";
@@ -71,6 +108,7 @@ export function createCountryDropdown(options: CountryDropdownOptions): HTMLElem
       });
       item.appendChild(cell);
       item.addEventListener("click", () => {
+        selectedCode = c.countryCode;
         input.value = c.name;
         onSelect(c.countryCode);
         setOpen(false);
@@ -91,6 +129,11 @@ export function createCountryDropdown(options: CountryDropdownOptions): HTMLElem
       clickOutsideHandler = (e: MouseEvent) => {
         if (root.contains(e.target as Node)) return;
         setOpen(false);
+        if (clearable && !selectedCode) {
+          input.value = "";
+        } else {
+          syncInputFromSelection();
+        }
         document.removeEventListener("mousedown", clickOutsideHandler!);
         clickOutsideHandler = null;
       };
@@ -113,11 +156,25 @@ export function createCountryDropdown(options: CountryDropdownOptions): HTMLElem
   input.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       setOpen(false);
+      if (clearable && !selectedCode) {
+        input.value = "";
+      } else {
+        syncInputFromSelection();
+      }
       input.blur();
     }
   });
 
   root.appendChild(panel);
 
-  return root;
+  return {
+    element: root,
+    setSelected(countryCode: string): void {
+      selectedCode = countryCode;
+      syncInputFromSelection();
+    },
+    getSelected(): string {
+      return selectedCode;
+    },
+  };
 }

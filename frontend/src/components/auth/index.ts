@@ -17,7 +17,7 @@ function escapeHtmlText(s: string): string {
 
 /**
  * Renders the auth header content: optionally Home (when showHomeButton), then Login or
- * (clickable name + avatar for settings + Log out).
+ * (clickable name + avatar for profile + Log out).
  */
 export function renderAuthHeader(
   container: HTMLElement,
@@ -26,7 +26,7 @@ export function renderAuthHeader(
   onLogout: () => void,
   showHomeButton?: boolean,
   onGoHome?: () => void,
-  onOpenSettings?: () => void,
+  onOpenProfile?: () => void,
 ): void {
   container.replaceChildren();
   if (showHomeButton && onGoHome) {
@@ -50,23 +50,24 @@ export function renderAuthHeader(
       avatar.src = user.photoURL;
     }
 
-    if (onOpenSettings) {
+    if (onOpenProfile) {
       const identity = document.createElement("span");
       identity.className = "auth-header__identity";
       identity.appendChild(name);
       if (user.photoURL) {
         identity.appendChild(avatar);
       }
-      identity.addEventListener("click", onOpenSettings);
+      identity.addEventListener("click", onOpenProfile);
 
       if (user.email) {
         const html = DOMPurify.sanitize(
           `<div>${escapeHtmlText(user.email)}</div>` +
-            `<div class="auth-header__identity-tooltip-hint">Click to edit settings</div>`,
+            `<div class="auth-header__identity-tooltip-hint">` +
+            `Click to view your profile and settings</div>`,
         );
         attachTooltip(identity, html, { useHtml: true });
       } else {
-        attachTooltip(identity, "Click to edit settings");
+        attachTooltip(identity, "Click to view your profile and settings");
       }
       container.appendChild(identity);
     } else {
@@ -90,3 +91,4 @@ export function renderAuthHeader(
     container.appendChild(loginBtn);
   }
 }
+

@@ -6,7 +6,9 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 ## UI routing
 
-If the URL path is `/share/<share-token>`, a shared visit list will be retrieved and displayed, see @api.md. In this case the "country visits list" is fetched from another user. This is called shared visit list routing mode.
+If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see @api.md) and displayed. The public [user profile](user-profile-component.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
+
+If the URL path is `/profile` and the user is logged in, the own [user profile](user-profile-component.md) is shown with an **Edit settings** button underneath (opens the [user settings dialog](user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -34,9 +36,9 @@ Any tooltips should be represented as a custom component instead of any "alt" te
 
 ## Page structure
 
-Top bar: name of logged in user + avatar image, if available. When logged in, the name and avatar are clickable (`cursor: pointer`, not a button) and open the [user settings dialog](user-settings-dialog.md); their tooltip shows the user email with “Click to edit settings” underneath. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
+Top bar: name of logged in user + avatar image, if available. When logged in, the name and avatar are clickable (`cursor: pointer`, not a button) and navigate to `/profile` (own profile); their tooltip shows the user email with “Click to view your profile and settings” underneath. Login / Log out buttons. The top bar shall have some padding on its right side to separate it from the page edge.
 
-If showing a shared visits list, a "Home" button is displayed to the left of other top bar contents, with ample padding. Pressing this will remove the html fragment from the URL and show the normal page routing. This button shall not be shown in normal page routing mode.
+If showing a shared profile or the own profile page, a "Home" button is displayed to the left of other top bar contents, with ample padding. Pressing this navigates to normal page routing (clears `/share/...` or `/profile`). This button shall not be shown in normal page routing mode.
 
 ---
 
@@ -44,7 +46,7 @@ If not logged in, this section is not visible.
 
 This section has several possible representation modes, each a "tab" which - depending on the selection in the tab control mentioned below - uses up the entire space of the section, ie. only one representation mode (or "tab") is visible at any given time.
 
-The section title shows the number of unique countries visited in parentheses. In normal page routing mode the title is **Your visited countries (N)**. In shared visit list routing mode it is **&lt;user name&gt;'s visited countries (N)**, or **Shared visit list (N)** if the shared user's name is unavailable. **N** is the count of distinct country codes in the visit list (not the total number of visit rows). When a tag filter is active (see below), **N** counts only countries that have at least one visit matching the filter.
+The section title shows the number of unique countries visited in parentheses. In normal page routing mode the title is **Your visited countries (N)**. In shared profile routing mode it is **&lt;user name&gt;'s visited countries (N)**, or **Shared visit list (N)** if the shared user's name is unavailable. **N** is the count of distinct country codes in the visit list (not the total number of visit rows). When a tag filter is active (see below), **N** counts only countries that have at least one visit matching the filter. On a shared profile page, the [user profile component](user-profile-component.md) is rendered above this section.
 
 On **Alphabetical**, **By continent**, **Map**, and **Timeline** tabs (but not **Statistics**), immediately below the section title, there is a **Filter by tags** row: a text input with placeholder "Filter by tags", using the same input rules as the [tag editor component](tag-editor-component.md) (lowercase ASCII `[a-z]` only; invalid characters are stripped). When the user has entered **two or more** such characters, a **1.0 second** debounce runs (reset on each change); when it fires, the in-memory visit list is filtered so only visits that have **at least one tag** whose value **contains** the typed substring are shown (substring match). This affects the **N** in the section title, the country grids, the Timeline and By continent lists, and the Map (highlighted countries and visit tooltips). Fewer than two characters means **no** tag filter is applied. Inside the input, along the **right** edge, is a faint circular **clear** control (×) that empties the field and resets the filter **immediately** without waiting for the debounce; its tooltip reads **Clear search filter**.
 
@@ -64,7 +66,7 @@ On the **Alphabetical** tab, list edit mode is not started from the UI (the visi
 - The transformation between an unique / non-unique lists shall be animated as well.
 - While not in edit mode, the floating **Edit** button's tooltip should say "Click to edit the visits list".
 
-Edit mode will not be available when in shared visit list routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
+Edit mode will not be available when in shared profile routing mode; instead, a large centered "Home" button will be placed under the country list. Its function will match the Home button in the top bar.
 
 **Tab 2:** Country lists by continent
 
@@ -138,13 +140,13 @@ While a confirmation dialog is open (for example delete visit or remove friend),
 
 ---
 
-If not logged in, this section is not visible. If viewing a shared visit list, this section is not visible either.
+If not logged in, this section is not visible. If viewing a shared profile or own profile page, this section is not visible either.
 
 This section holds the controls to add a new visited country. This is handled by [this reusable component](country-visit-editor-component.md).
 
 ---
 
-If not logged in OR not viewing another user's shared visits, this section is not visible.
+If not logged in OR not viewing another user's shared profile, this section is not visible.
 
 If the user (by their `ShareToken`) is not yet found in the current user's friends list (see local variable holding it), the UI should display a text "Would you like to add <name> to your friends list?" and a "Add friend" button. Otherwise the UI should say "<name> is in your friend list.".
 
@@ -152,7 +154,7 @@ Clicking "Add friend" button should attempt to create the friend in the backend 
 
 ---
 
-If not logged in OR viewing another user's shared visits, this section is not visible.
+If not logged in OR viewing another user's shared profile OR on the own profile page, this section is not visible.
 
 This section provides a sharing feature. The UI presents a read-only input box which is populated to a Share URL. The URL is formed from the current site origin + path `/share/<share-token>` (with optional base path when the app is not deployed at `/`) where `share-token` is the `ShareToken` value received in the GET /visits call. To the right of this input box is a button with a icon for share/copy and the text "Copy". Pressing this button copies the Share URL onto the system clipboard and displays a success toast announcing "The Share URL was copied to the clipboard". The tooltip text for the button should say "Copy Share URL". Under these controls is a text explaining that this Share URL is permanent and can be shared to friends to allow them to see your country list and that pressing the Copy button will copy the URL to your system clipboard.
 
@@ -179,5 +181,6 @@ Centered on the bottom should be a large "Login" button whose functionality must
 --
 
 At the very bottom of the page there are links to About, Privacy Policy, and Terms of Service (About leftmost). The About page (`/about.html`) welcomes new users with plain-language copy and the same travel polaroids as the logged-out splash.
+
 
 

@@ -5,6 +5,7 @@ import {
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { openUserSettingsDialog } from "Components/user-settings-dialog";
+import { createUserProfile } from "Components/user-profile";
 import { createCountryCell } from "Components/country-cell";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
@@ -52,17 +53,27 @@ let friends: Friend[] = [];
 /** Shared visit list when URL path is /share/<token>. */
 let sharedVisits: CountryVisit[] = [];
 let sharedUserName: string | null = null;
-/** Image URL of the shared user (from GET /share/visits). */
+/** Image URL of the shared user (from GET /share/profile). */
 let sharedUserImageUrl: string | null = null;
+let sharedHomeCountryCode: string | null = null;
+let sharedDescription: string | null = null;
+
+/** Own profile settings fields (from GET /settings) when on /profile. */
+let profileHomeCountryCode: string | null = null;
+let profileDescription: string | null = null;
 
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
 
-function getShareTokenFromPath(): string | null {
+function appPathname(): string {
   let pathname = window.location.pathname;
   if (baseUrl && pathname.startsWith(baseUrl)) {
     pathname = pathname.slice(baseUrl.length) || "/";
   }
-  const m = pathname.match(/^\/share\/([^/]+)\/?$/);
+  return pathname;
+}
+
+function getShareTokenFromPath(): string | null {
+  const m = appPathname().match(/^\/share\/([^/]+)\/?$/);
   if (!m) return null;
   try {
     const decoded = decodeURIComponent(m[1]);
@@ -72,8 +83,17 @@ function getShareTokenFromPath(): string | null {
   }
 }
 
+function isOwnProfilePath(): boolean {
+  const p = appPathname();
+  return p === "/profile" || p === "/profile/";
+}
+
 function homePath(): string {
   return baseUrl ? `${baseUrl}/` : "/";
+}
+
+function profilePath(): string {
+  return baseUrl ? `${baseUrl}/profile` : "/profile";
 }
 
 let firebaseUi: any | null = null;
@@ -712,9 +732,15 @@ export interface RenderOptions {
   onFormNotesChange: (value: string) => void;
   shareToken: string | null;
   isSharedMode: boolean;
+  isOwnProfileMode: boolean;
   sharedVisits: CountryVisit[];
   sharedUserName: string | null;
   sharedUserImageUrl: string | null;
+  sharedHomeCountryCode: string | null;
+  sharedDescription: string | null;
+  profileHomeCountryCode: string | null;
+  profileDescription: string | null;
+  onOpenSettings: () => void;
   onGoHome: () => void;
   visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics";
   onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => void;
@@ -1241,9 +1267,22 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     countries: countriesList,
     sharedVisits: sharedVisitsList,
     sharedUserName: sharedUserNameVal,
-    sharedUserImageUrl: _sharedUserImageUrl,
+    sharedUserImageUrl,
+    sharedHomeCountryCode,
+    sharedDescription,
     onGoHome,
   } = options;
+  const profile = createUserProfile({
+    name: sharedUserNameVal ?? "Traveller",
+    imageUrl: sharedUserImageUrl ?? undefined,
+    homeCountryCode: sharedHomeCountryCode ?? undefined,
+    description: sharedDescription ?? undefined,
+    countriesVisited: visitedCountryTitleCount(sharedVisitsList),
+    countries: countriesList,
+    baseUrl,
+  });
+  container.appendChild(profile.element);
+
   const visitedSection = document.createElement("section");
   visitedSection.className = "app-section";
   const title = document.createElement("h1");
@@ -1484,10 +1523,38 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
 }
 
 /**
- * Renders the main #app content from current state: visited countries section and add-visit form when logged in, or shared list when URL is /share/<token>.
+ * Renders the logged-in user's own profile page (/profile).
+ */
+function renderOwnProfileSection(container: HTMLElement, options: RenderOptions): void {
+  const user = options.user;
+  if (!user) return;
+  const profile = createUserProfile({
+    name: user.displayName ?? user.email ?? "Traveller",
+    imageUrl: user.photoURL ?? undefined,
+    homeCountryCode: options.profileHomeCountryCode ?? undefined,
+    description: options.profileDescription ?? undefined,
+    countriesVisited: visitedCountryTitleCount(options.visits),
+    countries: options.countries,
+    baseUrl,
+  });
+  container.appendChild(profile.element);
+
+  const editWrap = document.createElement("div");
+  editWrap.className = "user-profile__edit-wrap";
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "user-profile__edit-btn";
+  editBtn.textContent = "Edit settings";
+  editBtn.addEventListener("click", options.onOpenSettings);
+  editWrap.appendChild(editBtn);
+  container.appendChild(editWrap);
+}
+
+/**
+ * Renders the main #app content: visits, shared profile (/share/<token>), or own profile (/profile).
  */
 function renderAppContent(container: HTMLElement, options: RenderOptions): void {
-  const { user, isEditMode, visits: visitsList, isSharedMode } = options;
+  const { user, isEditMode, visits: visitsList, isSharedMode, isOwnProfileMode } = options;
   removeVisitListEditFloatFromDom();
   container.replaceChildren();
 
@@ -1500,6 +1567,10 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
   }
   if (!user) {
     renderWelcomeView(container, options.onLogin);
+    return;
+  }
+  if (isOwnProfileMode) {
+    renderOwnProfileSection(container, options);
     return;
   }
 
@@ -1625,36 +1696,59 @@ export async function main(): Promise<void> {
   let formMediaUrl = "";
   let formNotes = "";
 
-  async function applyShareRoute(): Promise<void> {
+  async function applyRoute(): Promise<void> {
     const token = getShareTokenFromPath();
     if (token) {
       try {
-        const r = await api.getShareVisits(token);
+        const r = await api.getShareProfile(token);
         sharedVisits = r.visits;
         sharedUserName = r.userName;
         sharedUserImageUrl = r.imageUrl ?? null;
+        sharedHomeCountryCode = r.homeCountryCode ?? null;
+        sharedDescription = r.description ?? null;
         logAnalyticsEvent("open_shared_url", { share_token: token });
       } catch (err) {
-        console.error("Failed to load shared visits", err);
+        console.error("Failed to load shared profile", err);
         errorToast("Invalid or expired share link");
         sharedVisits = [];
         sharedUserName = null;
         sharedUserImageUrl = null;
+        sharedHomeCountryCode = null;
+        sharedDescription = null;
       }
     } else {
       sharedVisits = [];
       sharedUserName = null;
       sharedUserImageUrl = null;
+      sharedHomeCountryCode = null;
+      sharedDescription = null;
     }
+
+    if (isOwnProfilePath() && currentUser) {
+      try {
+        const settings = await api.getSettings();
+        profileHomeCountryCode = settings.homeCountryCode ?? null;
+        profileDescription = settings.description ?? null;
+      } catch (err) {
+        console.error("Failed to load profile settings", err);
+        profileHomeCountryCode = null;
+        profileDescription = null;
+        if (err instanceof ApiError && err.responseCode === 401) {
+          void signOut();
+          errorToast("Session expired");
+        }
+      }
+    }
+
     if (authHeaderEl) {
       renderAuthHeader(
         authHeaderEl,
         currentUser,
         onLogin,
         onLogout,
-        !!getShareTokenFromPath(),
+        !!getShareTokenFromPath() || isOwnProfilePath(),
         navigateHome,
-        openSettings,
+        openProfile,
       );
     }
     refreshAppContent();
@@ -1662,7 +1756,13 @@ export async function main(): Promise<void> {
 
   function navigateHome(): void {
     history.pushState(null, "", homePath());
-    void applyShareRoute();
+    void applyRoute();
+  }
+
+  function openProfile(): void {
+    if (!currentUser) return;
+    history.pushState(null, "", profilePath());
+    void applyRoute();
   }
 
   function onLogin(): void {
@@ -1683,8 +1783,15 @@ export async function main(): Promise<void> {
   function openSettings(): void {
     openUserSettingsDialog({
       api,
+      countries,
+      baseUrl,
       onUnauthorized: () => {
         void signOut();
+      },
+      onSaved: (settings) => {
+        profileHomeCountryCode = settings.homeCountryCode ?? null;
+        profileDescription = settings.description ?? null;
+        refreshAppContent();
       },
     });
   }
@@ -1700,7 +1807,10 @@ export async function main(): Promise<void> {
       } catch {
         countries = [];
       }
-      refreshAppContent();
+      if (isOwnProfilePath()) {
+        history.pushState(null, "", homePath());
+      }
+      void applyRoute();
       console.log("Signed out");
     });
   }
@@ -1808,9 +1918,15 @@ export async function main(): Promise<void> {
       },
       shareToken,
       isSharedMode: !!getShareTokenFromPath(),
+      isOwnProfileMode: isOwnProfilePath(),
       sharedVisits,
       sharedUserName,
       sharedUserImageUrl,
+      sharedHomeCountryCode,
+      sharedDescription,
+      profileHomeCountryCode,
+      profileDescription,
+      onOpenSettings: openSettings,
       onGoHome: navigateHome,
       visitListTab,
       onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => {
@@ -1988,7 +2104,7 @@ export async function main(): Promise<void> {
               errorToast("Failed to complete login");
             }
             sessionStorage.removeItem("login:initiated");
-            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, navigateHome, openSettings);
+            renderAuthHeader(authHeaderEl, user, onLogin, onLogout, false, navigateHome, openProfile);
             refreshAppContent();
             return;
           }
@@ -2026,8 +2142,8 @@ export async function main(): Promise<void> {
         shareToken = null;
         friends = [];
       }
-      const showHome = !!getShareTokenFromPath();
-      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, navigateHome, openSettings);
+      const showHome = !!getShareTokenFromPath() || isOwnProfilePath();
+      renderAuthHeader(authHeaderEl, user, onLogin, onLogout, showHome, navigateHome, openProfile);
       refreshAppContent();
     });
     void unsubscribe;
@@ -2042,10 +2158,10 @@ export async function main(): Promise<void> {
   }
 
   window.addEventListener("popstate", () => {
-    void applyShareRoute();
+    void applyRoute();
   });
 
-  await applyShareRoute();
+  await applyRoute();
 
   window.addEventListener("error", function (event) {
     console.error(

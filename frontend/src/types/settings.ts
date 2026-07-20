@@ -5,5 +5,7 @@ export interface SharingSettings {
 }
 
 export interface UserSettings {
+  homeCountryCode?: string;
+  description?: string;
   sharing: SharingSettings;
 }

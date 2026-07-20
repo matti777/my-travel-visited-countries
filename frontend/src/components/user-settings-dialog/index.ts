@@ -1,7 +1,15 @@
 import { openModal } from "Components/modal";
 import { errorToast } from "Components/toast";
+import { createCountryDropdown } from "Components/country-dropdown";
+import { createCharCountLabel } from "Components/char-count-label";
 import { ApiError } from "../../api";
+import type { Country } from "../../types/country";
 import type { UserSettings } from "../../types/settings";
+
+const MAX_DESCRIPTION_LENGTH = 1000;
+
+const DESCRIPTION_PLACEHOLDER =
+  "Optional traveller description. Markdown formatting supported!";
 
 type SettingsApi = {
   getSettings(): Promise<UserSettings>;
@@ -10,7 +18,34 @@ type SettingsApi = {
 
 export interface OpenUserSettingsDialogOptions {
   api: SettingsApi;
+  countries: Country[];
+  baseUrl: string;
   onUnauthorized?: () => void;
+  onSaved?: (settings: UserSettings) => void;
+}
+
+function truncateDescription(value: string): string {
+  if (value.length <= MAX_DESCRIPTION_LENGTH) {
+    return value;
+  }
+  return value.slice(0, MAX_DESCRIPTION_LENGTH);
+}
+
+function buildPutBody(
+  homeCountryCode: string,
+  description: string,
+  sharing: UserSettings["sharing"],
+): UserSettings {
+  const settings: UserSettings = { sharing };
+  const home = homeCountryCode.trim();
+  if (home) {
+    settings.homeCountryCode = home;
+  }
+  const desc = description.trim();
+  if (desc) {
+    settings.description = desc;
+  }
+  return settings;
 }
 
 /**
@@ -20,7 +55,7 @@ export interface OpenUserSettingsDialogOptions {
 export function openUserSettingsDialog(
   options: OpenUserSettingsDialogOptions,
 ): void {
-  const { api, onUnauthorized } = options;
+  const { api, countries, baseUrl, onUnauthorized, onSaved } = options;
 
   const body = document.createElement("div");
   body.className = "user-settings-dialog";
@@ -28,8 +63,57 @@ export function openUserSettingsDialog(
   const intro = document.createElement("p");
   intro.className = "user-settings-dialog__intro";
   intro.textContent =
-    "Choose what visitors see when they open your Share URL.";
+    "Update your profile details and choose what visitors see on your Share URL.";
   body.appendChild(intro);
+
+  let homeCountryCode = "";
+  const homeLabel = document.createElement("div");
+  homeLabel.className = "user-settings-dialog__field-label";
+  homeLabel.textContent = "Home country";
+  body.appendChild(homeLabel);
+
+  const homeDropdown = createCountryDropdown({
+    countries,
+    baseUrl,
+    selectedCountryCode: "",
+    clearable: true,
+    onSelect: (code) => {
+      homeCountryCode = code;
+    },
+  });
+  homeDropdown.element.classList.add("user-settings-dialog__country");
+  body.appendChild(homeDropdown.element);
+
+  const descFieldId = `user-settings-description-${Math.random().toString(36).slice(2, 9)}`;
+  const descCount = createCharCountLabel({
+    title: "Free-form traveller description",
+    maxLength: MAX_DESCRIPTION_LENGTH,
+    htmlFor: descFieldId,
+    className: "user-settings-dialog__field-label",
+  });
+  body.appendChild(descCount.element);
+
+  const descInput = document.createElement("textarea");
+  descInput.id = descFieldId;
+  descInput.className = "user-settings-dialog__description";
+  descInput.rows = 4;
+  descInput.maxLength = MAX_DESCRIPTION_LENGTH;
+  descInput.placeholder = DESCRIPTION_PLACEHOLDER;
+  descInput.disabled = true;
+  body.appendChild(descInput);
+
+  const descHint = document.createElement("p");
+  descHint.className = "user-settings-dialog__hint";
+  descHint.textContent = "Markdown formatting supported.";
+  body.appendChild(descHint);
+
+  descInput.addEventListener("input", () => {
+    const truncated = truncateDescription(descInput.value);
+    if (truncated !== descInput.value) {
+      descInput.value = truncated;
+    }
+    descCount.setCount(descInput.value.length);
+  });
 
   const mediaLabel = document.createElement("label");
   mediaLabel.className = "user-settings-dialog__row";
@@ -96,6 +180,13 @@ export function openUserSettingsDialog(
     mediaCb.disabled = !enabled;
     notesCb.disabled = !enabled;
     tagsCb.disabled = !enabled;
+    descInput.disabled = !enabled;
+    const homeInput = homeDropdown.element.querySelector(
+      "input",
+    ) as HTMLInputElement | null;
+    if (homeInput) {
+      homeInput.disabled = !enabled;
+    }
     saveBtn.disabled = !enabled || saving;
   };
 
@@ -119,15 +210,14 @@ export function openUserSettingsDialog(
     if (saving) return;
     saving = true;
     setControlsEnabled(false);
-    const settings: UserSettings = {
-      sharing: {
-        shareMediaUrl: mediaCb.checked,
-        shareNotes: notesCb.checked,
-        shareTags: tagsCb.checked,
-      },
-    };
+    const settings = buildPutBody(homeCountryCode, descInput.value, {
+      shareMediaUrl: mediaCb.checked,
+      shareNotes: notesCb.checked,
+      shareTags: tagsCb.checked,
+    });
     try {
-      await api.updateSettings(settings);
+      const saved = await api.updateSettings(settings);
+      onSaved?.(saved);
       closeModal?.();
     } catch (err) {
       console.error("Failed to update settings", err);
@@ -145,6 +235,10 @@ export function openUserSettingsDialog(
   void (async () => {
     try {
       const settings = await api.getSettings();
+      homeCountryCode = settings.homeCountryCode ?? "";
+      homeDropdown.setSelected(homeCountryCode);
+      descInput.value = truncateDescription(settings.description ?? "");
+      descCount.setCount(descInput.value.length);
       mediaCb.checked = Boolean(settings?.sharing?.shareMediaUrl);
       notesCb.checked = Boolean(settings?.sharing?.shareNotes);
       tagsCb.checked = Boolean(settings?.sharing?.shareTags);

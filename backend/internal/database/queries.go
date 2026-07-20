@@ -401,8 +401,21 @@ func (c *Client) UpdateUserSettings(
 		}
 		return fmt.Errorf("failed to get user: %w", err)
 	}
+	settingsDoc := map[string]interface{}{
+		"Sharing": map[string]interface{}{
+			"ShareMediaURL": settings.Sharing.ShareMediaURL,
+			"ShareNotes":    settings.Sharing.ShareNotes,
+			"ShareTags":     settings.Sharing.ShareTags,
+		},
+	}
+	if settings.HomeCountryCode != "" {
+		settingsDoc["HomeCountryCode"] = settings.HomeCountryCode
+	}
+	if settings.Description != "" {
+		settingsDoc["Description"] = settings.Description
+	}
 	_, err = ref.Update(ctx, []firestore.Update{
-		{Path: "Settings", Value: settings},
+		{Path: "Settings", Value: settingsDoc},
 	})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
@@ -412,3 +425,4 @@ func (c *Client) UpdateUserSettings(
 	}
 	return nil
 }
+

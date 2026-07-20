@@ -11,8 +11,8 @@ func (s *Server) RegisterRoutes() {
 	s.Router.GET("/countries", func(c *gin.Context) {
 		s.GetCountriesHandler(c.Request.Context(), c)
 	})
-	s.Router.GET("/share/visits/:shareToken", func(c *gin.Context) {
-		s.GetShareVisitsHandler(c.Request.Context(), c)
+	s.Router.GET("/share/profile/:shareToken", func(c *gin.Context) {
+		s.GetShareProfileHandler(c.Request.Context(), c)
 	})
 
 	// Protected routes: require valid Firebase ID token
@@ -54,3 +54,4 @@ func (s *Server) RegisterRoutes() {
 	// Static frontend: serve embedded files; unknown paths serve index.html (SPA fallback)
 	s.Router.NoRoute(s.staticHandler)
 }
+

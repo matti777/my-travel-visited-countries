@@ -27,7 +27,9 @@ type User struct {
 
 // UserSettings holds per-user preferences (see data-models.md).
 type UserSettings struct {
-	Sharing SharingSettings `firestore:"Sharing" json:"sharing"`
+	HomeCountryCode string          `firestore:"HomeCountryCode,omitempty" json:"homeCountryCode,omitempty"`
+	Description     string          `firestore:"Description,omitempty" json:"description,omitempty"`
+	Sharing         SharingSettings `firestore:"Sharing" json:"sharing"`
 }
 
 // SharingSettings controls what is exposed on shared visit lists.
@@ -54,4 +56,22 @@ func (u *User) EffectiveSettings() UserSettings {
 		return DefaultUserSettings()
 	}
 	return *u.Settings
+}
+
+// SettingsResponse is the JSON body for GET/PUT /settings (omits unset optionals).
+func SettingsToResponse(s UserSettings) map[string]interface{} {
+	out := map[string]interface{}{
+		"sharing": map[string]bool{
+			"shareMediaUrl": s.Sharing.ShareMediaURL,
+			"shareNotes":    s.Sharing.ShareNotes,
+			"shareTags":     s.Sharing.ShareTags,
+		},
+	}
+	if s.HomeCountryCode != "" {
+		out["homeCountryCode"] = s.HomeCountryCode
+	}
+	if s.Description != "" {
+		out["description"] = s.Description
+	}
+	return out
 }

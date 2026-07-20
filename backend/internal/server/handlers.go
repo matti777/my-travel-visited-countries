@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -65,7 +66,7 @@ func (s *Server) GetSettingsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dbUser.EffectiveSettings())
+	c.JSON(http.StatusOK, models.SettingsToResponse(dbUser.EffectiveSettings()))
 }
 
 // PutSettingsHandler handles PUT /settings for the authenticated user.
@@ -81,22 +82,30 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
-	var body struct {
-		Sharing *struct {
-			ShareMediaURL *bool `json:"shareMediaUrl"`
-			ShareNotes    *bool `json:"shareNotes"`
-			ShareTags     *bool `json:"shareTags"`
-		} `json:"sharing"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
+	var raw map[string]json.RawMessage
+	if err := c.ShouldBindJSON(&raw); err != nil {
 		log.Warn("Invalid PUT /settings body", logging.Error, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	if body.Sharing == nil ||
-		body.Sharing.ShareMediaURL == nil ||
-		body.Sharing.ShareNotes == nil ||
-		body.Sharing.ShareTags == nil {
+
+	sharingRaw, ok := raw["sharing"]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "sharing.shareMediaUrl, sharing.shareNotes, and sharing.shareTags are required",
+		})
+		return
+	}
+	var sharing struct {
+		ShareMediaURL *bool `json:"shareMediaUrl"`
+		ShareNotes    *bool `json:"shareNotes"`
+		ShareTags     *bool `json:"shareTags"`
+	}
+	if err := json.Unmarshal(sharingRaw, &sharing); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if sharing.ShareMediaURL == nil || sharing.ShareNotes == nil || sharing.ShareTags == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "sharing.shareMediaUrl, sharing.shareNotes, and sharing.shareTags are required",
 		})
@@ -105,11 +114,53 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 
 	settings := models.UserSettings{
 		Sharing: models.SharingSettings{
-			ShareMediaURL: *body.Sharing.ShareMediaURL,
-			ShareNotes:    *body.Sharing.ShareNotes,
-			ShareTags:     *body.Sharing.ShareTags,
+			ShareMediaURL: *sharing.ShareMediaURL,
+			ShareNotes:    *sharing.ShareNotes,
+			ShareTags:     *sharing.ShareTags,
 		},
 	}
+
+	if homeRaw, hasHome := raw["homeCountryCode"]; hasHome {
+		var home string
+		if err := json.Unmarshal(homeRaw, &home); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid homeCountryCode"})
+			return
+		}
+		if home == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "omit homeCountryCode to clear; do not send an empty string",
+			})
+			return
+		}
+		home = strings.ToUpper(strings.TrimSpace(home))
+		if !data.IsListedCountry(home) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid homeCountryCode"})
+			return
+		}
+		settings.HomeCountryCode = home
+	}
+
+	if descRaw, hasDesc := raw["description"]; hasDesc {
+		var desc string
+		if err := json.Unmarshal(descRaw, &desc); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid description"})
+			return
+		}
+		if desc == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "omit description to clear; do not send an empty string",
+			})
+			return
+		}
+		if err := models.ValidateNotes(desc); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "description must be at most 1000 characters",
+			})
+			return
+		}
+		settings.Description = desc
+	}
+
 	if err := s.db.UpdateUserSettings(ctx, user.ID, settings); err != nil {
 		if errors.Is(err, database.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
@@ -121,7 +172,7 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	log.Info("Updated user settings", logging.UserID, user.ID)
-	c.JSON(http.StatusOK, settings)
+	c.JSON(http.StatusOK, models.SettingsToResponse(settings))
 }
 
 // GetCountriesHandler handles GET /countries.
@@ -135,9 +186,10 @@ func (s *Server) GetCountriesHandler(ctx context.Context, c *gin.Context) {
 	})
 }
 
-// GetShareVisitsHandler handles GET /share/visits/:shareToken. Unauthenticated; returns visits and userName for the user with that ShareToken.
-func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
-	ctx, span := tracing.New(ctx, "GetShareVisitsHandler")
+// GetShareProfileHandler handles GET /share/profile/:shareToken.
+// Unauthenticated; returns public profile fields and visits for that ShareToken.
+func (s *Server) GetShareProfileHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "GetShareProfileHandler")
 	defer span.End()
 
 	shareToken := c.Param("shareToken")
@@ -181,10 +233,12 @@ func (s *Server) GetShareVisitsHandler(ctx context.Context, c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(http.StatusOK, models.ShareVisitsResponse{
-		Visits:   visits,
-		UserName: user.Name,
-		ImageUrl: user.ImageURL,
+	c.JSON(http.StatusOK, models.ShareProfileResponse{
+		Visits:          visits,
+		UserName:        user.Name,
+		ImageUrl:        user.ImageURL,
+		HomeCountryCode: settings.HomeCountryCode,
+		Description:     settings.Description,
 	})
 }
 
@@ -572,3 +626,4 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
+

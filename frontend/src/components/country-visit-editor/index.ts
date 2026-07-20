@@ -2,6 +2,7 @@ import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 import { errorToast } from "Components/toast";
 import { createCountryDropdown } from "Components/country-dropdown";
+import { createCharCountLabel } from "Components/char-count-label";
 import { createTagEditor } from "Components/tag-editor";
 import { createCountryCell } from "Components/country-cell";
 import type { Country } from "../../types/country";
@@ -66,35 +67,6 @@ function truncateNotes(value: string): string {
     return value;
   }
   return value.slice(0, MAX_NOTES_LENGTH);
-}
-
-function lerpChannel(a: number, b: number, t: number): number {
-  return Math.round(a + (b - a) * t);
-}
-
-function lerpRgb(
-  from: [number, number, number],
-  to: [number, number, number],
-  t: number,
-): string {
-  const clamped = Math.min(1, Math.max(0, t));
-  return (
-    `rgb(${lerpChannel(from[0], to[0], clamped)}, ` +
-    `${lerpChannel(from[1], to[1], clamped)}, ` +
-    `${lerpChannel(from[2], to[2], clamped)})`
-  );
-}
-
-/** Counter color: green @ 0, yellow @ 750, deep red @ 1000. */
-function notesCountColor(length: number): string {
-  const green: [number, number, number] = [0, 128, 0];
-  const yellow: [number, number, number] = [230, 184, 0];
-  const deepRed: [number, number, number] = [139, 0, 0];
-  const x = Math.min(MAX_NOTES_LENGTH, Math.max(0, length));
-  if (x <= 750) {
-    return lerpRgb(green, yellow, x / 750);
-  }
-  return lerpRgb(yellow, deepRed, (x - 750) / 250);
 }
 
 export interface CountryVisitEditorSubmitPayload {
@@ -184,7 +156,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
         baseUrl,
         selectedCountryCode,
         onSelect: onSelectCountry,
-      }),
+      }).element,
     );
   }
   const visitTimeLabel = document.createElement("span");
@@ -229,16 +201,12 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   const notesWrap = document.createElement("div");
   notesWrap.className = "add-visit-form__notes-wrap";
   const notesFieldId = `add-visit-form-notes-${mode}-${Math.random().toString(36).slice(2, 9)}`;
-  const notesLabel = document.createElement("label");
-  notesLabel.className = "add-visit-form__notes-label";
-  notesLabel.htmlFor = notesFieldId;
-  const notesLabelText = document.createElement("span");
-  notesLabelText.className = "add-visit-form__notes-label-text";
-  notesLabelText.textContent = "Free-form trip notes ";
-  const notesCount = document.createElement("span");
-  notesCount.className = "add-visit-form__notes-count";
-  notesLabel.appendChild(notesLabelText);
-  notesLabel.appendChild(notesCount);
+  const notesCountLabel = createCharCountLabel({
+    title: "Free-form trip notes",
+    maxLength: MAX_NOTES_LENGTH,
+    htmlFor: notesFieldId,
+    className: "add-visit-form__notes-label",
+  });
   const notesInput = document.createElement("textarea");
   notesInput.id = notesFieldId;
   notesInput.name = "notes";
@@ -247,14 +215,12 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   notesInput.maxLength = MAX_NOTES_LENGTH;
   notesInput.placeholder = NOTES_PLACEHOLDER;
   notesInput.value = truncateNotes(formNotes);
-  notesWrap.appendChild(notesLabel);
+  notesWrap.appendChild(notesCountLabel.element);
   notesWrap.appendChild(notesInput);
   form.appendChild(notesWrap);
 
   function updateNotesCounter(): void {
-    const len = notesInput.value.length;
-    notesCount.textContent = `[${len} / ${MAX_NOTES_LENGTH}]`;
-    notesCount.style.color = notesCountColor(len);
+    notesCountLabel.setCount(notesInput.value.length);
   }
 
   updateNotesCounter();
@@ -382,4 +348,5 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   addSection.appendChild(form);
   return addSection;
 }
+
 

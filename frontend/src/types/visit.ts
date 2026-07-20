@@ -16,9 +16,11 @@ export interface VisitsResponse {
   shareToken?: string;
 }
 
-export interface ShareVisitsResponse {
+/** GET /share/profile/:shareToken */
+export interface ShareProfileResponse {
   visits: CountryVisit[];
   userName: string;
   imageUrl?: string;
+  homeCountryCode?: string;
+  description?: string;
 }
-

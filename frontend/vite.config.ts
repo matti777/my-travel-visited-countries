@@ -3,15 +3,17 @@ import { defineConfig } from "vite";
 import { resolve } from "path";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
-/** Serve index.html for client route /share/<token> (not API /share/visits/...). */
+/** Serve index.html for client routes /share/<token> and /profile (not API /share/profile/...). */
 function spaShareRoutesMiddleware(): Connect.NextHandleFunction {
   return (req, _res, next) => {
     const raw = req.url ?? "";
     const pathOnly = raw.split("?")[0] ?? "";
     if (
       req.method === "GET" &&
-      pathOnly.startsWith("/share/") &&
-      !pathOnly.startsWith("/share/visits/")
+      ((pathOnly.startsWith("/share/") &&
+        !pathOnly.startsWith("/share/profile/")) ||
+        pathOnly === "/profile" ||
+        pathOnly === "/profile/")
     ) {
       req.url = "/index.html" + (raw.includes("?") ? "?" + raw.split("?").slice(1).join("?") : "");
     }
@@ -50,7 +52,7 @@ export default defineConfig({
     proxy: {
       "/countries": { target: "http://localhost:8080", changeOrigin: true },
       "/login": { target: "http://localhost:8080", changeOrigin: true },
-      "/share/visits": { target: "http://localhost:8080", changeOrigin: true },
+      "/share/profile": { target: "http://localhost:8080", changeOrigin: true },
       "/visits": { target: "http://localhost:8080", changeOrigin: true },
       "/friends": { target: "http://localhost:8080", changeOrigin: true },
       "/settings": { target: "http://localhost:8080", changeOrigin: true },
@@ -64,3 +66,4 @@ export default defineConfig({
     sourcemap: false,
   },
 });
+

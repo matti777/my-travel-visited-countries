@@ -1,7 +1,7 @@
 import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
 import type { Friend, FriendsResponse } from "./types/friend";
-import type { CountryVisit, ShareVisitsResponse, VisitsResponse } from "./types/visit";
+import type { CountryVisit, ShareProfileResponse, VisitsResponse } from "./types/visit";
 import type { UserSettings } from "./types/settings";
 
 
@@ -157,11 +157,11 @@ export default class Api {
     return { friends: response?.friends ?? [] };
   }
 
-  async getShareVisits(shareToken: string): Promise<ShareVisitsResponse> {
+  async getShareProfile(shareToken: string): Promise<ShareProfileResponse> {
     const response = (await this.performRequest(
-      `/share/visits/${encodeURIComponent(shareToken)}`,
+      `/share/profile/${encodeURIComponent(shareToken)}`,
       { method: "GET" }
-    )) as ShareVisitsResponse;
+    )) as ShareProfileResponse;
     return response;
   }
 
@@ -338,4 +338,5 @@ export default class Api {
 }
 
 export let api = new Api();
+
 
