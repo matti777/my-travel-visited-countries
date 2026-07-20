@@ -20,6 +20,16 @@ function parseIsoToLocalDate(isoDate: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** Native mobile date field shows locale format (e.g. dd.mm.yyyy); toggle value color. */
+function syncMobileDatePlaceholderClass(instance: {
+  selectedDates: Date[];
+  mobileInput?: HTMLInputElement;
+}): void {
+  const mobile = instance.mobileInput;
+  if (!mobile) return;
+  mobile.classList.toggle("has-value", instance.selectedDates.length > 0);
+}
+
 function isMediaUrlValid(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed === "") return true;
@@ -304,12 +314,15 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     minDate: MIN_DATE,
     maxDate: today,
     disable: [],
+    onReady: (_selectedDates, _dateStr, instance) => {
+      syncMobileDatePlaceholderClass(instance);
+    },
     onOpen: (_selectedDates, _dateStr, instance) => {
       if (!currentVisitDate) {
         instance.jumpToDate(today);
       }
     },
-    onChange: (selectedDates) => {
+    onChange: (selectedDates, _dateStr, instance) => {
       const d = selectedDates[0];
       if (d) {
         const iso =
@@ -324,6 +337,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
         currentVisitDate = null;
         onFormVisitDateChange(null);
       }
+      syncMobileDatePlaceholderClass(instance);
       updateValidationUI();
     },
   });
@@ -336,6 +350,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
     dateInput.value = "";
     currentVisitDate = null;
   }
+  syncMobileDatePlaceholderClass(fp);
 
   updateValidationUI();
 
@@ -367,3 +382,4 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   addSection.appendChild(form);
   return addSection;
 }
+

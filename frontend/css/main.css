@@ -1745,9 +1745,44 @@ body.visits-globe-immersive-open {
 
 /* Match country dropdown input font so placeholder matches "Select country" */
 .add-visit-form__date-input,
-.add-visit-form__date-input::placeholder {
+.add-visit-form__date-input::placeholder,
+.add-visit-form input.flatpickr-input::placeholder {
   font-family: inherit;
   font-size: 1rem;
+  color: var(--input-placeholder-color);
+  opacity: 1;
+}
+
+.add-visit-form__date-input,
+.add-visit-form input.flatpickr-input {
+  color: #333;
+}
+
+/*
+ * Flatpickr on mobile uses a native type=date control (locale format e.g. dd.mm.yyyy).
+ * WebKit paints that hint with the input color, not ::placeholder — keep it faint until set.
+ */
+.add-visit-form input.flatpickr-mobile {
+  color: var(--input-placeholder-color);
+}
+
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit,
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit-fields-wrapper,
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit-text,
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit-month-field,
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit-day-field,
+.add-visit-form input.flatpickr-mobile::-webkit-datetime-edit-year-field {
+  color: var(--input-placeholder-color);
+}
+
+.add-visit-form input.flatpickr-mobile.has-value,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit-fields-wrapper,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit-text,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit-month-field,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit-day-field,
+.add-visit-form input.flatpickr-mobile.has-value::-webkit-datetime-edit-year-field {
+  color: #333;
 }
 
 .add-visit-form__visit-time-label {
