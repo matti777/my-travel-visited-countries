@@ -109,11 +109,13 @@ type CountryVisitResponse struct {
 
 // ShareProfileResponse is the response for GET /share/profile/:shareToken.
 type ShareProfileResponse struct {
-	Visits          []CountryVisit `json:"visits"`
-	UserName        string         `json:"userName"`
-	ImageUrl        string         `json:"imageUrl,omitempty"`
-	HomeCountryCode string         `json:"homeCountryCode,omitempty"`
-	Description     string         `json:"description,omitempty"`
+	Visits            []CountryVisit `json:"visits"`
+	UserName          string         `json:"userName"`
+	ImageUrl          string         `json:"imageUrl,omitempty"`
+	HomeCountryCode   string         `json:"homeCountryCode,omitempty"`
+	InstagramUserName string         `json:"instagramUserName,omitempty"`
+	Description       string         `json:"description,omitempty"`
 }
+
 
 

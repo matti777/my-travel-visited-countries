@@ -27,9 +27,10 @@ type User struct {
 
 // UserSettings holds per-user preferences (see data-models.md).
 type UserSettings struct {
-	HomeCountryCode string          `firestore:"HomeCountryCode,omitempty" json:"homeCountryCode,omitempty"`
-	Description     string          `firestore:"Description,omitempty" json:"description,omitempty"`
-	Sharing         SharingSettings `firestore:"Sharing" json:"sharing"`
+	InstagramUserName string          `firestore:"InstagramUserName,omitempty" json:"instagramUserName,omitempty"`
+	HomeCountryCode   string          `firestore:"HomeCountryCode,omitempty" json:"homeCountryCode,omitempty"`
+	Description       string          `firestore:"Description,omitempty" json:"description,omitempty"`
+	Sharing           SharingSettings `firestore:"Sharing" json:"sharing"`
 }
 
 // SharingSettings controls what is exposed on shared visit lists.
@@ -67,6 +68,9 @@ func SettingsToResponse(s UserSettings) map[string]interface{} {
 			"shareTags":     s.Sharing.ShareTags,
 		},
 	}
+	if s.InstagramUserName != "" {
+		out["instagramUserName"] = s.InstagramUserName
+	}
 	if s.HomeCountryCode != "" {
 		out["homeCountryCode"] = s.HomeCountryCode
 	}
@@ -75,3 +79,4 @@ func SettingsToResponse(s UserSettings) map[string]interface{} {
 	}
 	return out
 }
+

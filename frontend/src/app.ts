@@ -56,10 +56,12 @@ let sharedUserName: string | null = null;
 /** Image URL of the shared user (from GET /share/profile). */
 let sharedUserImageUrl: string | null = null;
 let sharedHomeCountryCode: string | null = null;
+let sharedInstagramUserName: string | null = null;
 let sharedDescription: string | null = null;
 
 /** Own profile settings fields (from GET /settings) when on /profile. */
 let profileHomeCountryCode: string | null = null;
+let profileInstagramUserName: string | null = null;
 let profileDescription: string | null = null;
 
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
@@ -737,8 +739,10 @@ export interface RenderOptions {
   sharedUserName: string | null;
   sharedUserImageUrl: string | null;
   sharedHomeCountryCode: string | null;
+  sharedInstagramUserName: string | null;
   sharedDescription: string | null;
   profileHomeCountryCode: string | null;
+  profileInstagramUserName: string | null;
   profileDescription: string | null;
   onOpenSettings: () => void;
   onGoHome: () => void;
@@ -1269,6 +1273,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     sharedUserName: sharedUserNameVal,
     sharedUserImageUrl,
     sharedHomeCountryCode,
+    sharedInstagramUserName,
     sharedDescription,
     onGoHome,
   } = options;
@@ -1276,6 +1281,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     name: sharedUserNameVal ?? "Traveller",
     imageUrl: sharedUserImageUrl ?? undefined,
     homeCountryCode: sharedHomeCountryCode ?? undefined,
+    instagramUserName: sharedInstagramUserName ?? undefined,
     description: sharedDescription ?? undefined,
     countriesVisited: visitedCountryTitleCount(sharedVisitsList),
     countries: countriesList,
@@ -1532,6 +1538,7 @@ function renderOwnProfileSection(container: HTMLElement, options: RenderOptions)
     name: user.displayName ?? user.email ?? "Traveller",
     imageUrl: user.photoURL ?? undefined,
     homeCountryCode: options.profileHomeCountryCode ?? undefined,
+    instagramUserName: options.profileInstagramUserName ?? undefined,
     description: options.profileDescription ?? undefined,
     countriesVisited: visitedCountryTitleCount(options.visits),
     countries: options.countries,
@@ -1705,6 +1712,7 @@ export async function main(): Promise<void> {
         sharedUserName = r.userName;
         sharedUserImageUrl = r.imageUrl ?? null;
         sharedHomeCountryCode = r.homeCountryCode ?? null;
+        sharedInstagramUserName = r.instagramUserName ?? null;
         sharedDescription = r.description ?? null;
         logAnalyticsEvent("open_shared_url", { share_token: token });
       } catch (err) {
@@ -1714,6 +1722,7 @@ export async function main(): Promise<void> {
         sharedUserName = null;
         sharedUserImageUrl = null;
         sharedHomeCountryCode = null;
+        sharedInstagramUserName = null;
         sharedDescription = null;
       }
     } else {
@@ -1721,6 +1730,7 @@ export async function main(): Promise<void> {
       sharedUserName = null;
       sharedUserImageUrl = null;
       sharedHomeCountryCode = null;
+      sharedInstagramUserName = null;
       sharedDescription = null;
     }
 
@@ -1728,10 +1738,12 @@ export async function main(): Promise<void> {
       try {
         const settings = await api.getSettings();
         profileHomeCountryCode = settings.homeCountryCode ?? null;
+        profileInstagramUserName = settings.instagramUserName ?? null;
         profileDescription = settings.description ?? null;
       } catch (err) {
         console.error("Failed to load profile settings", err);
         profileHomeCountryCode = null;
+        profileInstagramUserName = null;
         profileDescription = null;
         if (err instanceof ApiError && err.responseCode === 401) {
           void signOut();
@@ -1790,6 +1802,7 @@ export async function main(): Promise<void> {
       },
       onSaved: (settings) => {
         profileHomeCountryCode = settings.homeCountryCode ?? null;
+        profileInstagramUserName = settings.instagramUserName ?? null;
         profileDescription = settings.description ?? null;
         refreshAppContent();
       },
@@ -1923,8 +1936,10 @@ export async function main(): Promise<void> {
       sharedUserName,
       sharedUserImageUrl,
       sharedHomeCountryCode,
+      sharedInstagramUserName,
       sharedDescription,
       profileHomeCountryCode,
+      profileInstagramUserName,
       profileDescription,
       onOpenSettings: openSettings,
       onGoHome: navigateHome,

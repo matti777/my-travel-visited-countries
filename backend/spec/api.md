@@ -38,15 +38,15 @@ DELETE /visits/<visit-id>: Deletes a CountryVisit. Users are only allowed to del
 
 ### Get shared profile
 
-GET /share/profile/<share-token>: Uses the share token to retrieve the public profile and country visits for the user with matching `ShareToken`. Response type is **ShareProfileResponse**: `visits`, `userName`, optional `imageUrl`, optional `homeCountryCode`, optional `description` (omit keys when unset). CountryVisit objects include `tags` as for GET /visits. When the owner's Settings.Sharing.ShareMediaURL is false, `mediaUrl` is omitted/cleared on each visit; when ShareNotes is false, `notes` is omitted/cleared; when ShareTags is false, `tags` is an empty array. Missing Settings defaults all three flags to true. **Unauthenticated**.
+GET /share/profile/<share-token>: Uses the share token to retrieve the public profile and country visits for the user with matching `ShareToken`. Response type is **ShareProfileResponse**: `visits`, `userName`, optional `imageUrl`, optional `homeCountryCode`, optional `instagramUserName`, optional `description` (omit keys when unset). CountryVisit objects include `tags` as for GET /visits. When the owner's Settings.Sharing.ShareMediaURL is false, `mediaUrl` is omitted/cleared on each visit; when ShareNotes is false, `notes` is omitted/cleared; when ShareTags is false, `tags` is an empty array. Missing Settings defaults all three flags to true. **Unauthenticated**.
 
 ### Get user settings
 
-GET /settings: Returns the current user's settings only (auth `UserID`). Response body includes `sharing` (`shareMediaUrl`, `shareNotes`, `shareTags`) and optional `homeCountryCode` / `description` (omit when unset). If the User document has no `Settings`, sharing flags default to **true**. A missing `ShareTags` key on an existing Settings object also defaults to **true**. **Authenticated**.
+GET /settings: Returns the current user's settings only (auth `UserID`). Response body includes `sharing` (`shareMediaUrl`, `shareNotes`, `shareTags`) and optional `homeCountryCode` / `instagramUserName` / `description` (omit when unset). If the User document has no `Settings`, sharing flags default to **true**. A missing `ShareTags` key on an existing Settings object also defaults to **true**. **Authenticated**.
 
 ### Update user settings
 
-PUT /settings: Replaces the current user's settings. Request body must include all three booleans under `sharing` (`shareMediaUrl`, `shareNotes`, `shareTags`). Optional `homeCountryCode` and `description`: include the key only when setting a non-empty value; **omit the key entirely to clear/unset** that field (do not send empty strings; empty strings yield **400**). Present `homeCountryCode` must be a listed country code; present `description` must be at most **1000** characters. Writes only to the authenticated user's User document. On success **200 OK** with the stored settings (omit unset optional keys). **400** if the body is invalid or any sharing boolean is omitted. **404** if the user document is missing (complete login first). **Authenticated**.
+PUT /settings: Replaces the current user's settings. Request body must include all three booleans under `sharing` (`shareMediaUrl`, `shareNotes`, `shareTags`). Optional `homeCountryCode`, `instagramUserName`, and `description`: include the key only when setting a non-empty value; **omit the key entirely to clear/unset** that field (do not send empty strings). Present `homeCountryCode` must be a listed country code; present `instagramUserName` must match the Instagram username format in [data-models.md](data-models.md) (leading `@` is stripped); present `description` must be at most **1000** characters. Writes only to the authenticated user's User document. On success **200 OK** with the stored settings (omit unset optional keys). **400** if the body is invalid or any sharing boolean is omitted. Field-level validation failures use **ValidationErrors**: `{ "error": "validation failed", "fields": { "<camelCaseField>": "<message>" } }`. **404** if the user document is missing (complete login first). **Authenticated**.
 
 ### List friends
 
@@ -59,3 +59,4 @@ POST /friends: Adds a new friend user by their `ShareToken` if such friend does 
 ### Delete friend
 
 DELETE /friends/<share-token>: Deletes a friend user by their `ShareToken`, if such friend exists for current user. **Authenticated**.
+

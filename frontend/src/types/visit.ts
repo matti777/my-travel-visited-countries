@@ -22,5 +22,7 @@ export interface ShareProfileResponse {
   userName: string;
   imageUrl?: string;
   homeCountryCode?: string;
+  instagramUserName?: string;
   description?: string;
 }
+

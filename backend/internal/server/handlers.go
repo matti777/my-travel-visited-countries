@@ -140,6 +140,30 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 		settings.HomeCountryCode = home
 	}
 
+	if igRaw, hasIg := raw["instagramUserName"]; hasIg {
+		var ig string
+		if err := json.Unmarshal(igRaw, &ig); err != nil {
+			c.JSON(http.StatusBadRequest, models.NewValidationErrors(map[string]string{
+				"instagramUserName": "invalid Instagram username",
+			}))
+			return
+		}
+		if ig == "" {
+			c.JSON(http.StatusBadRequest, models.NewValidationErrors(map[string]string{
+				"instagramUserName": "omit instagramUserName to clear; do not send an empty string",
+			}))
+			return
+		}
+		ig = models.NormalizeInstagramUserName(ig)
+		if err := models.ValidateInstagramUserName(ig); err != nil {
+			c.JSON(http.StatusBadRequest, models.NewValidationErrors(map[string]string{
+				"instagramUserName": "invalid Instagram username",
+			}))
+			return
+		}
+		settings.InstagramUserName = ig
+	}
+
 	if descRaw, hasDesc := raw["description"]; hasDesc {
 		var desc string
 		if err := json.Unmarshal(descRaw, &desc); err != nil {
@@ -234,11 +258,12 @@ func (s *Server) GetShareProfileHandler(ctx context.Context, c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, models.ShareProfileResponse{
-		Visits:          visits,
-		UserName:        user.Name,
-		ImageUrl:        user.ImageURL,
-		HomeCountryCode: settings.HomeCountryCode,
-		Description:     settings.Description,
+		Visits:            visits,
+		UserName:          user.Name,
+		ImageUrl:          user.ImageURL,
+		HomeCountryCode:   settings.HomeCountryCode,
+		InstagramUserName: settings.InstagramUserName,
+		Description:       settings.Description,
 	})
 }
 
@@ -626,4 +651,5 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
+
 

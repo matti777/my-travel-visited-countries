@@ -31,8 +31,17 @@ function truncateDescription(value: string): string {
   return value.slice(0, MAX_DESCRIPTION_LENGTH);
 }
 
+function normalizeInstagramUserName(value: string): string {
+  let s = value.trim();
+  if (s.startsWith("@")) {
+    s = s.slice(1).trim();
+  }
+  return s;
+}
+
 function buildPutBody(
   homeCountryCode: string,
+  instagramUserName: string,
   description: string,
   sharing: UserSettings["sharing"],
 ): UserSettings {
@@ -40,6 +49,10 @@ function buildPutBody(
   const home = homeCountryCode.trim();
   if (home) {
     settings.homeCountryCode = home;
+  }
+  const ig = normalizeInstagramUserName(instagramUserName);
+  if (ig) {
+    settings.instagramUserName = ig;
   }
   const desc = description.trim();
   if (desc) {
@@ -83,6 +96,37 @@ export function openUserSettingsDialog(
   });
   homeDropdown.element.classList.add("user-settings-dialog__country");
   body.appendChild(homeDropdown.element);
+
+  const igFieldId = `user-settings-instagram-${Math.random().toString(36).slice(2, 9)}`;
+  const igLabel = document.createElement("label");
+  igLabel.className = "user-settings-dialog__field-label";
+  igLabel.htmlFor = igFieldId;
+  igLabel.textContent = "Instagram username";
+  body.appendChild(igLabel);
+
+  const igInput = document.createElement("input");
+  igInput.type = "text";
+  igInput.id = igFieldId;
+  igInput.className = "user-settings-dialog__instagram";
+  igInput.placeholder = "username";
+  igInput.autocomplete = "off";
+  igInput.spellcheck = false;
+  igInput.maxLength = 31;
+  igInput.disabled = true;
+  body.appendChild(igInput);
+
+  const igError = document.createElement("p");
+  igError.className = "field-error";
+  igError.hidden = true;
+  body.appendChild(igError);
+
+  const clearIgError = (): void => {
+    igInput.classList.remove("field-invalid");
+    igError.hidden = true;
+    igError.textContent = "";
+  };
+
+  igInput.addEventListener("input", clearIgError);
 
   const descFieldId = `user-settings-description-${Math.random().toString(36).slice(2, 9)}`;
   const descCount = createCharCountLabel({
@@ -181,6 +225,7 @@ export function openUserSettingsDialog(
     notesCb.disabled = !enabled;
     tagsCb.disabled = !enabled;
     descInput.disabled = !enabled;
+    igInput.disabled = !enabled;
     const homeInput = homeDropdown.element.querySelector(
       "input",
     ) as HTMLInputElement | null;
@@ -188,6 +233,16 @@ export function openUserSettingsDialog(
       homeInput.disabled = !enabled;
     }
     saveBtn.disabled = !enabled || saving;
+  };
+
+  const applyFieldErrors = (fields: Record<string, string>): void => {
+    clearIgError();
+    const igMsg = fields.instagramUserName;
+    if (igMsg) {
+      igInput.classList.add("field-invalid");
+      igError.textContent = igMsg;
+      igError.hidden = false;
+    }
   };
 
   const handleUnauthorized = (): void => {
@@ -209,12 +264,18 @@ export function openUserSettingsDialog(
   saveBtn.addEventListener("click", async () => {
     if (saving) return;
     saving = true;
+    clearIgError();
     setControlsEnabled(false);
-    const settings = buildPutBody(homeCountryCode, descInput.value, {
-      shareMediaUrl: mediaCb.checked,
-      shareNotes: notesCb.checked,
-      shareTags: tagsCb.checked,
-    });
+    const settings = buildPutBody(
+      homeCountryCode,
+      igInput.value,
+      descInput.value,
+      {
+        shareMediaUrl: mediaCb.checked,
+        shareNotes: notesCb.checked,
+        shareTags: tagsCb.checked,
+      },
+    );
     try {
       const saved = await api.updateSettings(settings);
       onSaved?.(saved);
@@ -224,11 +285,22 @@ export function openUserSettingsDialog(
       if (err instanceof ApiError && err.responseCode === 401) {
         handleUnauthorized();
         closeModal?.();
-      } else {
-        errorToast(err instanceof Error ? err.message : "Failed to save settings");
+        return;
+      }
+      if (
+        err instanceof ApiError &&
+        err.responseCode === 400 &&
+        err.fields &&
+        Object.keys(err.fields).length > 0
+      ) {
+        applyFieldErrors(err.fields);
         saving = false;
         setControlsEnabled(true);
+        return;
       }
+      errorToast(err instanceof Error ? err.message : "Failed to save settings");
+      saving = false;
+      setControlsEnabled(true);
     }
   });
 
@@ -237,6 +309,7 @@ export function openUserSettingsDialog(
       const settings = await api.getSettings();
       homeCountryCode = settings.homeCountryCode ?? "";
       homeDropdown.setSelected(homeCountryCode);
+      igInput.value = settings.instagramUserName ?? "";
       descInput.value = truncateDescription(settings.description ?? "");
       descCount.setCount(descInput.value.length);
       mediaCb.checked = Boolean(settings?.sharing?.shareMediaUrl);

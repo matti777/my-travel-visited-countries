@@ -1,11 +1,13 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { attachTooltip } from "Components/tooltip";
 import type { Country } from "../../types/country";
 
 export interface UserProfileData {
   name: string;
   imageUrl?: string;
   homeCountryCode?: string;
+  instagramUserName?: string;
   description?: string;
   countriesVisited: number;
 }
@@ -25,6 +27,61 @@ function renderMarkdownHtml(markdown: string): string {
   return DOMPurify.sanitize(raw);
 }
 
+function isMobileUserAgent(): boolean {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+function instagramWebUrl(username: string): string {
+  return `https://www.instagram.com/${encodeURIComponent(username)}/`;
+}
+
+function openInstagramProfile(username: string): void {
+  const webUrl = instagramWebUrl(username);
+  if (!isMobileUserAgent()) {
+    window.open(webUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const appUrl = `instagram://user?username=${encodeURIComponent(username)}`;
+  let fellBack = false;
+  const fallback = (): void => {
+    if (fellBack) return;
+    fellBack = true;
+    window.location.href = webUrl;
+  };
+
+  const onVisibility = (): void => {
+    if (document.hidden) {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  const timer = window.setTimeout(() => {
+    document.removeEventListener("visibilitychange", onVisibility);
+    if (!document.hidden) {
+      fallback();
+    }
+  }, 900);
+
+  window.location.href = appUrl;
+}
+
+function createInstagramIconSvg(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("user-profile__instagram-icon");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute(
+    "d",
+    "M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5zM17.5 6.75a1.25 1.25 0 1 1-1.25 1.25 1.25 1.25 0 0 1 1.25-1.25z",
+  );
+  path.setAttribute("fill", "currentColor");
+  svg.appendChild(path);
+  return svg;
+}
+
 /**
  * Read-only traveller profile. See frontend/spec/components/user-profile.md.
  */
@@ -34,6 +91,7 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
     name: options.name,
     imageUrl: options.imageUrl,
     homeCountryCode: options.homeCountryCode,
+    instagramUserName: options.instagramUserName,
     description: options.description,
     countriesVisited: options.countriesVisited,
   };
@@ -74,6 +132,17 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
   homeRow.appendChild(homeLabel);
   homeRow.appendChild(homeValue);
   fields.appendChild(homeRow);
+
+  const igRow = document.createElement("div");
+  igRow.className = "user-profile__row";
+  const igLabel = document.createElement("span");
+  igLabel.className = "user-profile__label";
+  igLabel.textContent = "Instagram:";
+  const igValue = document.createElement("span");
+  igValue.className = "user-profile__value user-profile__instagram";
+  igRow.appendChild(igLabel);
+  igRow.appendChild(igValue);
+  // Inserted only when set — [hidden] loses to display:inline-flex under display:contents.
 
   const visitedRow = document.createElement("div");
   visitedRow.className = "user-profile__row";
@@ -122,6 +191,33 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
       nameSpan.textContent = country?.name ?? code;
       homeValue.appendChild(flag);
       homeValue.appendChild(nameSpan);
+    }
+
+    igValue.replaceChildren();
+    const ig = (state.instagramUserName ?? "").trim();
+    if (ig) {
+      const link = document.createElement("a");
+      link.className = "user-profile__instagram-link";
+      link.href = instagramWebUrl(ig);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", "Open Instagram profile");
+      link.appendChild(createInstagramIconSvg());
+      const igHandle = document.createElement("span");
+      igHandle.className = "user-profile__instagram-handle";
+      igHandle.textContent = `@${ig}`;
+      link.appendChild(igHandle);
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        openInstagramProfile(ig);
+      });
+      attachTooltip(link, "Open Instagram profile");
+      igValue.appendChild(link);
+      if (!igRow.isConnected) {
+        fields.insertBefore(igRow, visitedRow);
+      }
+    } else if (igRow.isConnected) {
+      igRow.remove();
     }
 
     visitedValue.textContent = String(state.countriesVisited);

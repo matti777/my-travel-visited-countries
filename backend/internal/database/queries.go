@@ -408,6 +408,9 @@ func (c *Client) UpdateUserSettings(
 			"ShareTags":     settings.Sharing.ShareTags,
 		},
 	}
+	if settings.InstagramUserName != "" {
+		settingsDoc["InstagramUserName"] = settings.InstagramUserName
+	}
 	if settings.HomeCountryCode != "" {
 		settingsDoc["HomeCountryCode"] = settings.HomeCountryCode
 	}
@@ -425,4 +428,5 @@ func (c *Client) UpdateUserSettings(
 	}
 	return nil
 }
+
 

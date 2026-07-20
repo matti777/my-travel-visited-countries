@@ -33,13 +33,26 @@ export class ApiError extends Error {
   message: string;
   responseCode?: number;
   cause?: any;
+  /** Field-level validation errors from 400 ValidationErrors responses. */
+  fields?: Record<string, string>;
 
-  constructor({ message, responseCode, cause }: { message: string; responseCode?: number; cause?: any }) {
+  constructor({
+    message,
+    responseCode,
+    cause,
+    fields,
+  }: {
+    message: string;
+    responseCode?: number;
+    cause?: any;
+    fields?: Record<string, string>;
+  }) {
     super();
 
     this.message = message;
     this.responseCode = responseCode;
     this.cause = cause;
+    this.fields = fields;
   }
 }
 
@@ -314,11 +327,30 @@ export default class Api {
     }
 
     if (response.status < 200 || response.status >= 400) {
+      let message = `Invalid status ${response.status}: ${response.statusText}`;
+      let fields: Record<string, string> | undefined;
+      try {
+        const body = (await response.json()) as {
+          error?: string;
+          fields?: Record<string, string>;
+        };
+        if (body?.error) {
+          message = body.error;
+        }
+        if (body?.fields && typeof body.fields === "object") {
+          fields = body.fields;
+        }
+      } catch (err) {
+        console.error("Failed to parse error response body", err);
+      }
       const apiError = new ApiError({
-        message: `Invalid status ${response.status}: ${response.statusText}`,
+        message,
         responseCode: response.status,
+        fields,
       });
-      if (response.status !== 401) {
+      const isFieldValidation =
+        response.status === 400 && fields && Object.keys(fields).length > 0;
+      if (response.status !== 401 && !isFieldValidation) {
         errorToast(apiError.message);
       }
       throw apiError;
@@ -338,5 +370,6 @@ export default class Api {
 }
 
 export let api = new Api();
+
 
 
