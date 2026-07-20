@@ -30,23 +30,97 @@ interface SvgPanZoomPublic {
   };
   getPan: () => { x: number; y: number };
   pan: (point: { x: number; y: number }) => unknown;
+  setBeforePan: (
+    fn: (
+      oldPan: { x: number; y: number },
+      newPan: { x: number; y: number }
+    ) => { x: number; y: number } | boolean
+  ) => unknown;
+  setOnZoom: (fn: (scale: number) => void) => unknown;
 }
 
 interface SvgMapWithPanZoom {
   mapPanZoom?: SvgPanZoomPublic;
+  setControlStatuses?: () => void;
 }
 
-/** Fit to width and place the map’s vertical center on the shell’s center Y. */
+function contentCenterPan(sizes: ReturnType<SvgPanZoomPublic["getSizes"]>): {
+  x: number;
+  y: number;
+} {
+  return {
+    x:
+      (sizes.width - sizes.viewBox.width * sizes.realZoom) / 2 -
+      sizes.viewBox.x * sizes.realZoom,
+    y:
+      (sizes.height - sizes.viewBox.height * sizes.realZoom) / 2 -
+      sizes.viewBox.y * sizes.realZoom,
+  };
+}
+
+function panMapToShellCenter(panZoom: SvgPanZoomPublic): void {
+  panZoom.pan(contentCenterPan(panZoom.getSizes()));
+}
+
+/**
+ * svgMap’s stock beforePan uses 85% gutters. When the map is shorter than the shell
+ * (overview / zoomed-out), topLimit > bottomLimit and Math.max/min always resolves to
+ * topLimit — which parks the equator in the lower part of the container. Any pan()
+ * (including center) is forced there too.
+ *
+ * When content fits an axis, pin that axis to the shell center (equator on center-Y).
+ * When zoomed in past the shell, keep gutter-style pan limits with ordered bounds.
+ */
+function constrainPanToShell(
+  panZoom: SvgPanZoomPublic,
+  newPan: { x: number; y: number }
+): { x: number; y: number } {
+  const sizes = panZoom.getSizes();
+  const contentW = sizes.viewBox.width * sizes.realZoom;
+  const contentH = sizes.viewBox.height * sizes.realZoom;
+  const center = contentCenterPan(sizes);
+  // 1px slack for float / subpixel layout.
+  const fitsX = contentW <= sizes.width + 1;
+  const fitsY = contentH <= sizes.height + 1;
+
+  let x = newPan.x;
+  let y = newPan.y;
+
+  if (fitsX) {
+    x = center.x;
+  } else {
+    const gutterW = sizes.width * 0.85;
+    const leftLimit =
+      -((sizes.viewBox.x + sizes.viewBox.width) * sizes.realZoom) + gutterW;
+    const rightLimit =
+      sizes.width - gutterW - sizes.viewBox.x * sizes.realZoom;
+    const minX = Math.min(leftLimit, rightLimit);
+    const maxX = Math.max(leftLimit, rightLimit);
+    x = Math.max(minX, Math.min(maxX, x));
+  }
+
+  if (fitsY) {
+    y = center.y;
+  } else {
+    const gutterH = sizes.height * 0.85;
+    const topLimit =
+      -((sizes.viewBox.y + sizes.viewBox.height) * sizes.realZoom) + gutterH;
+    const bottomLimit =
+      sizes.height - gutterH - sizes.viewBox.y * sizes.realZoom;
+    const minY = Math.min(topLimit, bottomLimit);
+    const maxY = Math.max(topLimit, bottomLimit);
+    y = Math.max(minY, Math.min(maxY, y));
+  }
+
+  return { x, y };
+}
+
+/** Fit to width and place the map’s equator on the shell’s center Y. */
 function alignMapToShellCenter(panZoom: SvgPanZoomPublic): void {
   panZoom.resize();
   panZoom.fit();
   panZoom.center();
-  const sizes = panZoom.getSizes();
-  const pan = panZoom.getPan();
-  const centerY =
-    (sizes.height - sizes.viewBox.height * sizes.realZoom) / 2 -
-    sizes.viewBox.y * sizes.realZoom;
-  panZoom.pan({ x: pan.x, y: centerY });
+  panMapToShellCenter(panZoom);
 }
 
 /**
@@ -126,6 +200,11 @@ export function createVisitsMap(
         return;
       }
 
+      // Replace svgMap’s inverted overview clamp (see constrainPanToShell).
+      panZoom.setBeforePan((_oldPan, newPan) =>
+        constrainPanToShell(panZoom, newPan)
+      );
+
       const mapSvg = container.querySelector(".svgMap-map-image");
       if (mapSvg instanceof SVGElement) {
         // Explicit pixel size so svg-pan-zoom’s fit/center uses the full shell.
@@ -146,6 +225,25 @@ export function createVisitsMap(
         }
       };
 
+      /** After zoom-out past shell height, snap equator back to center-Y. */
+      const recenterIfContentFits = (): void => {
+        if (disposed) return;
+        try {
+          const sizes = panZoom.getSizes();
+          const contentH = sizes.viewBox.height * sizes.realZoom;
+          if (contentH <= sizes.height + 1) {
+            panMapToShellCenter(panZoom);
+          }
+        } catch (err) {
+          console.error("failed to recenter visits map:", err);
+        }
+      };
+
+      panZoom.setOnZoom(() => {
+        mapInstance.setControlStatuses?.();
+        recenterIfContentFits();
+      });
+
       // Align after layout settles (first paint can still report a short SVG).
       syncAlignment();
       requestAnimationFrame(() => {
@@ -153,10 +251,19 @@ export function createVisitsMap(
         requestAnimationFrame(syncAlignment);
       });
 
+      container.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+      });
+
       resizeObserver = new ResizeObserver(() => {
         if (disposed) return;
         try {
+          if (mapSvg instanceof SVGElement) {
+            mapSvg.setAttribute("width", String(container.clientWidth));
+            mapSvg.setAttribute("height", String(container.clientHeight));
+          }
           panZoom.resize();
+          recenterIfContentFits();
         } catch (err) {
           console.error("failed to resize visits map:", err);
         }
