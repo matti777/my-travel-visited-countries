@@ -1,5 +1,6 @@
 import type { GlobeInstance } from "globe.gl";
 import { buildCountryFillValues, getVisitedHighlightCodes, type CountryFillValue } from "../visits-map-shared/colors";
+import { showMapLoading } from "../visits-map-shared/loading";
 import type { VisitsVizHandle, VisitsVizOptions } from "../visits-map-shared/options";
 import { buildCountryNames, buildVisitsMapTooltip, groupVisitsByCountry } from "../visits-map-shared/tooltip";
 import { buildPinData, createPinResources, POLYGON_ALTITUDE, type PinDatum, type PinResources } from "./pins";
@@ -122,6 +123,8 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
     root.style.height = `${options.height}px`;
   }
   parent.appendChild(root);
+
+  const loading = showMapLoading(root);
 
   const canvasHost = document.createElement("div");
   canvasHost.className = "visits-globe__canvas";
@@ -291,15 +294,22 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
         import("globe.gl"),
         fetch(asset("ne_110m_admin_0_countries.geojson")),
       ]);
-      if (disposed) return;
+      if (disposed) {
+        loading.dismiss();
+        return;
+      }
 
       if (!geoRes.ok) {
         console.error("failed to load countries geojson:", geoRes.status);
+        loading.dismiss();
         return;
       }
 
       const collection = (await geoRes.json()) as GeoFeatureCollection;
-      if (disposed) return;
+      if (disposed) {
+        loading.dismiss();
+        return;
+      }
 
       const visitedFeatures = collection.features.filter((f) => {
         const iso = featureIso(f.properties);
@@ -409,14 +419,17 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
       });
       resizeObserver.observe(root);
       syncFullscreenButton();
+      if (!disposed) loading.dismiss();
     } catch (err) {
       console.error("failed to create visits globe:", err);
+      loading.dismiss();
     }
   })();
 
   return {
     dispose: () => {
       disposed = true;
+      loading.dismiss();
       hideTooltip();
       root.removeEventListener("pointermove", onPointerMove);
       fsBtn.removeEventListener("click", onFsClick);
@@ -448,5 +461,6 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
     },
   };
 }
+
 
 

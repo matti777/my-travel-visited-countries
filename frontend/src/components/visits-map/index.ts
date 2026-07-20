@@ -5,6 +5,7 @@ import {
   COLOR_UNVISITED_SOVEREIGN,
   COLOR_VISITED_DEFAULT,
 } from "../visits-map-shared/colors";
+import { showMapLoading } from "../visits-map-shared/loading";
 import type {
   VisitsVizHandle,
   VisitsVizOptions,
@@ -14,6 +15,7 @@ import {
   buildVisitsMapTooltip,
   groupVisitsByCountry,
 } from "../visits-map-shared/tooltip";
+import { attachTouchPanPinch } from "./touch-pan-pinch";
 
 export type CreateVisitsMapOptions = VisitsVizOptions;
 export type { VisitsVizHandle };
@@ -30,6 +32,9 @@ interface SvgPanZoomPublic {
   };
   getPan: () => { x: number; y: number };
   pan: (point: { x: number; y: number }) => unknown;
+  panBy: (point: { x: number; y: number }) => unknown;
+  getZoom: () => number;
+  zoomAtPoint: (scale: number, point: { x: number; y: number }) => unknown;
   setBeforePan: (
     fn: (
       oldPan: { x: number; y: number },
@@ -122,6 +127,8 @@ export function createVisitsMap(
   }
   parent.appendChild(container);
 
+  const loading = showMapLoading(container);
+
   const visitsByCountry = groupVisitsByCountry(visits);
   const listedCodes = new Set(countries.map((c) => c.countryCode.toUpperCase()));
   const values = buildCountryFillValues(countryCodes, countries, visits);
@@ -129,6 +136,7 @@ export function createVisitsMap(
 
   let disposed = false;
   let resizeObserver: ResizeObserver | null = null;
+  let detachTouch: (() => void) | null = null;
 
   const startSvgMap = (): void => {
     if (disposed || !document.getElementById(id)) return;
@@ -178,6 +186,7 @@ export function createVisitsMap(
 
       const panZoom = mapInstance.mapPanZoom;
       if (!panZoom) {
+        loading.dismiss();
         return;
       }
 
@@ -192,6 +201,13 @@ export function createVisitsMap(
         mapSvg.setAttribute("width", String(container.clientWidth));
         mapSvg.setAttribute("height", String(container.clientHeight));
       }
+
+      // Take over touch: stock svg-pan-zoom has no pinch (pan + double-tap only).
+      const touchRoot =
+        container.querySelector(".svgMap-map-wrapper") instanceof HTMLElement
+          ? (container.querySelector(".svgMap-map-wrapper") as HTMLElement)
+          : container;
+      detachTouch = attachTouchPanPinch(touchRoot, panZoom);
 
       const syncAlignment = (): void => {
         if (disposed) return;
@@ -210,7 +226,10 @@ export function createVisitsMap(
       syncAlignment();
       requestAnimationFrame(() => {
         syncAlignment();
-        requestAnimationFrame(syncAlignment);
+        requestAnimationFrame(() => {
+          syncAlignment();
+          if (!disposed) loading.dismiss();
+        });
       });
 
       container.addEventListener("contextmenu", (e) => {
@@ -234,6 +253,7 @@ export function createVisitsMap(
       resizeObserver.observe(container);
     } catch (err) {
       console.error("failed to create visits map:", err);
+      loading.dismiss();
     }
   };
 
@@ -242,8 +262,11 @@ export function createVisitsMap(
   return {
     dispose: () => {
       disposed = true;
+      detachTouch?.();
+      detachTouch = null;
       resizeObserver?.disconnect();
       resizeObserver = null;
+      loading.dismiss();
       container.remove();
     },
   };

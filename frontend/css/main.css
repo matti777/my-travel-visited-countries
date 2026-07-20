@@ -1227,6 +1227,34 @@ main.about-page {
   background: transparent;
 }
 
+/* Slight map/globe load indicator */
+.visit-map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.visit-map-loading__spinner {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 80, 90, 0.18);
+  border-top-color: rgba(0, 120, 130, 0.9);
+  animation: visit-map-spin 0.65s linear infinite;
+}
+
+@keyframes visit-map-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 .visits-globe__canvas {
   position: absolute;
   inset: 0;
@@ -1358,6 +1386,8 @@ body.visits-globe-immersive-open {
   min-height: 1px;
   background-color: transparent;
   overflow: hidden;
+  /* Allow JS pinch/pan; block browser page-zoom on the map. */
+  touch-action: none;
 }
 
 /* SVG fills the wrapper; viewBox + meet keeps content full-width and Y-centered. */

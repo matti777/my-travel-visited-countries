@@ -1,3 +1,4 @@
+import { showMapLoading } from "../visits-map-shared/loading";
 import type {
   VisitsVizHandle,
   VisitsVizOptions,
@@ -84,6 +85,7 @@ export function createVisitListMapShell(
     if (switching || disposed) return;
     switching = true;
     setToggleDisabled(true);
+    const loading = showMapLoading(shell);
     try {
       const { createVisitsMap } = await import("../visits-map");
       if (disposed) return;
@@ -95,6 +97,7 @@ export function createVisitListMapShell(
     } catch (err) {
       console.error("failed to load 2D map view:", err);
     } finally {
+      loading.dismiss();
       switching = false;
       if (!disposed) setToggleDisabled(false);
     }
@@ -104,6 +107,7 @@ export function createVisitListMapShell(
     if (switching || disposed) return;
     switching = true;
     setToggleDisabled(true);
+    const loading = showMapLoading(shell);
     try {
       const { createVisitsGlobe } = await import("../visits-globe");
       if (disposed) return;
@@ -115,6 +119,7 @@ export function createVisitListMapShell(
     } catch (err) {
       console.error("failed to load 3D globe view:", err);
     } finally {
+      loading.dismiss();
       switching = false;
       if (!disposed) setToggleDisabled(false);
     }
@@ -142,5 +147,6 @@ export function createVisitListMapShell(
     },
   };
 }
+
 
 

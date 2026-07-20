@@ -14,6 +14,8 @@ Same `VisitsVizOptions` as [visits-map-component.md](visits-map-component.md). `
 
 ## Lazy loading
 
+Shows a slight centered spinner until globe.gl, GeoJSON, and the WebGL scene are ready.
+
 `globe.gl`, GeoJSON, and earth textures are loaded **inside** `createVisitsGlobe` (dynamic `import` + `fetch`). Three.js is pulled in with this module (for pin meshes) but not the initial page bundle; prefer also dynamic-importing this module from the caller (as the Map shell does).
 
 ## Rendering
