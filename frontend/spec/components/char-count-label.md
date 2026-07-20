@@ -1,6 +1,6 @@
 # Character count label component
 
-Reusable label row with a live `[current / max]` counter. Used for visit notes in the [country visit editor](country-visit-editor-component.md) and for Description in the [user settings dialog](user-settings-dialog.md).
+Reusable label row with a live `[current / max]` counter. Used for visit notes in the [country visit editor](country-visit-editor.md) and for Description in the [user settings dialog](user-settings-dialog.md).
 
 ## Presentation
 

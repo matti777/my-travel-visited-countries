@@ -1,6 +1,6 @@
 # Country dropdown component
 
-Searchable country selector used by the [country visit editor](country-visit-editor-component.md) and the [user settings dialog](user-settings-dialog.md) (home country).
+Searchable country selector used by the [country visit editor](country-visit-editor.md) and the [user settings dialog](user-settings-dialog.md) (home country).
 
 ## Behavior
 

@@ -46,7 +46,7 @@ export function fitCountryVisitInfoTooltipToViewport(
 
 /**
  * Hover content for by-continent and timeline visit cards
- * (see country-visit-info-tooltip-component.md).
+ * (see country-visit-info-tooltip.md).
  */
 export function buildCountryVisitInfoTooltipHtml(
   visit: CountryVisit,

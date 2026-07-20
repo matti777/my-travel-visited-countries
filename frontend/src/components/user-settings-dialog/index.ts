@@ -50,7 +50,7 @@ function buildPutBody(
 
 /**
  * Opens the user settings dialog (GET /settings on open, PUT on Save).
- * See frontend/spec/user-settings-dialog.md.
+ * See frontend/spec/components/user-settings-dialog.md.
  */
 export function openUserSettingsDialog(
   options: OpenUserSettingsDialogOptions,

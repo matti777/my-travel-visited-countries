@@ -29,7 +29,7 @@ function filterCountries(countries: Country[], query: string): Country[] {
  * Creates a custom dropdown: single text input with placeholder "Select country".
  * When the input is focused/clicked, the list opens underneath and the input is used as the filter.
  * ESC or click outside closes the list.
- * See frontend/spec/country-dropdown-component.md.
+ * See frontend/spec/components/country-dropdown.md.
  */
 export function createCountryDropdown(
   options: CountryDropdownOptions,

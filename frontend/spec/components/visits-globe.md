@@ -10,7 +10,7 @@ Shared fill colors and tooltip DOM live in `src/components/visits-map-shared/`.
 createVisitsGlobe(parent: HTMLElement, options: VisitsVizOptions): VisitsVizHandle
 ```
 
-Same `VisitsVizOptions` as [visits-map-component.md](visits-map-component.md). `dispose()` tears down WebGL, observers, and DOM.
+Same `VisitsVizOptions` as [visits-map.md](visits-map.md). `dispose()` tears down WebGL, observers, and DOM.
 
 ## Lazy loading
 
@@ -44,8 +44,9 @@ On touch / coarse-pointer devices, hover tips stay hidden; tap a country or pin 
 
 ## Related
 
-- [visits-map-component.md](visits-map-component.md) — 2D counterpart
+- [visits-map.md](visits-map.md) — 2D counterpart
 - Asset provenance: `public/assets/globe/README.md`
 - Map tab composition: `Components/visit-list-map-shell`
+
 
 

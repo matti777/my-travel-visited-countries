@@ -4,10 +4,10 @@ import { logAnalyticsEvent } from "../../firebase";
 /** Max tags per visit — must match backend MaxTagsPerVisit / api.md. */
 export const MAX_TAGS_PER_VISIT = 10;
 
-/** Minimum characters per tag (tag-editor-component.md). */
+/** Minimum characters per tag (tag-editor.md). */
 export const MIN_TAG_LENGTH = 2;
 
-/** Alphabetically sorted preset suggestions (tag-editor-component.md). */
+/** Alphabetically sorted preset suggestions (tag-editor.md). */
 export const SUGGESTED_TAGS: readonly string[] = [
   "adventure",
   "backpacking",

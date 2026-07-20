@@ -33,6 +33,7 @@ createVisitsMap(parent: HTMLElement, options: VisitsVizOptions): VisitsVizHandle
 
 ## Related
 
-- [visits-globe-component.md](visits-globe-component.md) — 3D counterpart
+- [visits-globe.md](visits-globe.md) — 3D counterpart
 - Map tab composition: `Components/visit-list-map-shell`
+
 

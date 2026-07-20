@@ -26,7 +26,7 @@ function renderMarkdownHtml(markdown: string): string {
 }
 
 /**
- * Read-only traveller profile. See frontend/spec/user-profile-component.md.
+ * Read-only traveller profile. See frontend/spec/components/user-profile.md.
  */
 export function createUserProfile(options: CreateUserProfileOptions): UserProfileHandle {
   const { countries, baseUrl } = options;

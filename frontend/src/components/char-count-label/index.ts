@@ -46,7 +46,7 @@ function countColor(length: number, maxLength: number): string {
 
 /**
  * Label with title + colored [current / max] counter.
- * See frontend/spec/char-count-label-component.md.
+ * See frontend/spec/components/char-count-label.md.
  */
 export function createCharCountLabel(
   options: CharCountLabelOptions,

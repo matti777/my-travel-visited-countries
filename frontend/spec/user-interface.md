@@ -6,9 +6,9 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 ## UI routing
 
-If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see @api.md) and displayed. The public [user profile](user-profile-component.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
+If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
 
-If the URL path is `/profile` and the user is logged in, the own [user profile](user-profile-component.md) is shown with an **Edit settings** button underneath (opens the [user settings dialog](user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
+If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown with an **Edit settings** button underneath (opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -32,7 +32,7 @@ All animations shall have a duration of 0.4 seconds.
 
 Any input validation errors should add a red border around the input component and disable the Add button until the errors have been resolved.
 
-Any tooltips should be represented as a custom component instead of any "alt" text etc. The component should mainly be placed on top of the component that the tooltip belongs to, but if it wont fit, it should be placed on the side where there is room. The color theme of the tooltip component must match the look and feel of the rest of the application. Visit-card hover content (notes, tags, media hint) is built by the [country visit info tooltip](country-visit-info-tooltip-component.md); placement uses the shared tooltip shell.
+Any tooltips should be represented as a custom component instead of any "alt" text etc. The component should mainly be placed on top of the component that the tooltip belongs to, but if it wont fit, it should be placed on the side where there is room. The color theme of the tooltip component must match the look and feel of the rest of the application. Visit-card hover content (notes, tags, media hint) is built by the [country visit info tooltip](components/country-visit-info-tooltip.md); placement uses the shared tooltip shell.
 
 ## Page structure
 
@@ -46,9 +46,9 @@ If not logged in, this section is not visible.
 
 This section has several possible representation modes, each a "tab" which - depending on the selection in the tab control mentioned below - uses up the entire space of the section, ie. only one representation mode (or "tab") is visible at any given time.
 
-The section title shows the number of unique countries visited in parentheses. In normal page routing mode the title is **Your visited countries (N)**. In shared profile routing mode it is **&lt;user name&gt;'s visited countries (N)**, or **Shared visit list (N)** if the shared user's name is unavailable. **N** is the count of distinct country codes in the visit list (not the total number of visit rows). When a tag filter is active (see below), **N** counts only countries that have at least one visit matching the filter. On a shared profile page, the [user profile component](user-profile-component.md) is rendered above this section.
+The section title shows the number of unique countries visited in parentheses. In normal page routing mode the title is **Your visited countries (N)**. In shared profile routing mode it is **&lt;user name&gt;'s visited countries (N)**, or **Shared visit list (N)** if the shared user's name is unavailable. **N** is the count of distinct country codes in the visit list (not the total number of visit rows). When a tag filter is active (see below), **N** counts only countries that have at least one visit matching the filter. On a shared profile page, the [user profile component](components/user-profile.md) is rendered above this section.
 
-On **Alphabetical**, **By continent**, **Map**, and **Timeline** tabs (but not **Statistics**), immediately below the section title, there is a **Filter by tags** row: a text input with placeholder "Filter by tags", using the same input rules as the [tag editor component](tag-editor-component.md) (lowercase ASCII `[a-z]` only; invalid characters are stripped). When the user has entered **two or more** such characters, a **1.0 second** debounce runs (reset on each change); when it fires, the in-memory visit list is filtered so only visits that have **at least one tag** whose value **contains** the typed substring are shown (substring match). This affects the **N** in the section title, the country grids, the Timeline and By continent lists, and the Map (highlighted countries and visit tooltips). Fewer than two characters means **no** tag filter is applied. Inside the input, along the **right** edge, is a faint circular **clear** control (×) that empties the field and resets the filter **immediately** without waiting for the debounce; its tooltip reads **Clear search filter**.
+On **Alphabetical**, **By continent**, **Map**, and **Timeline** tabs (but not **Statistics**), immediately below the section title, there is a **Filter by tags** row: a text input with placeholder "Filter by tags", using the same input rules as the [tag editor component](components/tag-editor.md) (lowercase ASCII `[a-z]` only; invalid characters are stripped). When the user has entered **two or more** such characters, a **1.0 second** debounce runs (reset on each change); when it fires, the in-memory visit list is filtered so only visits that have **at least one tag** whose value **contains** the typed substring are shown (substring match). This affects the **N** in the section title, the country grids, the Timeline and By continent lists, and the Map (highlighted countries and visit tooltips). Fewer than two characters means **no** tag filter is applied. Inside the input, along the **right** edge, is a faint circular **clear** control (×) that empties the field and resets the filter **immediately** without waiting for the debounce; its tooltip reads **Clear search filter**.
 
 **Tab 1:** Alphabetical list
 
@@ -72,13 +72,13 @@ Edit mode will not be available when in shared profile routing mode; instead, a 
 
 Similar listing to what Tab 1 describes but the countries are listed under 'subtitles' representing each possible content. Continents are listed in alphabetical order as well as the countries within them. Each continent gets a title with the continent name (and a country count in parenthesis) and under it, the list of countries. The continent subsections are separated by a reasonable amount of vertical padding. Unlike the alphabetical list, here the countries listed are not unique, but instead each visit gets its own country cell. The visits within a country are sorted by their `VisitTime`. Here the country cells will display the time of the visit, in a similar fashion as in the edit mode. A tooltip for each cell shall read "Click to view attached media" IF `MediaURL` is present. If such a cell is clicked, the media URL should be opened in a new tab. For such a cell, the visit time text should look like a link to indicate the presence of the media url.
 
-Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](country-visit-info-tooltip-component.md).
+Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](components/country-visit-info-tooltip.md).
 
-While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](country-visit-editor-component.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a secondary (outline) button labeled **Close without saving** to dismiss without applying edits; **Save visit** remains the primary action.
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](components/country-visit-editor.md). It shall be presented as a "popup dialog", centered on screen, laid over the page content, with a dark layover view blocking the page content. Clicking outside of the component will close it. Standard appear/disappear animations are applied to this component. The dialog shall include a secondary (outline) button labeled **Close without saving** to dismiss without applying edits; **Save visit** remains the primary action.
 
 **Tab 3:** Countries plotted on map
 
-Displays visited countries on a map visualization. The 2D map and 3D globe each use the full map shell (`.visit-list-map-shell`). The 2D map’s pan/zoom viewport fills that shell; Mercator content spans the width and is vertically centered within it. A lower-right **2D | 3D** toggle switches projection (tooltips: "Flat Mercator view" / "Globe view"). **2D** is the default on load and when remounting the tab. Both modes are lazy-loaded: **2D** loads [visits-map](visits-map-component.md) (svgMap) when the Map tab mounts; **3D** loads [visits-globe](visits-globe-component.md) (globe.gl) only when first selected. A slight spinner shows while each view loads. On touch devices, the 2D map supports one-finger pan and two-finger pinch-zoom. On mobile, tapping a country shows a sticky visit tooltip (5s, fades on pan/zoom/tap-away).
+Displays visited countries on a map visualization. The 2D map and 3D globe each use the full map shell (`.visit-list-map-shell`). The 2D map’s pan/zoom viewport fills that shell; Mercator content spans the width and is vertically centered within it. A lower-right **2D | 3D** toggle switches projection (tooltips: "Flat Mercator view" / "Globe view"). **2D** is the default on load and when remounting the tab. Both modes are lazy-loaded: **2D** loads [visits-map](components/visits-map.md) (svgMap) when the Map tab mounts; **3D** loads [visits-globe](components/visits-globe.md) (globe.gl) only when first selected. A slight spinner shows while each view loads. On touch devices, the 2D map supports one-finger pan and two-finger pinch-zoom. On mobile, tapping a country shows a sticky visit tooltip (5s, fades on pan/zoom/tap-away).
 
 If a visit listed here has a `MediaURL` set, that visit should look like a link and have a tooltip about the link like in Tab 2. It also needs to be clickable and open the link in a new tab.
 
@@ -142,7 +142,7 @@ While a confirmation dialog is open (for example delete visit or remove friend),
 
 If not logged in, this section is not visible. If viewing a shared profile or own profile page, this section is not visible either.
 
-This section holds the controls to add a new visited country. This is handled by [this reusable component](country-visit-editor-component.md).
+This section holds the controls to add a new visited country. This is handled by [this reusable component](components/country-visit-editor.md).
 
 ---
 
@@ -150,7 +150,7 @@ If not logged in OR not viewing another user's shared profile, this section is n
 
 If the user (by their `ShareToken`) is not yet found in the current user's friends list (see local variable holding it), the UI should display a text "Would you like to add <name> to your friends list?" and a "Add friend" button. Otherwise the UI should say "<name> is in your friend list.".
 
-Clicking "Add friend" button should attempt to create the friend in the backend using the api call mentioned in @api.md. If successful, it should update the friend list variable automatically _without_ an extra API call to GET /friends.
+Clicking "Add friend" button should attempt to create the friend in the backend using the api call mentioned in [api.md](../../backend/spec/api.md). If successful, it should update the friend list variable automatically _without_ an extra API call to GET /friends.
 
 ---
 

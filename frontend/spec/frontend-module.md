@@ -1,12 +1,12 @@
 # Frontend module
 
-This is the web frontend module for our app. It is intended to be built into minimal distribution using Vite. The resulting static files are to be served by the backend application (see @backend-module.md).
+This is the web frontend module for our app. It is intended to be built into minimal distribution using Vite. The resulting static files are to be served by the backend application (see [backend-module.md](../../backend/spec/backend-module.md)).
 
 ## Module Structure
 
 The frontend application shall follow this structure:
 
-- `spec/`: Specifications (markdown and any other files use to document the app)
+- `spec/`: Specifications (markdown and any other files use to document the app). Component specs live under `spec/components/`.
 - `css/`: All CSS files go here
 - `src/`: All source files go here.
 - `src/components/`: All 'component' source files go here, with a subdirectory + index.ts per component.
@@ -17,8 +17,8 @@ Thumbnail sized (no more than a couple of kilobytes each) flags are stored as JP
 
 ## Map visualization components
 
-- [visits-map](visits-map-component.md) — 2D Mercator (`svgmap`), `Components/visits-map`
-- [visits-globe](visits-globe-component.md) — 3D Globe.GL, `Components/visits-globe`
+- [visits-map](components/visits-map.md) — 2D Mercator (`svgmap`), `Components/visits-map`
+- [visits-globe](components/visits-globe.md) — 3D Globe.GL, `Components/visits-globe`
 - Map tab shell: `Components/visit-list-map-shell` (2D/3D toggle; lazy-loads svgMap + globe)
 - Shared colors/tooltips: `Components/visits-map-shared`
 - Dependency: `globe.gl` (MIT). Vendored textures + GeoJSON under `public/assets/globe/` (see README there).
@@ -56,7 +56,7 @@ The **Statistics** tab counts **only** visits whose `countryCode` exists in the 
 
 ## User Authentication
 
-The application provides Login (or Log out, when logged in) buttons in the top right corner. Pressing Login dynamically loads FirebaseUI and shows an authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the Log out button; clicking the name or avatar opens the [user settings dialog](user-settings-dialog.md). Pressing Log out shall take the proper steps of logging the user out of Firebase Authentication.
+The application provides Login (or Log out, when logged in) buttons in the top right corner. Pressing Login dynamically loads FirebaseUI and shows an authentication screen where they can log in using the enabled authentication providers (just Google for now). When the user is logged in, their name + avatar image are displayed next to the Log out button; clicking the name or avatar opens the [user settings dialog](components/user-settings-dialog.md). Pressing Log out shall take the proper steps of logging the user out of Firebase Authentication.
 
 This authentication status is checked every time the app loads; if the user has a login session, the authentication token is recorded and stored into the global `api` instance provided by `api.ts`. The authentication token is to be kept in RAM only.
 
@@ -84,19 +84,19 @@ All major operations (network etc) should be logged to console log upon success 
 
 ## App initialization
 
-When the app starts, it checks the authentication status and then goes on to fetch a list of the countries from the backend (see @api.md). This list of countries shall be cached in the client for up to 7 days after which it will be invalidated from storage and refetched. This is to avoid unnecessary fetch operations for data that does not change often. Once the list of countries has been retrieved (from backend or local cache), it is stored in a variable held by `app.ts`.
+When the app starts, it checks the authentication status and then goes on to fetch a list of the countries from the backend (see [api.md](../../backend/spec/api.md)). This list of countries shall be cached in the client for up to 7 days after which it will be invalidated from storage and refetched. This is to avoid unnecessary fetch operations for data that does not change often. Once the list of countries has been retrieved (from backend or local cache), it is stored in a variable held by `app.ts`.
 
 ## Backend API
 
-For the backend API description, see @api.md.
+For the backend API description, see [api.md](../../backend/spec/api.md).
 
 ## Data models
 
-Implement Typescript types that adhere to the models defined in @data-models.md.
+Implement Typescript types that adhere to the models defined in [data-models.md](../../backend/spec/data-models.md).
 
 ## User interface
 
-The user interface for the application is defined in @user-interface.md.
+The user interface for the application is defined in [user-interface.md](user-interface.md).
 
-Modal confirmation dialogs (`Components/modal`) use a full-screen overlay whose stacking order sits above the edit-mode floating “Done” hint so overlays block interaction with controls behind them, including that float (see @user-interface.md).
+Modal confirmation dialogs (`Components/modal`) use a full-screen overlay whose stacking order sits above the edit-mode floating “Done” hint so overlays block interaction with controls behind them, including that float (see [user-interface.md](user-interface.md)).
 

@@ -4,7 +4,7 @@ Modal for editing the logged-in user's settings (`Settings` in data-models.md): 
 
 ## Presentation
 
-Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Panel content uses a thin border and padding similar to the [country visit editor](country-visit-editor-component.md). The dialog must fit within the viewport on desktop and mobile (including safe areas); title and action buttons stay visible while the form area may scroll if needed. Layout must not collapse or overflow horizontally.
+Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Panel content uses a thin border and padding similar to the [country visit editor](country-visit-editor.md). The dialog must fit within the viewport on desktop and mobile (including safe areas); title and action buttons stay visible while the form area may scroll if needed. Layout must not collapse or overflow horizontally.
 
 ## Opening
 
@@ -12,8 +12,8 @@ Opened from the own-profile page via **Edit settings** (not from the top bar). O
 
 ## Controls
 
-- **Home country** — [country dropdown](country-dropdown-component.md), clearable / optional (same behavior as the visit editor country selector).
-- **Description** — textarea with [character count label](char-count-label-component.md) titled **Free-form traveller description** (`maxLength` 1000). Markdown formatting supported (hint under the field).
+- **Home country** — [country dropdown](country-dropdown.md), clearable / optional (same behavior as the visit editor country selector).
+- **Description** — textarea with [character count label](char-count-label.md) titled **Free-form traveller description** (`maxLength` 1000). Markdown formatting supported (hint under the field).
 - Checkbox: share media URLs on shared profiles (`shareMediaUrl`)
 - Checkbox: share notes on shared visit lists (`shareNotes`)
 - Checkbox: share tags on shared visit lists (`shareTags`)
