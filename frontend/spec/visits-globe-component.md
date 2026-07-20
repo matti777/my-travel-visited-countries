@@ -38,7 +38,9 @@ Shows a slight centered spinner until globe.gl, GeoJSON, and the WebGL scene are
 
 ## Tooltips
 
-Hovering a visited (extruded) country or its pin shows one tooltip per country, matching the 2D map: flag, name, visit list, and media links. Implemented via Globe.GL `onPolygonHover` / `onObjectHover` plus a positioned DOM overlay (`.visits-globe__tooltip`). Hidden on touch devices via `@media (hover: none)`.
+Hovering a visited (extruded) country or its pin shows one tooltip per country, matching the 2D map: flag, name, visit list, and media links. Implemented via Globe.GL `onPolygonHover` / `onObjectHover` plus a positioned DOM overlay (`.visits-globe__tooltip`).
+
+On touch / coarse-pointer devices, hover tips stay hidden; tap a country or pin for a sticky tooltip (same content). It appears immediately, auto-fades after 5s, and dismisses with `--animation-duration` fade on globe pan/zoom (`controls` start), another tap on empty globe, or when the Map shell unmounts / switches mode.
 
 ## Related
 

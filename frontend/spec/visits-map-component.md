@@ -28,7 +28,8 @@ createVisitsMap(parent: HTMLElement, options: VisitsVizOptions): VisitsVizHandle
 - Touch: custom capture-phase pan + pinch-zoom (svg-pan-zoom has no built-in pinch); `touch-action: none` on the wrapper. Mouse wheel / zoom buttons / double-tap unchanged.
 - Slight loading spinner until the map is aligned.
 - Zoom / pan / reset via svgMap controls.
-- Hover tooltips: flag, title, visit list; media links call `onViewMediaUrl` when present.
+- Hover tooltips (fine pointer): flag, title, visit list; media links call `onViewMediaUrl` when present.
+- Mobile sticky tooltips (`hover: none` / coarse pointer): tap a country to show the same tooltip immediately; auto-fades after 5s (`--animation-duration`); dismisses with the same fade on pan, pinch-zoom, or another tap on empty map. Cleared when the Map shell unmounts / switches 2D↔3D.
 
 ## Related
 

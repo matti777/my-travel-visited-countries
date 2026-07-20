@@ -2,6 +2,11 @@ import type { GlobeInstance } from "globe.gl";
 import { buildCountryFillValues, getVisitedHighlightCodes, type CountryFillValue } from "../visits-map-shared/colors";
 import { showMapLoading } from "../visits-map-shared/loading";
 import type { VisitsVizHandle, VisitsVizOptions } from "../visits-map-shared/options";
+import {
+  createStickyTooltipController,
+  isMapTouchUi,
+  type StickyTooltipController,
+} from "../visits-map-shared/sticky-tooltip";
 import { buildCountryNames, buildVisitsMapTooltip, groupVisitsByCountry } from "../visits-map-shared/tooltip";
 import { buildPinData, createPinResources, POLYGON_ALTITUDE, type PinDatum, type PinResources } from "./pins";
 
@@ -143,6 +148,13 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
   tooltipEl.hidden = true;
   root.appendChild(tooltipEl);
 
+  const touchUi = isMapTouchUi();
+  const stickyTooltip: StickyTooltipController | null = touchUi
+    ? createStickyTooltipController(tooltipEl)
+    : null;
+  /** Skip onGlobeClick dismiss when a polygon/pin click just opened a sticky tip. */
+  let skipGlobeClickDismiss = false;
+
   const visitsByCountry = groupVisitsByCountry(visits);
   const listedCodes = new Set(countries.map((c) => c.countryCode.toUpperCase()));
   const fillValues = buildCountryFillValues(countryCodes, countries, visits);
@@ -181,6 +193,10 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
   const hideTooltip = () => {
     clearHideTooltipTimer();
     activeTooltipIso = null;
+    if (stickyTooltip) {
+      stickyTooltip.dismiss();
+      return;
+    }
     tooltipEl.hidden = true;
     tooltipEl.replaceChildren();
   };
@@ -199,22 +215,28 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
       });
       tooltipEl.replaceChildren(content);
     }
-    tooltipEl.hidden = false;
     positionTooltip();
+    if (stickyTooltip) {
+      stickyTooltip.show();
+      return;
+    }
+    tooltipEl.hidden = false;
   };
 
   const onPointerMove = (e: PointerEvent) => {
     const rect = root.getBoundingClientRect();
     pointerX = e.clientX - rect.left;
     pointerY = e.clientY - rect.top;
-    if (!tooltipEl.hidden) positionTooltip();
+    if (!touchUi && !tooltipEl.hidden) positionTooltip();
   };
 
   root.addEventListener("pointermove", onPointerMove);
-  tooltipEl.addEventListener("pointerenter", clearHideTooltipTimer);
-  tooltipEl.addEventListener("pointerleave", () => {
-    hideTooltipTimer = setTimeout(hideTooltip, 120);
-  });
+  if (!touchUi) {
+    tooltipEl.addEventListener("pointerenter", clearHideTooltipTimer);
+    tooltipEl.addEventListener("pointerleave", () => {
+      hideTooltipTimer = setTimeout(hideTooltip, 120);
+    });
+  }
 
   const isGlobeFullscreen = () => fullscreenElement() === root;
 
@@ -376,6 +398,7 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
         .pointOfView({ altitude: INITIAL_CAMERA_ALTITUDE })
         .polygonsTransitionDuration(0)
         .onPolygonHover((polygon: object | null) => {
+          if (touchUi) return;
           if (!polygon) {
             setHoveredIso(null);
             hideTooltipTimer = setTimeout(hideTooltip, 120);
@@ -392,6 +415,7 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
           showTooltipForIso(iso);
         })
         .onObjectHover((obj: object | null) => {
+          if (touchUi) return;
           if (!obj) {
             setHoveredIso(null);
             hideTooltipTimer = setTimeout(hideTooltip, 120);
@@ -405,12 +429,67 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
           }
           setHoveredIso(pin.iso);
           showTooltipForIso(pin.iso);
+        })
+        .onPolygonClick((polygon: object, event: MouseEvent) => {
+          if (!touchUi || !stickyTooltip) return;
+          event.preventDefault();
+          skipGlobeClickDismiss = true;
+          const f = polygon as GeoFeature;
+          const iso = (f.properties.__iso as string) ?? featureIso(f.properties);
+          if (!iso) {
+            hideTooltip();
+            return;
+          }
+          const rect = root.getBoundingClientRect();
+          pointerX = event.clientX - rect.left;
+          pointerY = event.clientY - rect.top;
+          setHoveredIso(iso);
+          showTooltipForIso(iso);
+        })
+        .onObjectClick((obj: object, event: MouseEvent) => {
+          if (!touchUi || !stickyTooltip) return;
+          event.preventDefault();
+          skipGlobeClickDismiss = true;
+          const pin = obj as PinDatum;
+          if (!pin.iso) {
+            hideTooltip();
+            return;
+          }
+          const rect = root.getBoundingClientRect();
+          pointerX = event.clientX - rect.left;
+          pointerY = event.clientY - rect.top;
+          setHoveredIso(pin.iso);
+          showTooltipForIso(pin.iso);
+        })
+        .onGlobeClick((_coords: { lat: number; lng: number }, event: MouseEvent) => {
+          if (!touchUi || !stickyTooltip) return;
+          event.preventDefault();
+          if (skipGlobeClickDismiss) {
+            skipGlobeClickDismiss = false;
+            return;
+          }
+          setHoveredIso(null);
+          hideTooltip();
         });
 
       const controls = world.controls();
       controls.autoRotate = true;
       controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
       controls.enableDamping = true;
+      if (touchUi && stickyTooltip) {
+        controls.addEventListener("start", () => {
+          setHoveredIso(null);
+          hideTooltip();
+        });
+      }
+
+      // Kill residual iOS/Android tap flash on the WebGL canvas.
+      const canvasEl = canvasHost.querySelector("canvas");
+      if (canvasEl instanceof HTMLCanvasElement) {
+        canvasEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
+        canvasEl.style.outline = "none";
+        canvasEl.style.touchAction = "none";
+      }
 
       resizeObserver = new ResizeObserver(() => {
         if (!world || disposed) return;
@@ -429,8 +508,9 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
   return {
     dispose: () => {
       disposed = true;
-      loading.dismiss();
+      stickyTooltip?.dispose();
       hideTooltip();
+      loading.dismiss();
       root.removeEventListener("pointermove", onPointerMove);
       fsBtn.removeEventListener("click", onFsClick);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
@@ -461,6 +541,7 @@ export function createVisitsGlobe(parent: HTMLElement, options: CreateVisitsGlob
     },
   };
 }
+
 
 
 

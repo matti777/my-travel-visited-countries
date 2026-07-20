@@ -1170,6 +1170,7 @@ main.about-page {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .visit-list-map-shell__pane {
@@ -1225,6 +1226,15 @@ main.about-page {
   overflow: hidden;
   border-radius: 4px;
   background: transparent;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.visits-globe,
+.visits-globe * {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Slight map/globe load indicator */
@@ -1260,6 +1270,8 @@ main.about-page {
   inset: 0;
   width: 100%;
   height: 100%;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .visits-globe__fs-btn {
@@ -2802,10 +2814,24 @@ body.visits-globe-immersive-open {
   }
 }
 
+/* Touch: hide hover tooltips; allow mobile sticky tips (tap-to-show). */
 @media (hover: none) {
-  .svgMap-tooltip,
-  .visits-globe__tooltip,
+  .svgMap-tooltip:not(.visit-map-tooltip--sticky),
+  .visits-globe__tooltip:not(.visit-map-tooltip--sticky),
   .tooltip {
     display: none !important;
+  }
+
+  .svgMap-tooltip.visit-map-tooltip--sticky,
+  .visits-globe__tooltip.visit-map-tooltip--sticky {
+    display: block !important;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity var(--animation-duration) ease;
+  }
+
+  .svgMap-tooltip.visit-map-tooltip--sticky.visit-map-tooltip--fading,
+  .visits-globe__tooltip.visit-map-tooltip--sticky.visit-map-tooltip--fading {
+    opacity: 0;
   }
 }

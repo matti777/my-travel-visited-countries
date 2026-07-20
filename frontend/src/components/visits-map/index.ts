@@ -11,6 +11,11 @@ import type {
   VisitsVizOptions,
 } from "../visits-map-shared/options";
 import {
+  createStickyTooltipController,
+  isMapTouchUi,
+  type StickyTooltipController,
+} from "../visits-map-shared/sticky-tooltip";
+import {
   buildCountryNames,
   buildVisitsMapTooltip,
   groupVisitsByCountry,
@@ -45,6 +50,12 @@ interface SvgPanZoomPublic {
 
 interface SvgMapWithPanZoom {
   mapPanZoom?: SvgPanZoomPublic;
+  tooltip?: HTMLElement;
+  setTooltipContent?: (content: HTMLElement | string) => void;
+  getTooltipContent?: (countryID: string) => HTMLElement;
+  showTooltip?: (e: { pageX: number; pageY: number }) => void;
+  hideTooltip?: () => void;
+  moveTooltip?: (e: { pageX: number; pageY: number }) => void;
 }
 
 function contentCenterPan(sizes: ReturnType<SvgPanZoomPublic["getSizes"]>): {
@@ -137,6 +148,7 @@ export function createVisitsMap(
   let disposed = false;
   let resizeObserver: ResizeObserver | null = null;
   let detachTouch: (() => void) | null = null;
+  let stickyTooltip: StickyTooltipController | null = null;
 
   const startSvgMap = (): void => {
     if (disposed || !document.getElementById(id)) return;
@@ -207,7 +219,87 @@ export function createVisitsMap(
         container.querySelector(".svgMap-map-wrapper") instanceof HTMLElement
           ? (container.querySelector(".svgMap-map-wrapper") as HTMLElement)
           : container;
-      detachTouch = attachTouchPanPinch(touchRoot, panZoom);
+
+      if (isMapTouchUi() && mapInstance.tooltip) {
+        stickyTooltip = createStickyTooltipController(mapInstance.tooltip);
+      }
+
+      const dismissSticky = (): void => {
+        stickyTooltip?.dismiss();
+        container
+          .querySelectorAll(".svgMap-country.svgMap-active")
+          .forEach((el) => el.classList.remove("svgMap-active"));
+      };
+
+      const showStickyForCountry = (
+        countryEl: Element,
+        clientX: number,
+        clientY: number
+      ): void => {
+        if (!stickyTooltip || !mapInstance.tooltip) return;
+        const countryID = countryEl.getAttribute("data-id");
+        if (!countryID) {
+          dismissSticky();
+          return;
+        }
+        container
+          .querySelectorAll(".svgMap-country.svgMap-active")
+          .forEach((el) => el.classList.remove("svgMap-active"));
+        countryEl.classList.add("svgMap-active");
+        if (countryEl.parentNode) {
+          countryEl.parentNode.appendChild(countryEl);
+        }
+        const content =
+          mapInstance.getTooltipContent?.(countryID) ??
+          buildVisitsMapTooltip({
+            countryID,
+            countryNames,
+            listedCodes,
+            visitsByCountry,
+            baseUrl,
+            onViewMediaUrl,
+          });
+        mapInstance.setTooltipContent?.(content);
+        const pageX = clientX + window.scrollX;
+        const pageY = clientY + window.scrollY;
+        mapInstance.showTooltip?.({ pageX, pageY });
+        mapInstance.moveTooltip?.({ pageX, pageY });
+        stickyTooltip.show();
+      };
+
+      detachTouch = attachTouchPanPinch(touchRoot, panZoom, {
+        onPanOrZoom: () => {
+          dismissSticky();
+        },
+        onTap: (clientX, clientY) => {
+          if (!stickyTooltip) return;
+          const hit = document.elementFromPoint(clientX, clientY);
+          if (hit?.closest(".svgMap-tooltip, .visit-map-tooltip--sticky")) {
+            return;
+          }
+          const country = hit?.closest(".svgMap-country");
+          if (country) {
+            showStickyForCountry(country, clientX, clientY);
+            return;
+          }
+          dismissSticky();
+        },
+      });
+
+      // Zoom buttons sit outside the pan/pinch root — dismiss sticky on use.
+      if (stickyTooltip) {
+        container
+          .querySelectorAll(".svgMap-zoom-button")
+          .forEach((btn) => {
+            btn.addEventListener(
+              "click",
+              () => {
+                dismissSticky();
+              },
+              { passive: true }
+            );
+          });
+      }
 
       const syncAlignment = (): void => {
         if (disposed) return;
@@ -262,6 +354,8 @@ export function createVisitsMap(
   return {
     dispose: () => {
       disposed = true;
+      stickyTooltip?.dispose();
+      stickyTooltip = null;
       detachTouch?.();
       detachTouch = null;
       resizeObserver?.disconnect();
@@ -271,3 +365,4 @@ export function createVisitsMap(
     },
   };
 }
+
