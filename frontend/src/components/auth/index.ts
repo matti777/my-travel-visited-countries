@@ -33,7 +33,7 @@ export function renderAuthHeader(
     const homeBtn = document.createElement("button");
     homeBtn.type = "button";
     homeBtn.textContent = "Home";
-    homeBtn.className = "auth-header__home-btn";
+    homeBtn.className = "auth-header__home-btn primary";
     homeBtn.addEventListener("click", onGoHome);
     container.appendChild(homeBtn);
   }
@@ -81,12 +81,14 @@ export function renderAuthHeader(
     const logoutBtn = document.createElement("button");
     logoutBtn.textContent = "Log out";
     logoutBtn.type = "button";
+    logoutBtn.className = "primary";
     logoutBtn.addEventListener("click", onLogout);
     container.appendChild(logoutBtn);
   } else {
     const loginBtn = document.createElement("button");
     loginBtn.textContent = "Login";
     loginBtn.type = "button";
+    loginBtn.className = "primary";
     loginBtn.addEventListener("click", onLogin);
     container.appendChild(loginBtn);
   }

@@ -215,7 +215,7 @@ export function openUserSettingsDialog(
   saveRow.className = "user-settings-dialog__save-row";
   const saveBtn = document.createElement("button");
   saveBtn.type = "button";
-  saveBtn.className = "user-settings-dialog__save-btn";
+  saveBtn.className = "user-settings-dialog__save-btn primary";
   saveBtn.textContent = "Save settings";
   saveBtn.disabled = true;
   saveRow.appendChild(saveBtn);
@@ -225,7 +225,7 @@ export function openUserSettingsDialog(
   footer.className = "app-confirm__actions";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "app-confirm__btn app-confirm__btn--secondary";
+  closeBtn.className = "app-confirm__btn secondary";
   closeBtn.textContent = "Close without saving";
   closeBtn.setAttribute("aria-label", "Close without saving");
   footer.appendChild(closeBtn);

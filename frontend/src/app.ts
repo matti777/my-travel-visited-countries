@@ -5,6 +5,7 @@ import {
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { openUserSettingsDialog } from "Components/user-settings-dialog";
+import { openWishListEditor } from "Components/wish-list-editor";
 import { createUserProfile } from "Components/user-profile";
 import { createCountryCell } from "Components/country-cell";
 import { createShareSection } from "Components/share-section";
@@ -338,7 +339,7 @@ function renderLinkAccountsOverlay(state: PendingAccountLink): void {
     body.appendChild(msg);
     const backBtn = document.createElement("button");
     backBtn.type = "button";
-    backBtn.className = "link-accounts__btn";
+    backBtn.className = "link-accounts__btn primary";
     backBtn.textContent = "Back to sign in";
     backBtn.addEventListener("click", () => {
       closeLinkAccountsOverlay();
@@ -363,7 +364,7 @@ function renderLinkAccountsOverlay(state: PendingAccountLink): void {
   for (const providerId of supported) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "link-accounts__btn";
+    btn.className = "link-accounts__btn primary";
     btn.textContent = `Continue with ${providerLabel(providerId)}`;
     btn.addEventListener("click", async () => {
       if (busy || !pendingAccountLink) return;
@@ -745,6 +746,7 @@ export interface RenderOptions {
   profileInstagramUserName: string | null;
   profileDescription: string | null;
   onOpenSettings: () => void;
+  onOpenWishList: () => void;
   onGoHome: () => void;
   visitListTab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics";
   onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => void;
@@ -1154,7 +1156,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           footer.className = "app-confirm__actions";
           const closeBtn = document.createElement("button");
           closeBtn.type = "button";
-          closeBtn.className = "app-confirm__btn app-confirm__btn--secondary";
+          closeBtn.className = "app-confirm__btn secondary";
           closeBtn.textContent = "Close without saving";
           closeBtn.setAttribute("aria-label", "Close without saving");
           footer.appendChild(closeBtn);
@@ -1341,7 +1343,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
   const homeBtn = document.createElement("button");
   homeBtn.type = "button";
   homeBtn.textContent = "Home";
-  homeBtn.className = "share-home-btn";
+  homeBtn.className = "share-home-btn primary";
   homeBtn.addEventListener("click", onGoHome);
   homeWrap.appendChild(homeBtn);
   visitedSection.appendChild(homeWrap);
@@ -1369,7 +1371,7 @@ function renderAddFriendSection(container: HTMLElement, options: RenderOptions):
     box.appendChild(text);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "add-friend-section__btn";
+    btn.className = "add-friend-section__btn primary";
     btn.textContent = "Add friend";
     btn.addEventListener("click", () => onAddFriend());
     box.appendChild(btn);
@@ -1519,7 +1521,7 @@ function renderWelcomeView(container: HTMLElement, onLogin: () => void): void {
   loginWrap.className = "welcome-view__login-wrap";
   const loginBtn = document.createElement("button");
   loginBtn.type = "button";
-  loginBtn.className = "welcome-view__login-btn";
+  loginBtn.className = "welcome-view__login-btn primary";
   loginBtn.textContent = "Login";
   loginBtn.addEventListener("click", onLogin);
   loginWrap.appendChild(loginBtn);
@@ -1548,9 +1550,17 @@ function renderOwnProfileSection(container: HTMLElement, options: RenderOptions)
 
   const editWrap = document.createElement("div");
   editWrap.className = "user-profile__edit-wrap";
+
+  const wishListBtn = document.createElement("button");
+  wishListBtn.type = "button";
+  wishListBtn.className = "user-profile__wishlist-btn primary";
+  wishListBtn.textContent = "Edit Wish List";
+  wishListBtn.addEventListener("click", options.onOpenWishList);
+  editWrap.appendChild(wishListBtn);
+
   const editBtn = document.createElement("button");
   editBtn.type = "button";
-  editBtn.className = "user-profile__edit-btn";
+  editBtn.className = "user-profile__edit-btn primary";
   editBtn.textContent = "Edit settings";
   editBtn.addEventListener("click", options.onOpenSettings);
   editWrap.appendChild(editBtn);
@@ -1809,6 +1819,17 @@ export async function main(): Promise<void> {
     });
   }
 
+  function openWishList(): void {
+    openWishListEditor({
+      api,
+      countries,
+      baseUrl,
+      onUnauthorized: () => {
+        void signOut();
+      },
+    });
+  }
+
   function onLogout(): void {
     api.clearCountriesCache();
     signOut().then(async () => {
@@ -1942,6 +1963,7 @@ export async function main(): Promise<void> {
       profileInstagramUserName,
       profileDescription,
       onOpenSettings: openSettings,
+      onOpenWishList: openWishList,
       onGoHome: navigateHome,
       visitListTab,
       onVisitListTabChange: (tab: "alphabetical" | "byContinent" | "map" | "timeline" | "statistics") => {

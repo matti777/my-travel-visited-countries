@@ -8,7 +8,7 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
 
-If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown with an **Edit settings** button underneath (opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
+If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown with **Edit Wish List** and **Edit settings** underneath (horizontally centered as a pair; Wish List opens the [wish list editor](components/wish-list-editor.md), settings opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -22,7 +22,7 @@ The color scheme should have some light turquoise.
 
 The custom font should be **Roboto Condensed**, available as Google Font.
 
-Buttons should have slightly rounded corners and a thin border.
+Buttons should have slightly rounded corners and a thin border. Shared variants on buttons: class `primary` (turquoise border + light turquoise fill, dark text — historic default CTA), `secondary` (white fill + gray border), and `danger` (red outline). Feature-specific classes may add layout (size, width) or intentional overrides (e.g. solid turquoise profile CTAs).
 
 The "country cells" (UI element depicting a country - both available one as well as a visited one - should display the country flag on the left and the country name on the right. The cells should be of constant height and width regardless of the country name's length.
 
@@ -181,6 +181,7 @@ Centered on the bottom should be a large "Login" button whose functionality must
 --
 
 At the very bottom of the page there are links to About, Privacy Policy, and Terms of Service (About leftmost). The About page (`/about.html`) welcomes new users with plain-language copy and the same travel polaroids as the logged-out splash.
+
 
 
 

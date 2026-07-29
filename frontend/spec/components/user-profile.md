@@ -18,8 +18,9 @@ Reusable read-only traveller profile. Used on the own `/profile` page and at the
 
 ## Host actions
 
-Own-profile host (`app.ts`) places an **Edit settings** button under this component. Shared-profile host does not.
+Own-profile host (`app.ts`) places **Edit Wish List** and **Edit settings** under this component (both `button.primary`), horizontally centered as a pair with gap (**Edit Wish List** on the left). Shared-profile host does not.
 
 ## Component
 
 Implemented as `Components/user-profile` (`createUserProfile`). Supports refreshing displayed fields after settings save (e.g. `update` / remount).
+

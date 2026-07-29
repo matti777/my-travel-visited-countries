@@ -144,13 +144,14 @@ export async function confirmDialog(options: {
 
     const noBtn = document.createElement("button");
     noBtn.type = "button";
-    noBtn.className = "app-confirm__btn app-confirm__btn--secondary";
+    noBtn.className = "app-confirm__btn secondary";
     noBtn.textContent = options.cancelText ?? "No";
 
     const yesBtn = document.createElement("button");
     yesBtn.type = "button";
-    yesBtn.className = "app-confirm__btn app-confirm__btn--primary";
-    if (options.danger) yesBtn.classList.add("app-confirm__btn--danger");
+    yesBtn.className = options.danger
+      ? "app-confirm__btn danger"
+      : "app-confirm__btn primary";
     yesBtn.textContent = options.confirmText ?? "Yes";
 
     footer.appendChild(noBtn);

@@ -117,7 +117,7 @@ export function createTagEditor(): TagEditorControl {
 
   const addBtn = document.createElement("button");
   addBtn.type = "button";
-  addBtn.className = "add-visit-form__add-btn tag-editor__add-btn";
+  addBtn.className = "add-visit-form__add-btn tag-editor__add-btn primary";
   addBtn.textContent = "Add tag";
 
   const suggestionsPanel = document.createElement("div");

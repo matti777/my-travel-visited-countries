@@ -10,6 +10,86 @@
   --input-placeholder-color: #bdbdbd;
 }
 
+
+/* Shared button variants (.primary / .secondary / .danger on <button>).
+   Visuals match historic defaults; feature-specific rules still apply for layout. */
+.primary {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: #222;
+  box-sizing: border-box;
+}
+
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondary {
+  border-radius: 6px;
+  border: 1px solid #b0b0b0;
+  background: #fff;
+  color: #444;
+  font-weight: 400;
+  padding: 0.35rem 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: #888;
+  background: #fafafa;
+}
+
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.danger {
+  border-radius: 6px;
+  border: 1px solid #c00;
+  color: #a00;
+  font-weight: 700;
+  background: #fff;
+  padding: 0.35rem 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Aliases for confirm dialogs that use shared class names */
+.app-confirm__btn.primary {
+  background: var(--color-turquoise-light);
+  border-color: var(--color-turquoise);
+  color: #222;
+  font-weight: 600;
+}
+
+.app-confirm__btn.secondary {
+  background: #fff;
+  border-color: #b0b0b0;
+  color: #444;
+  font-weight: 400;
+}
+
+.app-confirm__btn.secondary:hover {
+  border-color: #888;
+  background: #fafafa;
+}
+
+.app-confirm__btn.danger {
+  border-color: #c00;
+  color: #a00;
+  font-weight: 700;
+  background: #fff;
+}
+
 /* Unified placeholder styling for text inputs and textareas. */
 input::placeholder,
 textarea::placeholder {
@@ -2962,16 +3042,21 @@ body.visits-globe-immersive-open {
 .user-profile__edit-wrap {
   max-width: 640px;
   margin: 1.25rem auto 0;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.85rem;
 }
 
+.user-profile__wishlist-btn,
 .user-profile__edit-btn {
   font-family: inherit;
   font-size: 1rem;
   padding: 0.4rem 0.9rem;
   border-radius: 6px;
-  border: 1px solid var(--color-turquoise, #40b4b4);
-  background: var(--color-turquoise, #40b4b4);
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise);
   color: #fff;
   cursor: pointer;
 }
@@ -3033,3 +3118,193 @@ body.visits-globe-immersive-open {
   font-style: italic;
   cursor: pointer;
 }
+
+
+/* Wish list editor modal: max 90% viewport height; body scrolls */
+.app-modal-panel:has(.wish-list-editor) {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(90vh, 90dvh);
+  overflow: hidden;
+}
+
+.app-modal-panel:has(.wish-list-editor) .app-modal-title,
+.app-modal-panel:has(.wish-list-editor) .app-modal-footer {
+  flex-shrink: 0;
+}
+
+.app-modal-panel:has(.wish-list-editor) .app-modal-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Wish list editor */
+.wish-list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: min(100%, 28rem);
+}
+
+.wish-list-editor__intro {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #444;
+  line-height: 1.4;
+}
+
+.wish-list-editor__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.wish-list-editor__save-row {
+  margin-top: 0.5rem;
+}
+
+.wish-list-editor__save-btn {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.45rem 1rem;
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #222;
+}
+
+.wish-list-editor__save-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wish-list-editor-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #c8d8d8;
+  border-radius: 8px;
+  background: #fafefe;
+  transition: transform 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
+}
+
+.wish-list-editor-cell--add {
+  border-style: dashed;
+  background: #f7fbfb;
+}
+
+.wish-list-editor-cell--dragging {
+  opacity: 0.55;
+}
+
+.wish-list-editor-cell--drag-over {
+  box-shadow: 0 0 0 2px var(--color-turquoise);
+}
+
+.wish-list-editor-cell__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wish-list-editor-cell__country {
+  width: 100%;
+}
+
+.wish-list-editor-cell__desc-label {
+  margin: 0.25rem 0 0;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.wish-list-editor-cell__description {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 2.5rem;
+  max-height: calc(1.4em * 6);
+  line-height: 1.4;
+}
+
+.wish-list-editor-cell__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.wish-list-editor-cell__drag-handle {
+  width: 14px;
+  align-self: stretch;
+  min-height: 4.5rem;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #9ab;
+  background:
+    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 28% / 100% 12px,
+    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 50% / 100% 12px,
+    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 72% / 100% 12px,
+    #f4f8f8;
+  background-repeat: no-repeat;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.wish-list-editor-cell__drag-handle:active {
+  cursor: grabbing;
+}
+
+.wish-list-editor-cell__delete {
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #c00;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wish-list-editor-cell__delete:hover {
+  background: #f5f5f5;
+}
+
+.wish-list-editor-cell__add-btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  color: #222;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wish-list-editor-cell__add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+

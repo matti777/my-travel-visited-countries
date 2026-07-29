@@ -1,3 +1,14 @@
+/** Wish-list entry (GET/PUT /wishlist, share profile). */
+export interface WishListCountry {
+  countryCode: string;
+  description?: string;
+}
+
+/** GET /wishlist and PUT /wishlist response body. */
+export interface WishListResponse {
+  wishList: WishListCountry[];
+}
+
 /**
  * Types matching GET /visits API response (backend CountryVisit, data-models.md).
  */
@@ -17,12 +28,6 @@ export interface VisitsResponse {
 }
 
 /** GET /share/profile/:shareToken */
-export interface WishListCountry {
-  countryCode: string;
-  description?: string;
-}
-
-/** GET /share/profile/:shareToken */
 export interface ShareProfileResponse {
   visits: CountryVisit[];
   userName: string;
@@ -32,5 +37,4 @@ export interface ShareProfileResponse {
   description?: string;
   wishList?: WishListCountry[];
 }
-
 
