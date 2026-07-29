@@ -198,6 +198,19 @@ export function openUserSettingsDialog(
   tagsLabel.appendChild(tagsText);
   body.appendChild(tagsLabel);
 
+  const wishListLabel = document.createElement("label");
+  wishListLabel.className = "user-settings-dialog__row";
+  const wishListCb = document.createElement("input");
+  wishListCb.type = "checkbox";
+  wishListCb.className = "user-settings-dialog__checkbox";
+  wishListCb.disabled = true;
+  const wishListText = document.createElement("span");
+  wishListText.className = "user-settings-dialog__label-text";
+  wishListText.textContent = "Share wish list on shared profiles";
+  wishListLabel.appendChild(wishListCb);
+  wishListLabel.appendChild(wishListText);
+  body.appendChild(wishListLabel);
+
   const saveRow = document.createElement("div");
   saveRow.className = "user-settings-dialog__save-row";
   const saveBtn = document.createElement("button");
@@ -224,6 +237,7 @@ export function openUserSettingsDialog(
     mediaCb.disabled = !enabled;
     notesCb.disabled = !enabled;
     tagsCb.disabled = !enabled;
+    wishListCb.disabled = !enabled;
     descInput.disabled = !enabled;
     igInput.disabled = !enabled;
     const homeInput = homeDropdown.element.querySelector(
@@ -274,6 +288,7 @@ export function openUserSettingsDialog(
         shareMediaUrl: mediaCb.checked,
         shareNotes: notesCb.checked,
         shareTags: tagsCb.checked,
+        shareWishList: wishListCb.checked,
       },
     );
     try {
@@ -315,6 +330,8 @@ export function openUserSettingsDialog(
       mediaCb.checked = Boolean(settings?.sharing?.shareMediaUrl);
       notesCb.checked = Boolean(settings?.sharing?.shareNotes);
       tagsCb.checked = Boolean(settings?.sharing?.shareTags);
+      // Default true when missing (older responses / rollout of ShareWishList).
+      wishListCb.checked = settings?.sharing?.shareWishList !== false;
       setControlsEnabled(true);
     } catch (err) {
       console.error("Failed to load settings", err);
@@ -328,3 +345,4 @@ export function openUserSettingsDialog(
     }
   })();
 }
+

@@ -17,6 +17,12 @@ export interface VisitsResponse {
 }
 
 /** GET /share/profile/:shareToken */
+export interface WishListCountry {
+  countryCode: string;
+  description?: string;
+}
+
+/** GET /share/profile/:shareToken */
 export interface ShareProfileResponse {
   visits: CountryVisit[];
   userName: string;
@@ -24,5 +30,7 @@ export interface ShareProfileResponse {
   homeCountryCode?: string;
   instagramUserName?: string;
   description?: string;
+  wishList?: WishListCountry[];
 }
+
 

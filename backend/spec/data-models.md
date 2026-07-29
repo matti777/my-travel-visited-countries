@@ -25,6 +25,7 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `Name`: User name from the auth token
 - `Email`: User email from the auth token
 - `ImageURL`: User's image URL; extracted from the authentication token and stored at login (on user creation).
+- `WishList`: Ordered list of `WishListCountry` objects (at most 10). Optional; absent or empty means no wish-list entries.
 - `Settings`: A subobject with following properties:
   - `InstagramUserName`: Instagram user name. Optional. Format: 1–30 characters; letters, digits, `.`, `_`; no leading/trailing `.`; no `..`.
   - `HomeCountryCode`: 2-letter ISO 3166-1 alpha-2 country code for home country. Optional.
@@ -33,6 +34,16 @@ Represents a system user. Data parsed from incoming authentication token. Only u
     - `ShareMediaURL`: A boolean indicating whether or not to display any MediaURL for shared country visits
     - `ShareNotes`: A boolean indicating whether or not to display any Notes for shared country visits
     - `ShareTags`: A boolean indicating whether or not to display any Tags for shared country visits
+    - `ShareWishList`: A boolean indicating whether or not to display the user's WishList on shared profiles
+
+### WishListCountry model
+
+A country on the user's wish list (places they want to visit).
+
+- `CountryCode`: 2-letter ISO 3166-1 alpha-2 code. Mandatory.
+- `Description`: Free-form text explaining why the country is on the wish list. Optional (can be empty). Max length 500 characters. When displayed, supports Markdown formatting.
+
+**Validation:** `CountryCode` must be a valid listed country code. At most **10** entries per user; each `CountryCode` may appear at most once. Array order is the wish-list order.
 
 ### Country model
 

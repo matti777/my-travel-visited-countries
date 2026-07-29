@@ -18,7 +18,8 @@ Opened from the own-profile page via **Edit settings** (not from the top bar). O
 - Checkbox: share media URLs on shared profiles (`shareMediaUrl`)
 - Checkbox: share notes on shared visit lists (`shareNotes`)
 - Checkbox: share tags on shared visit lists (`shareTags`)
-- **Save settings** — left-aligned under the controls (same placement/styling pattern as **Save visit** / **Add visit**). Calls **PUT /settings** with sharing flags always present; includes `homeCountryCode` / `instagramUserName` / `description` only when set (omit key to clear). On success closes the dialog and notifies the host (`onSaved`) so the profile can refresh. On **ValidationErrors** (400 with `fields`), show a red border and error message under each matching input; clear field errors on input change. On auth failure, session handling matches other authenticated mutations.
+- Checkbox: share wish list on shared profiles (`shareWishList`)
+- **Save settings** — left-aligned under the controls (same placement/styling pattern as **Save visit** / **Add visit**). Calls **PUT /settings** with sharing flags always present (`shareMediaUrl`, `shareNotes`, `shareTags`, `shareWishList`); includes `homeCountryCode` / `instagramUserName` / `description` only when set (omit key to clear). On success closes the dialog and notifies the host (`onSaved`) so the profile can refresh. On **ValidationErrors** (400 with `fields`), show a red border and error message under each matching input; clear field errors on input change. On auth failure, session handling matches other authenticated mutations.
 - **Close without saving** — secondary (outline) button in the modal footer. Dismisses without writing. Clicking outside the panel also dismisses without saving. **Save settings** is the primary (filled) action.
 
 Checkboxes are custom-styled (larger hit target, turquoise border/fill, clear tick) to match the app color scheme.
@@ -26,3 +27,4 @@ Checkboxes are custom-styled (larger hit target, turquoise border/fill, clear ti
 ## Component
 
 Implemented as `Components/user-settings-dialog`.
+
