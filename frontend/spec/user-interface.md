@@ -6,9 +6,9 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 ## UI routing
 
-If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
+If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top (including wish list when the API returns `wishList`), then that user's visit list. This is called shared profile routing mode.
 
-If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown with **Edit Wish List** and **Edit settings** underneath (horizontally centered as a pair; Wish List opens the [wish list editor](components/wish-list-editor.md), settings opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
+If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown (including the read-only wish list under the traveller description when non-empty) with **Edit Wish List** and **Edit settings** underneath (horizontally centered as a pair; Wish List opens the [wish list editor](components/wish-list-editor.md), settings opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 

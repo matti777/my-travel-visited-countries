@@ -33,7 +33,7 @@ import {
 import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
-import type { CountryVisit } from "./types/visit";
+import type { CountryVisit, WishListCountry } from "./types/visit";
 import type firebase from "firebase/compat/app";
 import firebaseApp from "firebase/compat/app";
 import "firebase/compat/auth";
@@ -60,11 +60,13 @@ let sharedUserImageUrl: string | null = null;
 let sharedHomeCountryCode: string | null = null;
 let sharedInstagramUserName: string | null = null;
 let sharedDescription: string | null = null;
+let sharedWishList: WishListCountry[] | null = null;
 
 /** Own profile settings fields (from GET /settings) when on /profile. */
 let profileHomeCountryCode: string | null = null;
 let profileInstagramUserName: string | null = null;
 let profileDescription: string | null = null;
+let profileWishList: WishListCountry[] = [];
 
 const baseUrl = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
 
@@ -743,9 +745,11 @@ export interface RenderOptions {
   sharedHomeCountryCode: string | null;
   sharedInstagramUserName: string | null;
   sharedDescription: string | null;
+  sharedWishList: WishListCountry[] | null;
   profileHomeCountryCode: string | null;
   profileInstagramUserName: string | null;
   profileDescription: string | null;
+  profileWishList: WishListCountry[];
   onOpenSettings: () => void;
   onOpenWishList: () => void;
   onGoHome: () => void;
@@ -1278,6 +1282,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     sharedHomeCountryCode,
     sharedInstagramUserName,
     sharedDescription,
+    sharedWishList,
     onGoHome,
   } = options;
   const profile = createUserProfile({
@@ -1286,6 +1291,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     homeCountryCode: sharedHomeCountryCode ?? undefined,
     instagramUserName: sharedInstagramUserName ?? undefined,
     description: sharedDescription ?? undefined,
+    wishList: sharedWishList ?? undefined,
     countriesVisited: visitedCountryTitleCount(sharedVisitsList),
     countries: countriesList,
     baseUrl,
@@ -1543,6 +1549,7 @@ function renderOwnProfileSection(container: HTMLElement, options: RenderOptions)
     homeCountryCode: options.profileHomeCountryCode ?? undefined,
     instagramUserName: options.profileInstagramUserName ?? undefined,
     description: options.profileDescription ?? undefined,
+    wishList: options.profileWishList,
     countriesVisited: visitedCountryTitleCount(options.visits),
     countries: options.countries,
     baseUrl,
@@ -1724,6 +1731,7 @@ export async function main(): Promise<void> {
         sharedHomeCountryCode = r.homeCountryCode ?? null;
         sharedInstagramUserName = r.instagramUserName ?? null;
         sharedDescription = r.description ?? null;
+        sharedWishList = r.wishList ?? null;
         logAnalyticsEvent("open_shared_url", { share_token: token });
       } catch (err) {
         console.error("Failed to load shared profile", err);
@@ -1734,6 +1742,7 @@ export async function main(): Promise<void> {
         sharedHomeCountryCode = null;
         sharedInstagramUserName = null;
         sharedDescription = null;
+        sharedWishList = null;
       }
     } else {
       sharedVisits = [];
@@ -1742,19 +1751,25 @@ export async function main(): Promise<void> {
       sharedHomeCountryCode = null;
       sharedInstagramUserName = null;
       sharedDescription = null;
+      sharedWishList = null;
     }
 
     if (isOwnProfilePath() && currentUser) {
       try {
-        const settings = await api.getSettings();
+        const [settings, wishList] = await Promise.all([
+          api.getSettings(),
+          api.getWishList(),
+        ]);
         profileHomeCountryCode = settings.homeCountryCode ?? null;
         profileInstagramUserName = settings.instagramUserName ?? null;
         profileDescription = settings.description ?? null;
+        profileWishList = wishList;
       } catch (err) {
         console.error("Failed to load profile settings", err);
         profileHomeCountryCode = null;
         profileInstagramUserName = null;
         profileDescription = null;
+        profileWishList = [];
         if (err instanceof ApiError && err.responseCode === 401) {
           void signOut();
           errorToast("Session expired");
@@ -1826,6 +1841,10 @@ export async function main(): Promise<void> {
       baseUrl,
       onUnauthorized: () => {
         void signOut();
+      },
+      onSaved: (wishList) => {
+        profileWishList = wishList;
+        refreshAppContent();
       },
     });
   }
@@ -1959,9 +1978,11 @@ export async function main(): Promise<void> {
       sharedHomeCountryCode,
       sharedInstagramUserName,
       sharedDescription,
+      sharedWishList,
       profileHomeCountryCode,
       profileInstagramUserName,
       profileDescription,
+      profileWishList,
       onOpenSettings: openSettings,
       onOpenWishList: openWishList,
       onGoHome: navigateHome,

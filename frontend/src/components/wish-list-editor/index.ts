@@ -106,18 +106,16 @@ export function openWishListEditor(options: OpenWishListEditorOptions): void {
   listEl.className = "wish-list-editor__list";
   body.appendChild(listEl);
 
-  const saveRow = document.createElement("div");
-  saveRow.className = "wish-list-editor__save-row";
+  const footer = document.createElement("div");
+  footer.className = "app-confirm__actions wish-list-editor__footer";
+
   const saveBtn = document.createElement("button");
   saveBtn.type = "button";
   saveBtn.className = "wish-list-editor__save-btn primary";
   saveBtn.textContent = "Save changes";
   saveBtn.disabled = true;
-  saveRow.appendChild(saveBtn);
-  body.appendChild(saveRow);
+  footer.appendChild(saveBtn);
 
-  const footer = document.createElement("div");
-  footer.className = "app-confirm__actions";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "app-confirm__btn secondary";

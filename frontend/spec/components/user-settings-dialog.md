@@ -4,7 +4,7 @@ Modal for editing the logged-in user's settings (`Settings` in data-models.md): 
 
 ## Presentation
 
-Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Panel content uses a thin border and padding similar to the [country visit editor](country-visit-editor.md). The dialog must fit within the viewport on desktop and mobile (including safe areas); title and action buttons stay visible while the form area may scroll if needed. Layout must not collapse or overflow horizontally.
+Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Form controls sit in a bordered content panel (same border/padding language as the [country visit editor](country-visit-editor.md) / wish list editor). Title and footer actions stay outside the border and remain visible; the bordered panel scrolls if needed. Fits desktop and mobile (including safe areas). Layout must not collapse or overflow horizontally.
 
 ## Opening
 
@@ -19,8 +19,8 @@ Opened from the own-profile page via **Edit settings** (not from the top bar). O
 - Checkbox: share notes on shared visit lists (`shareNotes`)
 - Checkbox: share tags on shared visit lists (`shareTags`)
 - Checkbox: share wish list on shared profiles (`shareWishList`)
-- **Save settings** — left-aligned under the controls (same placement/styling pattern as **Save visit** / **Add visit**). Calls **PUT /settings** with sharing flags always present (`shareMediaUrl`, `shareNotes`, `shareTags`, `shareWishList`); includes `homeCountryCode` / `instagramUserName` / `description` only when set (omit key to clear). On success closes the dialog and notifies the host (`onSaved`) so the profile can refresh. On **ValidationErrors** (400 with `fields`), show a red border and error message under each matching input; clear field errors on input change. On auth failure, session handling matches other authenticated mutations.
-- **Close without saving** — secondary (outline) button in the modal footer. Dismisses without writing. Clicking outside the panel also dismisses without saving. **Save settings** is the primary (filled) action.
+- **Save settings** — primary button in the sticky footer (left); disabled until the draft differs from the loaded settings. Calls **PUT /settings** with sharing flags always present (`shareMediaUrl`, `shareNotes`, `shareTags`, `shareWishList`); includes `homeCountryCode` / `instagramUserName` / `description` only when set (omit key to clear). On success closes the dialog and notifies the host (`onSaved`) so the profile can refresh. On **ValidationErrors** (400 with `fields`), show a red border and error message under each matching input; clear field errors on input change. On auth failure, session handling matches other authenticated mutations.
+- **Close without saving** — secondary (outline) button in the sticky footer (right). Dismisses without writing. Clicking outside the panel also dismisses without saving.
 
 Checkboxes are custom-styled (larger hit target, turquoise border/fill, clear tick) to match the app color scheme.
 

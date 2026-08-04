@@ -4,7 +4,7 @@ Modal for editing the logged-in user's wish list (`GET` / `PUT /wishlist`). Open
 
 ## Presentation
 
-Centered popup over a dark overlay using `Components/modal` (same appear/disappear animations as settings). Title: **Wish list**. Panel max height **90%** of the viewport; body scrolls when content exceeds that. Footer actions stay visible. Fits desktop and mobile viewports.
+Centered popup over a dark overlay using `Components/modal` (same appear/disappear animations as settings). Title: **Wish list**. Panel max height **90%** of the viewport. Intro + list sit in a bordered content panel (same border/padding language as settings); that panel scrolls when needed. Title and footer actions stay outside the border and remain visible. Fits desktop and mobile viewports.
 
 ## Opening
 
@@ -27,11 +27,14 @@ If GET returns more than 5 entries (legacy data), all are shown; Add stays hidde
 
 ## Actions
 
-- **Save changes** (primary): **PUT /wishlist** with the full draft. On success: success toast, close. On 401: session handling + close. Other errors: toast, keep open.
-- **Close without saving** (secondary): discard draft and close. Outside click also discards.
+Footer row (always visible while the body scrolls):
+
+- **Save changes** (primary, left): **PUT /wishlist** with the full draft. On success: success toast, close. On 401: session handling + close. Other errors: toast, keep open.
+- **Close without saving** (secondary, right edge): discard draft and close. Outside click also discards.
 
 Client-side checks before save: at most 5 entries, unique country codes, descriptions ≤ 500 characters.
 
 ## Component
 
 Implemented as `Components/wish-list-editor` (`openWishListEditor`).
+

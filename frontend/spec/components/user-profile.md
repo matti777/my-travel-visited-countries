@@ -11,10 +11,11 @@ Reusable read-only traveller profile. Used on the own `/profile` page and at the
   - **Instagram:** when `instagramUserName` is set — Instagram logo + `@username` as a link that opens the Instagram app on mobile if installed, otherwise the Instagram website profile. Tooltip: "Open Instagram profile". Row omitted when unset.
   - **Countries visited:** unique country count
   - **Description:** free-form Markdown (sanitized HTML). When set, shown in a box with a dashed border, rounded corners, and a slightly different background from the app background. Empty when unset.
+  - **Wish list:** under the description. Title: `"Wish List" of countries I would like to visit`. Ordered list of [WishListCell](wish-list-cell.md) entries (flag + country name + optional Markdown description). Entire block omitted when `wishList` is missing or empty (e.g. shared profile with wish-list sharing off).
 
 ## Props
 
-`name`, optional `imageUrl`, optional `homeCountryCode`, optional `instagramUserName`, `countriesVisited`, `countries` (for name/flag lookup), `baseUrl`.
+`name`, optional `imageUrl`, optional `homeCountryCode`, optional `instagramUserName`, `countriesVisited`, optional `wishList`, `countries` (for name/flag lookup), `baseUrl`.
 
 ## Host actions
 
@@ -23,4 +24,3 @@ Own-profile host (`app.ts`) places **Edit Wish List** and **Edit settings** unde
 ## Component
 
 Implemented as `Components/user-profile` (`createUserProfile`). Supports refreshing displayed fields after settings save (e.g. `update` / remount).
-

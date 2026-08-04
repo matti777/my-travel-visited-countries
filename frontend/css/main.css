@@ -2272,9 +2272,9 @@ body.visits-globe-immersive-open {
 .app-modal-panel:has(.user-settings-dialog) .app-modal-body {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .user-settings-dialog {
@@ -2283,6 +2283,11 @@ body.visits-globe-immersive-open {
   padding: 1rem 1.25rem;
   box-sizing: border-box;
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .user-settings-dialog__intro {
@@ -2359,8 +2364,11 @@ body.visits-globe-immersive-open {
   cursor: not-allowed;
 }
 
-.user-settings-dialog__save-row {
-  padding-top: 0.75rem;
+.user-settings-dialog__footer {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 .user-settings-dialog__save-btn {
@@ -3043,6 +3051,67 @@ body.visits-globe-immersive-open {
   margin-bottom: 0;
 }
 
+
+.user-profile__wish-list {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+}
+
+.user-profile__wish-list-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.user-profile__wish-list-ol {
+  margin: 0;
+  padding-left: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.user-profile__wish-list-item {
+  padding-left: 0.15rem;
+}
+
+.wish-list-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.wish-list-cell__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #222;
+  font-size: 0.98rem;
+}
+
+.wish-list-cell__flag {
+  width: 28px;
+  height: 20px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.wish-list-cell__description {
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: #444;
+}
+
+.wish-list-cell__description > :first-child {
+  margin-top: 0;
+}
+
+.wish-list-cell__description > :last-child {
+  margin-bottom: 0;
+}
+
 .user-profile__edit-wrap {
   max-width: 640px;
   margin: 1.25rem auto 0;
@@ -3124,7 +3193,7 @@ body.visits-globe-immersive-open {
 }
 
 
-/* Wish list editor modal: max 90% viewport height; body scrolls */
+/* Wish list editor modal: max 90% viewport height; bordered body scrolls */
 .app-modal-panel:has(.wish-list-editor) {
   display: flex;
   flex-direction: column;
@@ -3142,24 +3211,34 @@ body.visits-globe-immersive-open {
 .app-modal-panel:has(.wish-list-editor) .app-modal-body {
   min-height: 0;
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Wish list editor — bordered content panel (title + footer stay outside) */
+.wish-list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 1px solid rgba(0, 80, 90, 0.25);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Wish list editor */
-.wish-list-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: min(100%, 28rem);
-}
-
 .wish-list-editor__intro {
   margin: 0;
   font-size: 0.95rem;
-  color: #444;
+  color: #333;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .wish-list-editor__list {
@@ -3169,15 +3248,25 @@ body.visits-globe-immersive-open {
   gap: 0.65rem;
 }
 
-.wish-list-editor__save-row {
-  margin-top: 0.5rem;
+
+/* Space above sticky wish-list footer actions (footerPlain zeros default padding). */
+.app-modal-body:has(.wish-list-editor) + .app-modal-footer--plain {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+}
+
+.wish-list-editor__footer {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 .wish-list-editor__save-btn {
   border-radius: 6px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
-  padding: 0.45rem 1rem;
+  padding: 0.35rem 0.85rem;
   font-family: inherit;
   font-size: 1rem;
   cursor: pointer;
