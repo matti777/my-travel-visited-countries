@@ -952,7 +952,11 @@ main.about-page {
   white-space: nowrap;
 }
 
-.country-cell__delete {
+
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -961,13 +965,27 @@ main.about-page {
   border: 1px solid #c00;
   background: #fff;
   cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
+  color: #c00;
   line-height: 1;
 }
 
-.country-cell__delete:hover {
+.delete-button:hover {
   background: #f5f5f5;
+}
+
+.delete-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.delete-button__icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.country-cell__delete {
+  /* layout hook; visuals from .delete-button */
 }
 
 .country-cell--compact {
@@ -2824,21 +2842,7 @@ body.visits-globe-immersive-open {
 }
 
 .friend-cell__delete {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 4px;
-  border: 1px solid #c00;
-  background: #fff;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.friend-cell__delete:hover {
-  background: #f5f5f5;
+  /* layout hook; visuals from .delete-button */
 }
 
 @media (max-width: 768px) {
@@ -3159,6 +3163,7 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-editor__list {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -3185,32 +3190,48 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-editor-cell {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
+  position: relative;
+  display: block;
+  padding: 0.65rem 2.75rem 0.65rem 0.75rem;
   border: 1px solid #c8d8d8;
   border-radius: 8px;
   background: #fafefe;
-  transition: transform 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
+  box-sizing: border-box;
+  touch-action: none;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.28s ease;
+}
+
+.wish-list-editor-cell--item {
+  cursor: grab;
+}
+
+.wish-list-editor-cell--item:hover {
+  background: #eef7f7;
 }
 
 .wish-list-editor-cell--add {
   border-style: dashed;
   background: #f7fbfb;
+  touch-action: auto;
+  cursor: default;
 }
 
 .wish-list-editor-cell--dragging {
-  opacity: 0.55;
+  background: #dceeee;
+  box-shadow: 0 8px 22px rgba(0, 60, 70, 0.22);
+  cursor: grabbing;
+  z-index: 5;
+  opacity: 1;
 }
 
-.wish-list-editor-cell--drag-over {
-  box-shadow: 0 0 0 2px var(--color-turquoise);
+.wish-list-editor-cell--shifting {
+  transition: transform 0.28s ease;
 }
 
 .wish-list-editor-cell__main {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -3243,64 +3264,33 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-editor-cell__actions {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: flex-end;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
-.wish-list-editor-cell__drag-handle {
-  width: 14px;
-  align-self: stretch;
-  min-height: 4.5rem;
-  padding: 0;
-  border-radius: 4px;
-  border: 1px solid #9ab;
-  background:
-    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 28% / 100% 12px,
-    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 50% / 100% 12px,
-    radial-gradient(circle, #6a8080 1.1px, transparent 1.2px) 50% 72% / 100% 12px,
-    #f4f8f8;
-  background-repeat: no-repeat;
-  cursor: grab;
-  flex-shrink: 0;
-}
-
-.wish-list-editor-cell__drag-handle:active {
-  cursor: grabbing;
+  gap: 0.35rem;
+  z-index: 1;
 }
 
 .wish-list-editor-cell__delete {
-  flex-shrink: 0;
-  align-self: flex-start;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 4px;
-  border: 1px solid #c00;
-  background: #fff;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.wish-list-editor-cell__delete:hover {
-  background: #f5f5f5;
+  /* layout hook; visuals from .delete-button */
 }
 
 .wish-list-editor-cell__add-btn {
   font-family: inherit;
-  font-size: 0.95rem;
-  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 6px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
   color: #222;
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1.2;
+  min-height: 28px;
 }
 
 .wish-list-editor-cell__add-btn:disabled {

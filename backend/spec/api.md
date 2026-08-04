@@ -54,7 +54,7 @@ GET /wishlist: Returns the authenticated user's wish list. Response body: `{ "wi
 
 ### Update wish list
 
-PUT /wishlist: Replaces the authenticated user's entire wish list. Request body must include `wishList` (array); omitting `wishList` yields **400 Bad Request**. Use `[]` to clear. Each entry must have `countryCode` (listed country code); optional `description` (at most **500** characters). At most **10** entries; each `countryCode` unique; array order is preserved. On success **200 OK** with the stored list in the same shape as GET. **400** on validation failure. **404** if the user document is missing. **Authenticated**.
+PUT /wishlist: Replaces the authenticated user's entire wish list. Request body must include `wishList` (array); omitting `wishList` yields **400 Bad Request**. Use `[]` to clear. Each entry must have `countryCode` (listed country code); optional `description` (at most **500** characters). At most **5** entries; each `countryCode` unique; array order is preserved. On success **200 OK** with the stored list in the same shape as GET. **400** on validation failure. **404** if the user document is missing. **Authenticated**.
 
 ### List friends
 

@@ -25,7 +25,7 @@ Represents a system user. Data parsed from incoming authentication token. Only u
 - `Name`: User name from the auth token
 - `Email`: User email from the auth token
 - `ImageURL`: User's image URL; extracted from the authentication token and stored at login (on user creation).
-- `WishList`: Ordered list of `WishListCountry` objects (at most 10). Optional; absent or empty means no wish-list entries.
+- `WishList`: Ordered list of `WishListCountry` objects (at most 5). Optional; absent or empty means no wish-list entries.
 - `Settings`: A subobject with following properties:
   - `InstagramUserName`: Instagram user name. Optional. Format: 1–30 characters; letters, digits, `.`, `_`; no leading/trailing `.`; no `..`.
   - `HomeCountryCode`: 2-letter ISO 3166-1 alpha-2 country code for home country. Optional.
@@ -43,7 +43,7 @@ A country on the user's wish list (places they want to visit).
 - `CountryCode`: 2-letter ISO 3166-1 alpha-2 code. Mandatory.
 - `Description`: Free-form text explaining why the country is on the wish list. Optional (can be empty). Max length 500 characters. When displayed, supports Markdown formatting.
 
-**Validation:** `CountryCode` must be a valid listed country code. At most **10** entries per user; each `CountryCode` may appear at most once. Array order is the wish-list order.
+**Validation:** `CountryCode` must be a valid listed country code. At most **5** entries per user; each `CountryCode` may appear at most once. Array order is the wish-list order.
 
 ### Country model
 
@@ -74,3 +74,4 @@ Friend models represent other users in the system that have been added to a user
 - `ShareToken`: ShareToken of the friend user
 - `Name`: Name of the friend user; duplicated here for faster access.
 - `ImageURL`: Image URL of the friend user; duplicated here for faster access and set when the friend is created (e.g. from the share endpoint response or from the User document looked up by ShareToken).
+

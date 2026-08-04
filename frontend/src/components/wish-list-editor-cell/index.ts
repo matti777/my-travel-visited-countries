@@ -1,6 +1,6 @@
-import { attachTooltip } from "Components/tooltip";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createCharCountLabel } from "Components/char-count-label";
+import { createDeleteButton } from "Components/delete-button";
 import type { Country } from "../../types/country";
 import type { WishListCountry } from "../../types/visit";
 
@@ -8,6 +8,20 @@ export const MAX_WISH_LIST_DESCRIPTION_LENGTH = 500;
 
 const DESCRIPTION_PLACEHOLDER =
   "Optional: why you want to visit (plain text).";
+
+/** True when the event target is an interactive control (do not start cell drag). */
+export function isWishListEditorCellInteractiveTarget(
+  target: EventTarget | null,
+): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  return Boolean(
+    target.closest(
+      "input, textarea, button, select, a, .country-dropdown, label",
+    ),
+  );
+}
 
 export type WishListEditorCellMode = "item" | "add";
 
@@ -22,7 +36,6 @@ export interface WishListEditorCellOptions {
   onChange?: (entry: WishListCountry) => void;
   onDelete?: () => void;
   onAdd?: (entry: WishListCountry) => void;
-  onDragStart?: (e: DragEvent) => void;
   disabled?: boolean;
 }
 
@@ -32,8 +45,6 @@ export interface WishListEditorCellHandle {
   setDisabled(disabled: boolean): void;
   /** Clears country + description (add mode after successful Add). */
   clear(): void;
-  /** Drag handle element (item mode only). */
-  dragHandle: HTMLButtonElement | null;
 }
 
 function truncateDescription(value: string): string {
@@ -49,9 +60,13 @@ function filterAvailableCountries(
   keepCode: string,
 ): Country[] {
   const excludedSet = new Set(
-    excluded.map((c) => c.toUpperCase()).filter((c) => c !== keepCode.toUpperCase()),
+    excluded
+      .map((c) => c.toUpperCase())
+      .filter((c) => c !== keepCode.toUpperCase()),
   );
-  return countries.filter((c) => !excludedSet.has(c.countryCode.toUpperCase()));
+  return countries.filter(
+    (c) => !excludedSet.has(c.countryCode.toUpperCase()),
+  );
 }
 
 /**
@@ -60,14 +75,7 @@ function filterAvailableCountries(
 export function createWishListEditorCell(
   options: WishListEditorCellOptions,
 ): WishListEditorCellHandle {
-  const {
-    mode,
-    baseUrl,
-    onChange,
-    onDelete,
-    onAdd,
-    onDragStart,
-  } = options;
+  const { mode, baseUrl, onChange, onDelete, onAdd } = options;
 
   let countryCode = (options.countryCode ?? "").toUpperCase();
   let description = options.description ?? "";
@@ -77,6 +85,8 @@ export function createWishListEditorCell(
   root.className = "wish-list-editor-cell";
   if (mode === "add") {
     root.classList.add("wish-list-editor-cell--add");
+  } else {
+    root.classList.add("wish-list-editor-cell--item");
   }
 
   const main = document.createElement("div");
@@ -135,29 +145,17 @@ export function createWishListEditorCell(
   const actions = document.createElement("div");
   actions.className = "wish-list-editor-cell__actions";
 
-  let dragHandle: HTMLButtonElement | null = null;
+  let deleteBtn: HTMLButtonElement | null = null;
   let addBtn: HTMLButtonElement | null = null;
 
   if (mode === "item") {
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "wish-list-editor-cell__delete";
-    deleteBtn.textContent = "X";
-    deleteBtn.setAttribute("aria-label", "Remove from wish list");
-    attachTooltip(deleteBtn, "Click to remove from wish list");
-    deleteBtn.addEventListener("click", () => onDelete?.());
-    actions.appendChild(deleteBtn);
-
-    dragHandle = document.createElement("button");
-    dragHandle.type = "button";
-    dragHandle.className = "wish-list-editor-cell__drag-handle";
-    dragHandle.setAttribute("aria-label", "Drag to reorder");
-    dragHandle.draggable = true;
-    attachTooltip(dragHandle, "Drag to reorder");
-    dragHandle.addEventListener("dragstart", (e) => {
-      onDragStart?.(e);
+    deleteBtn = createDeleteButton({
+      className: "wish-list-editor-cell__delete",
+      ariaLabel: "Remove from wish list",
+      tooltip: "Click to remove from wish list",
+      onClick: () => onDelete?.(),
     });
-    actions.appendChild(dragHandle);
+    actions.appendChild(deleteBtn);
   } else {
     addBtn = document.createElement("button");
     addBtn.type = "button";
@@ -198,13 +196,6 @@ export function createWishListEditorCell(
     if (homeInput) {
       homeInput.disabled = value;
     }
-    if (dragHandle) {
-      dragHandle.draggable = !value;
-      dragHandle.disabled = value;
-    }
-    const deleteBtn = actions.querySelector(
-      ".wish-list-editor-cell__delete",
-    ) as HTMLButtonElement | null;
     if (deleteBtn) {
       deleteBtn.disabled = value;
     }
@@ -216,7 +207,6 @@ export function createWishListEditorCell(
 
   return {
     element: root,
-    dragHandle,
     getValue(): WishListCountry {
       return {
         countryCode,

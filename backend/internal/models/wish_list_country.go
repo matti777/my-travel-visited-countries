@@ -7,7 +7,7 @@ import (
 )
 
 // MaxWishListEntries is the maximum number of countries on a user's wish list.
-const MaxWishListEntries = 10
+const MaxWishListEntries = 5
 
 // MaxWishListDescriptionLength is the maximum Unicode characters in a wish-list description.
 const MaxWishListDescriptionLength = 500

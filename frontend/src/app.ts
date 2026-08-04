@@ -8,6 +8,7 @@ import { openUserSettingsDialog } from "Components/user-settings-dialog";
 import { openWishListEditor } from "Components/wish-list-editor";
 import { createUserProfile } from "Components/user-profile";
 import { createCountryCell } from "Components/country-cell";
+import { createDeleteButton } from "Components/delete-button";
 import { createShareSection } from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { sanitizeTagInput } from "Components/tag-editor";
@@ -1665,26 +1666,25 @@ function renderFriendsListSection(container: HTMLElement, options: RenderOptions
       });
       attachTooltip(linkArea, `Click to view country visits by ${friend.name}`);
       cell.appendChild(linkArea);
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "friend-cell__delete";
-      deleteBtn.textContent = "✕";
-      deleteBtn.setAttribute("aria-label", "Remove friend");
-      deleteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        void (async () => {
-          const ok = await confirmDialog({
-            title: "Confirm removal",
-            message: `Are you sure you want to remove friend ${friend.name}?`,
-            danger: true,
-            confirmText: "Yes, remove",
-            cancelText: "No",
-          });
-          if (!ok) return;
-          onDeleteFriend(friend.shareToken);
-        })();
+      const deleteBtn = createDeleteButton({
+        className: "friend-cell__delete",
+        ariaLabel: "Remove friend",
+        tooltip: `Click to remove ${friend.name} as friend`,
+        onClick: (e) => {
+          e.stopPropagation();
+          void (async () => {
+            const ok = await confirmDialog({
+              title: "Confirm removal",
+              message: `Are you sure you want to remove friend ${friend.name}?`,
+              danger: true,
+              confirmText: "Yes, remove",
+              cancelText: "No",
+            });
+            if (!ok) return;
+            onDeleteFriend(friend.shareToken);
+          })();
+        },
       });
-      attachTooltip(deleteBtn, `Click to remove ${friend.name} as friend`);
       cell.appendChild(deleteBtn);
       list.appendChild(cell);
     }
