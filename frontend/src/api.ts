@@ -1,7 +1,7 @@
 import { errorToast } from "Components/toast";
 import type { Country, CountriesResponse } from "./types/country";
 import type { Friend, FriendsResponse } from "./types/friend";
-import type { CountryVisit, ShareProfileResponse, VisitsResponse } from "./types/visit";
+import type { CountryVisit, ShareProfileResponse, VisitsResponse, WishListCountry, WishListResponse } from "./types/visit";
 import type { UserSettings } from "./types/settings";
 
 
@@ -156,6 +156,34 @@ export default class Api {
       body: JSON.stringify(settings),
     })) as UserSettings;
     return response;
+  }
+
+  async getWishList(): Promise<WishListCountry[]> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const response = (await this.performRequest("/wishlist", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })) as WishListResponse;
+    return response?.wishList ?? [];
+  }
+
+  async updateWishList(wishList: WishListCountry[]): Promise<WishListCountry[]> {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new ApiError({ message: "Not authenticated" });
+    }
+    const response = (await this.performRequest("/wishlist", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ wishList }),
+    })) as WishListResponse;
+    return response?.wishList ?? [];
   }
 
   async getFriends(): Promise<{ friends: Friend[] }> {
@@ -370,6 +398,7 @@ export default class Api {
 }
 
 export let api = new Api();
+
 
 
 

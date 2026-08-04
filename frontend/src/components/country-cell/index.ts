@@ -1,4 +1,4 @@
-import { attachTooltip } from "Components/tooltip";
+import { createDeleteButton } from "Components/delete-button";
 
 export type CountryCellVariant = "default" | "compact";
 
@@ -12,7 +12,7 @@ export interface CountryCellOptions {
 
 /**
  * Creates a country cell element: flag on the left, country name on the right.
- * Optionally shows visit time and an X delete button when onDelete is provided.
+ * Optionally shows visit time and a trash delete button when onDelete is provided.
  * Fixed dimensions for consistent grid layout.
  */
 export function createCountryCell(
@@ -55,14 +55,13 @@ export function createCountryCell(
   }
 
   if (!isCompact && options?.onDelete != null) {
-    const xBtn = document.createElement("button");
-    xBtn.type = "button";
-    xBtn.className = "country-cell__delete";
-    xBtn.textContent = "X";
-    xBtn.setAttribute("aria-label", "Delete visit");
-    xBtn.addEventListener("click", () => options.onDelete!());
-    attachTooltip(xBtn, "Click to delete this visit");
-    cell.appendChild(xBtn);
+    const deleteBtn = createDeleteButton({
+      className: "country-cell__delete",
+      ariaLabel: "Delete visit",
+      tooltip: "Click to delete this visit",
+      onClick: () => options.onDelete!(),
+    });
+    cell.appendChild(deleteBtn);
   }
 
   return cell;

@@ -2,6 +2,7 @@ export interface SharingSettings {
   shareMediaUrl: boolean;
   shareNotes: boolean;
   shareTags: boolean;
+  shareWishList: boolean;
 }
 
 export interface UserSettings {
@@ -10,4 +11,6 @@ export interface UserSettings {
   description?: string;
   sharing: SharingSettings;
 }
+
+
 

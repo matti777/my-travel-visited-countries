@@ -1,3 +1,14 @@
+/** Wish-list entry (GET/PUT /wishlist, share profile). */
+export interface WishListCountry {
+  countryCode: string;
+  description?: string;
+}
+
+/** GET /wishlist and PUT /wishlist response body. */
+export interface WishListResponse {
+  wishList: WishListCountry[];
+}
+
 /**
  * Types matching GET /visits API response (backend CountryVisit, data-models.md).
  */
@@ -24,5 +35,6 @@ export interface ShareProfileResponse {
   homeCountryCode?: string;
   instagramUserName?: string;
   description?: string;
+  wishList?: WishListCountry[];
 }
 

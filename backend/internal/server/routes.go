@@ -40,6 +40,12 @@ func (s *Server) RegisterRoutes() {
 		protected.PUT("/settings", func(c *gin.Context) {
 			s.PutSettingsHandler(c.Request.Context(), c)
 		})
+		protected.GET("/wishlist", func(c *gin.Context) {
+			s.GetWishListHandler(c.Request.Context(), c)
+		})
+		protected.PUT("/wishlist", func(c *gin.Context) {
+			s.PutWishListHandler(c.Request.Context(), c)
+		})
 		protected.GET("/friends", func(c *gin.Context) {
 			s.GetFriendsHandler(c.Request.Context(), c)
 		})
@@ -54,4 +60,5 @@ func (s *Server) RegisterRoutes() {
 	// Static frontend: serve embedded files; unknown paths serve index.html (SPA fallback)
 	s.Router.NoRoute(s.staticHandler)
 }
+
 

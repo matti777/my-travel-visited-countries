@@ -239,7 +239,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   const addBtn = document.createElement("button");
   addBtn.type = "submit";
   addBtn.textContent = mode === "edit" ? "Save visit" : "Add visit";
-  addBtn.className = "add-visit-form__add-btn";
+  addBtn.className = "add-visit-form__add-btn primary";
   addBtn.disabled = true;
   addBtnRow.appendChild(addBtn);
   form.appendChild(addBtnRow);

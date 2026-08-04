@@ -1,7 +1,9 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { attachTooltip } from "Components/tooltip";
+import { createWishListCell } from "Components/wish-list-cell";
 import type { Country } from "../../types/country";
+import type { WishListCountry } from "../../types/visit";
 
 export interface UserProfileData {
   name: string;
@@ -10,6 +12,7 @@ export interface UserProfileData {
   instagramUserName?: string;
   description?: string;
   countriesVisited: number;
+  wishList?: WishListCountry[];
 }
 
 export interface CreateUserProfileOptions extends UserProfileData {
@@ -85,7 +88,9 @@ function createInstagramIconSvg(): SVGSVGElement {
 /**
  * Read-only traveller profile. See frontend/spec/components/user-profile.md.
  */
-export function createUserProfile(options: CreateUserProfileOptions): UserProfileHandle {
+export function createUserProfile(
+  options: CreateUserProfileOptions,
+): UserProfileHandle {
   const { countries, baseUrl } = options;
   let state: UserProfileData = {
     name: options.name,
@@ -94,6 +99,7 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
     instagramUserName: options.instagramUserName,
     description: options.description,
     countriesVisited: options.countriesVisited,
+    wishList: options.wishList,
   };
 
   const root = document.createElement("section");
@@ -164,7 +170,51 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
   descBox.className = "user-profile__description";
   fields.appendChild(descBox);
 
+  const wishListSection = document.createElement("div");
+  wishListSection.className = "user-profile__wish-list";
+  wishListSection.hidden = true;
+  const wishListTitle = document.createElement("h2");
+  wishListTitle.className = "user-profile__wish-list-title";
+  wishListTitle.textContent =
+    '"Wish List" of countries I would like to visit';
+  wishListSection.appendChild(wishListTitle);
+  const wishListOl = document.createElement("ol");
+  wishListOl.className = "user-profile__wish-list-ol";
+  wishListSection.appendChild(wishListOl);
+  fields.appendChild(wishListSection);
+
   root.appendChild(fields);
+
+  function countryNameFor(code: string): string {
+    const upper = code.toUpperCase();
+    const country = countries.find(
+      (c) => c.countryCode.toUpperCase() === upper,
+    );
+    return country?.name ?? code;
+  }
+
+  function renderWishList(): void {
+    const entries = state.wishList ?? [];
+    wishListOl.replaceChildren();
+    if (entries.length === 0) {
+      wishListSection.hidden = true;
+      return;
+    }
+    for (const entry of entries) {
+      const li = document.createElement("li");
+      li.className = "user-profile__wish-list-item";
+      li.appendChild(
+        createWishListCell({
+          countryCode: entry.countryCode,
+          countryName: countryNameFor(entry.countryCode),
+          baseUrl,
+          description: entry.description,
+        }),
+      );
+      wishListOl.appendChild(li);
+    }
+    wishListSection.hidden = false;
+  }
 
   function render(): void {
     if (state.imageUrl) {
@@ -230,6 +280,8 @@ export function createUserProfile(options: CreateUserProfileOptions): UserProfil
       descBox.replaceChildren();
       descBox.hidden = true;
     }
+
+    renderWishList();
   }
 
   render();

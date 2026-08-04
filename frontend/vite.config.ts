@@ -56,6 +56,7 @@ export default defineConfig({
       "/visits": { target: "http://localhost:8080", changeOrigin: true },
       "/friends": { target: "http://localhost:8080", changeOrigin: true },
       "/settings": { target: "http://localhost:8080", changeOrigin: true },
+      "/wishlist": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
   build: {
@@ -66,4 +67,5 @@ export default defineConfig({
     sourcemap: false,
   },
 });
+
 

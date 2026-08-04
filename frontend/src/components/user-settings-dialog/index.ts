@@ -61,6 +61,42 @@ function buildPutBody(
   return settings;
 }
 
+type SettingsDraft = {
+  homeCountryCode: string;
+  instagramUserName: string;
+  description: string;
+  shareMediaUrl: boolean;
+  shareNotes: boolean;
+  shareTags: boolean;
+  shareWishList: boolean;
+};
+
+function normalizeDraft(draft: SettingsDraft): SettingsDraft {
+  return {
+    homeCountryCode: draft.homeCountryCode.trim().toUpperCase(),
+    instagramUserName: normalizeInstagramUserName(draft.instagramUserName),
+    description: draft.description.trim(),
+    shareMediaUrl: draft.shareMediaUrl,
+    shareNotes: draft.shareNotes,
+    shareTags: draft.shareTags,
+    shareWishList: draft.shareWishList,
+  };
+}
+
+function draftsEqual(a: SettingsDraft, b: SettingsDraft): boolean {
+  const left = normalizeDraft(a);
+  const right = normalizeDraft(b);
+  return (
+    left.homeCountryCode === right.homeCountryCode &&
+    left.instagramUserName === right.instagramUserName &&
+    left.description === right.description &&
+    left.shareMediaUrl === right.shareMediaUrl &&
+    left.shareNotes === right.shareNotes &&
+    left.shareTags === right.shareTags &&
+    left.shareWishList === right.shareWishList
+  );
+}
+
 /**
  * Opens the user settings dialog (GET /settings on open, PUT on Save).
  * See frontend/spec/components/user-settings-dialog.md.
@@ -92,6 +128,7 @@ export function openUserSettingsDialog(
     clearable: true,
     onSelect: (code) => {
       homeCountryCode = code;
+      updateSaveEnabled();
     },
   });
   homeDropdown.element.classList.add("user-settings-dialog__country");
@@ -126,7 +163,10 @@ export function openUserSettingsDialog(
     igError.textContent = "";
   };
 
-  igInput.addEventListener("input", clearIgError);
+  igInput.addEventListener("input", () => {
+    clearIgError();
+    updateSaveEnabled();
+  });
 
   const descFieldId = `user-settings-description-${Math.random().toString(36).slice(2, 9)}`;
   const descCount = createCharCountLabel({
@@ -157,6 +197,7 @@ export function openUserSettingsDialog(
       descInput.value = truncated;
     }
     descCount.setCount(descInput.value.length);
+    updateSaveEnabled();
   });
 
   const mediaLabel = document.createElement("label");
@@ -198,32 +239,73 @@ export function openUserSettingsDialog(
   tagsLabel.appendChild(tagsText);
   body.appendChild(tagsLabel);
 
-  const saveRow = document.createElement("div");
-  saveRow.className = "user-settings-dialog__save-row";
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "user-settings-dialog__save-btn";
-  saveBtn.textContent = "Save settings";
-  saveBtn.disabled = true;
-  saveRow.appendChild(saveBtn);
-  body.appendChild(saveRow);
+  const wishListLabel = document.createElement("label");
+  wishListLabel.className = "user-settings-dialog__row";
+  const wishListCb = document.createElement("input");
+  wishListCb.type = "checkbox";
+  wishListCb.className = "user-settings-dialog__checkbox";
+  wishListCb.disabled = true;
+  const wishListText = document.createElement("span");
+  wishListText.className = "user-settings-dialog__label-text";
+  wishListText.textContent = "Share wish list on shared profiles";
+  wishListLabel.appendChild(wishListCb);
+  wishListLabel.appendChild(wishListText);
+  body.appendChild(wishListLabel);
+
+  for (const cb of [mediaCb, notesCb, tagsCb, wishListCb]) {
+    cb.addEventListener("change", () => updateSaveEnabled());
+  }
 
   const footer = document.createElement("div");
-  footer.className = "app-confirm__actions";
+  footer.className = "app-confirm__actions user-settings-dialog__footer";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "user-settings-dialog__save-btn primary";
+  saveBtn.textContent = "Save settings";
+  saveBtn.disabled = true;
+  footer.appendChild(saveBtn);
+
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "app-confirm__btn app-confirm__btn--secondary";
+  closeBtn.className = "app-confirm__btn secondary";
   closeBtn.textContent = "Close without saving";
   closeBtn.setAttribute("aria-label", "Close without saving");
   footer.appendChild(closeBtn);
 
   let closeModal: (() => void) | null = null;
   let saving = false;
+  let loaded = false;
+  let initial: SettingsDraft = {
+    homeCountryCode: "",
+    instagramUserName: "",
+    description: "",
+    shareMediaUrl: true,
+    shareNotes: true,
+    shareTags: true,
+    shareWishList: true,
+  };
+
+  const readDraft = (): SettingsDraft => ({
+    homeCountryCode,
+    instagramUserName: igInput.value,
+    description: descInput.value,
+    shareMediaUrl: mediaCb.checked,
+    shareNotes: notesCb.checked,
+    shareTags: tagsCb.checked,
+    shareWishList: wishListCb.checked,
+  });
+
+  const updateSaveEnabled = (): void => {
+    saveBtn.disabled =
+      !loaded || saving || draftsEqual(readDraft(), initial);
+  };
 
   const setControlsEnabled = (enabled: boolean): void => {
     mediaCb.disabled = !enabled;
     notesCb.disabled = !enabled;
     tagsCb.disabled = !enabled;
+    wishListCb.disabled = !enabled;
     descInput.disabled = !enabled;
     igInput.disabled = !enabled;
     const homeInput = homeDropdown.element.querySelector(
@@ -232,7 +314,11 @@ export function openUserSettingsDialog(
     if (homeInput) {
       homeInput.disabled = !enabled;
     }
-    saveBtn.disabled = !enabled || saving;
+    if (!enabled) {
+      saveBtn.disabled = true;
+    } else {
+      updateSaveEnabled();
+    }
   };
 
   const applyFieldErrors = (fields: Record<string, string>): void => {
@@ -262,7 +348,7 @@ export function openUserSettingsDialog(
   closeBtn.addEventListener("click", () => close("closeButton"));
 
   saveBtn.addEventListener("click", async () => {
-    if (saving) return;
+    if (saving || !loaded || draftsEqual(readDraft(), initial)) return;
     saving = true;
     clearIgError();
     setControlsEnabled(false);
@@ -274,6 +360,7 @@ export function openUserSettingsDialog(
         shareMediaUrl: mediaCb.checked,
         shareNotes: notesCb.checked,
         shareTags: tagsCb.checked,
+        shareWishList: wishListCb.checked,
       },
     );
     try {
@@ -315,6 +402,10 @@ export function openUserSettingsDialog(
       mediaCb.checked = Boolean(settings?.sharing?.shareMediaUrl);
       notesCb.checked = Boolean(settings?.sharing?.shareNotes);
       tagsCb.checked = Boolean(settings?.sharing?.shareTags);
+      // Default true when missing (older responses / rollout of ShareWishList).
+      wishListCb.checked = settings?.sharing?.shareWishList !== false;
+      initial = readDraft();
+      loaded = true;
       setControlsEnabled(true);
     } catch (err) {
       console.error("Failed to load settings", err);
@@ -328,3 +419,4 @@ export function openUserSettingsDialog(
     }
   })();
 }
+

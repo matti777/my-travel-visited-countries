@@ -35,6 +35,7 @@ type Database interface {
 	GetUserByShareToken(ctx context.Context, shareToken string) (*models.User, error)
 	EnsureUser(ctx context.Context, user *models.User) error
 	UpdateUserSettings(ctx context.Context, userID string, settings models.UserSettings) error
+	UpdateUserWishList(ctx context.Context, userID string, wishList []models.WishListCountry) error
 	CreateCountryVisit(ctx context.Context, visit *models.CountryVisit) (*models.CountryVisit, error)
 	GetCountryVisit(ctx context.Context, visitID, userID string) (*models.CountryVisit, error)
 	ReplaceCountryVisit(ctx context.Context, visit *models.CountryVisit) error
@@ -269,3 +270,4 @@ func contentTypeByExt(ext string) string {
 	}
 	return ""
 }
+

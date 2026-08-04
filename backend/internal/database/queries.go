@@ -129,6 +129,7 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 						"ShareMediaURL": defaults.Sharing.ShareMediaURL,
 						"ShareNotes":    defaults.Sharing.ShareNotes,
 						"ShareTags":     defaults.Sharing.ShareTags,
+						"ShareWishList": defaults.Sharing.ShareWishList,
 					},
 				},
 			}
@@ -154,7 +155,7 @@ func (c *Client) EnsureUser(ctx context.Context, user *models.User) error {
 }
 
 // applyUserSettingsDefaults sets DefaultUserSettings when Settings was absent in Firestore.
-// If Settings exists but Sharing.ShareTags is missing, defaults ShareTags to true.
+// If Settings exists but Sharing.ShareTags or Sharing.ShareWishList is missing, defaults to true.
 func applyUserSettingsDefaults(u *models.User, data map[string]interface{}) {
 	if u == nil {
 		return
@@ -177,6 +178,9 @@ func applyUserSettingsDefaults(u *models.User, data map[string]interface{}) {
 	}
 	if _, has := sharingRaw["ShareTags"]; !has {
 		u.Settings.Sharing.ShareTags = true
+	}
+	if _, has := sharingRaw["ShareWishList"]; !has {
+		u.Settings.Sharing.ShareWishList = true
 	}
 }
 
@@ -406,6 +410,7 @@ func (c *Client) UpdateUserSettings(
 			"ShareMediaURL": settings.Sharing.ShareMediaURL,
 			"ShareNotes":    settings.Sharing.ShareNotes,
 			"ShareTags":     settings.Sharing.ShareTags,
+			"ShareWishList": settings.Sharing.ShareWishList,
 		},
 	}
 	if settings.InstagramUserName != "" {
@@ -425,6 +430,38 @@ func (c *Client) UpdateUserSettings(
 			return ErrUserNotFound
 		}
 		return fmt.Errorf("failed to update user settings: %w", err)
+	}
+	return nil
+}
+
+// UpdateUserWishList replaces the authenticated user's WishList on the User document.
+func (c *Client) UpdateUserWishList(
+	ctx context.Context,
+	userID string,
+	wishList []models.WishListCountry,
+) error {
+	if userID == "" {
+		return fmt.Errorf("userID is required")
+	}
+	ref := c.Collection("users").Doc(userID)
+	_, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	if wishList == nil {
+		wishList = []models.WishListCountry{}
+	}
+	_, err = ref.Update(ctx, []firestore.Update{
+		{Path: "WishList", Value: wishList},
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("failed to update user wish list: %w", err)
 	}
 	return nil
 }

@@ -23,6 +23,9 @@ type User struct {
 
 	// Settings is optional on older documents; nil means apply DefaultUserSettings().
 	Settings *UserSettings `firestore:"Settings" json:"-"`
+
+	// WishList is the user's ordered wish list (at most MaxWishListEntries). Optional.
+	WishList []WishListCountry `firestore:"WishList" json:"-"`
 }
 
 // UserSettings holds per-user preferences (see data-models.md).
@@ -38,6 +41,7 @@ type SharingSettings struct {
 	ShareMediaURL bool `firestore:"ShareMediaURL" json:"shareMediaUrl"`
 	ShareNotes    bool `firestore:"ShareNotes" json:"shareNotes"`
 	ShareTags     bool `firestore:"ShareTags" json:"shareTags"`
+	ShareWishList bool `firestore:"ShareWishList" json:"shareWishList"`
 }
 
 // DefaultUserSettings returns sharing defaults when Settings is absent (all true).
@@ -47,6 +51,7 @@ func DefaultUserSettings() UserSettings {
 			ShareMediaURL: true,
 			ShareNotes:    true,
 			ShareTags:     true,
+			ShareWishList: true,
 		},
 	}
 }
@@ -59,6 +64,14 @@ func (u *User) EffectiveSettings() UserSettings {
 	return *u.Settings
 }
 
+// EffectiveWishList returns the user's wish list, never nil.
+func (u *User) EffectiveWishList() []WishListCountry {
+	if u == nil || u.WishList == nil {
+		return []WishListCountry{}
+	}
+	return u.WishList
+}
+
 // SettingsResponse is the JSON body for GET/PUT /settings (omits unset optionals).
 func SettingsToResponse(s UserSettings) map[string]interface{} {
 	out := map[string]interface{}{
@@ -66,6 +79,7 @@ func SettingsToResponse(s UserSettings) map[string]interface{} {
 			"shareMediaUrl": s.Sharing.ShareMediaURL,
 			"shareNotes":    s.Sharing.ShareNotes,
 			"shareTags":     s.Sharing.ShareTags,
+			"shareWishList": s.Sharing.ShareWishList,
 		},
 	}
 	if s.InstagramUserName != "" {
@@ -79,4 +93,5 @@ func SettingsToResponse(s UserSettings) map[string]interface{} {
 	}
 	return out
 }
+
 

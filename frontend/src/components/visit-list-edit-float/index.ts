@@ -36,7 +36,7 @@ function buildInner(inner: HTMLElement, options: VisitListEditFloatOptions): voi
 
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "visit-list-edit-float__action edit-done-btn";
+  btn.className = "visit-list-edit-float__action edit-done-btn primary";
   btn.textContent = LABEL_BY_MODE[mode];
   btn.addEventListener("click", onPrimary);
 

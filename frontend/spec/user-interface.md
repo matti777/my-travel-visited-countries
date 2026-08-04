@@ -6,9 +6,9 @@ The name of the application is "Countries of Earth"; this should be reflected eg
 
 ## UI routing
 
-If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top, then that user's visit list. This is called shared profile routing mode.
+If the URL path is `/share/<share-token>`, a shared profile is loaded via **GET /share/profile/<share-token>** (see [api.md](../../backend/spec/api.md)) and displayed. The public [user profile](components/user-profile.md) is shown at the top (including wish list when the API returns `wishList`), then that user's visit list. This is called shared profile routing mode.
 
-If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown with an **Edit settings** button underneath (opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
+If the URL path is `/profile` and the user is logged in, the own [user profile](components/user-profile.md) is shown (including the read-only wish list under the traveller description when non-empty) with **Edit Wish List** and **Edit settings** underneath (horizontally centered as a pair; Wish List opens the [wish list editor](components/wish-list-editor.md), settings opens the [user settings dialog](components/user-settings-dialog.md)). Visit list, add-visit, share, and friends sections are hidden. A **Home** button in the top bar returns to normal routing. This is called own profile routing mode.
 
 In any other case the user's own country visits list is fetched and used. This is called normal page routing mode.
 
@@ -22,7 +22,7 @@ The color scheme should have some light turquoise.
 
 The custom font should be **Roboto Condensed**, available as Google Font.
 
-Buttons should have slightly rounded corners and a thin border.
+Buttons should have slightly rounded corners and a thin border. Shared variants on buttons: class `primary` (turquoise border + light turquoise fill, dark text — historic default CTA), `secondary` (white fill + gray border), and `danger` (red outline). Feature-specific classes may add layout (size, width) or intentional overrides (e.g. solid turquoise profile CTAs).
 
 The "country cells" (UI element depicting a country - both available one as well as a visited one - should display the country flag on the left and the country name on the right. The cells should be of constant height and width regardless of the country name's length.
 
@@ -59,8 +59,8 @@ This list of countries will be unique by country code, ie. it will show no dupli
 On the **Alphabetical** tab, list edit mode is not started from the UI (the visit-list edit float is not shown; see below). On **By continent** and **Timeline**, a floating control (see below) provides an **Edit** button. When edit mode is active, it will:
 
 - Show a **Done** button in that floating control (replacing **Edit**). Tooltip for Done should say "Click to complete editing".
-- While it is in edit state (Done button showing), the country cells shall have a "X" delete button on their right side. Pressing this will show a "popup dialog" for confirmation, with text "Are you sure you want to delete the visit to <country name> at <visit time>?" and **No** and **Yes, delete** buttons (no separate Close control in the dialog). Pressing **Yes, delete** will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button shall have a thin red border and use a bold / thick X mark. The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
-- When **Done** is pressed in the floating control, edit mode ends: the float shows **Edit** again (with hint text to press Edit) and the X buttons are hidden from country cells. The list returns to its non-edit presentation (for example unique-by-country on the Alphabetical tab).
+- While it is in edit state (Done button showing), the country cells shall have a trash delete button on their right side. Pressing this will show a "popup dialog" for confirmation, with text "Are you sure you want to delete the visit to <country name> at <visit time>?" and **No** and **Yes, delete** buttons (no separate Close control in the dialog). Pressing **Yes, delete** will trigger DELETE /visits/id API call. Also, while in edit mode, the country cells list shall NOT be unique; instead it will show all the visits, and the country cells shall display the visit time for each one to distinguish them from one another. The delete button is a compact red trash-can icon control (shared delete button). The visit time shall be shown under the country name in a slightly grayed color and thin font. It should fit comfortably in the cell and not get clipped. The delete button should have tooltip saying "Click to delete this visit".
+- When **Done** is pressed in the floating control, edit mode ends: the float shows **Edit** again (with hint text to press Edit) and the delete buttons are hidden from country cells. The list returns to its non-edit presentation (for example unique-by-country on the Alphabetical tab).
 - Deletion of a country visit shall be animated, it. the country cell shall disappear with a fade to alpha = 0 animation.
 - The deletion (if successful) API call shall not be followed by a new GET /visits call; instead the in-memory list shall be updated to reflect the removal.
 - The transformation between an unique / non-unique lists shall be animated as well.
@@ -162,7 +162,7 @@ This section provides a sharing feature. The UI presents a read-only input box w
 
 If not logged in, this section is not visible.
 
-The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button, similar to country cells in edit mode, for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made. The delete button shows the same confirmation dialog pattern as deleting a country visit (full-screen dark overlay, **No** and a primary confirm button—**Yes, remove**—no separate Close control), with message text "Are you sure you want to remove friend <name>?".
+The UI shall show a list of friends for the current user. The "friend cells" should look similar to the country cells, except they should be much wider and not show multiple in one row, instead all of them should be placed in a single top to bottom column. Clicking a friend cell should open their shared visits set using their `ShareToken`. Each friend cell should have a delete button (red trash-can icon, same shared control as country cells in edit mode), for deleting a friend. The API call to DELETE /friends - if successful - should be followed by manual removal of that friend from the local variable. No extra API call to GET /friends shall be made. The delete button shows the same confirmation dialog pattern as deleting a country visit (full-screen dark overlay, **No** and a primary confirm button—**Yes, remove**—no separate Close control), with message text "Are you sure you want to remove friend <name>?".
 
 ---
 
@@ -181,6 +181,7 @@ Centered on the bottom should be a large "Login" button whose functionality must
 --
 
 At the very bottom of the page there are links to About, Privacy Policy, and Terms of Service (About leftmost). The About page (`/about.html`) welcomes new users with plain-language copy and the same travel polaroids as the logged-out splash.
+
 
 
 

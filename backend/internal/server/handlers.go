@@ -82,6 +82,18 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
+	dbUser, err := s.db.GetUserByID(ctx, user.ID)
+	if err != nil {
+		log.Error("PUT /settings: GetUserByID failed", logging.UserID, user.ID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch settings"})
+		return
+	}
+	if dbUser == nil {
+		log.Warn("PUT /settings: user not found", logging.UserID, user.ID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+		return
+	}
+
 	var raw map[string]json.RawMessage
 	if err := c.ShouldBindJSON(&raw); err != nil {
 		log.Warn("Invalid PUT /settings body", logging.Error, err)
@@ -100,6 +112,7 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 		ShareMediaURL *bool `json:"shareMediaUrl"`
 		ShareNotes    *bool `json:"shareNotes"`
 		ShareTags     *bool `json:"shareTags"`
+		ShareWishList *bool `json:"shareWishList"`
 	}
 	if err := json.Unmarshal(sharingRaw, &sharing); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -117,7 +130,11 @@ func (s *Server) PutSettingsHandler(ctx context.Context, c *gin.Context) {
 			ShareMediaURL: *sharing.ShareMediaURL,
 			ShareNotes:    *sharing.ShareNotes,
 			ShareTags:     *sharing.ShareTags,
+			ShareWishList: dbUser.EffectiveSettings().Sharing.ShareWishList,
 		},
+	}
+	if sharing.ShareWishList != nil {
+		settings.Sharing.ShareWishList = *sharing.ShareWishList
 	}
 
 	if homeRaw, hasHome := raw["homeCountryCode"]; hasHome {
@@ -264,7 +281,95 @@ func (s *Server) GetShareProfileHandler(ctx context.Context, c *gin.Context) {
 		HomeCountryCode:   settings.HomeCountryCode,
 		InstagramUserName: settings.InstagramUserName,
 		Description:       settings.Description,
+		WishList:          shareWishListForProfile(settings, user),
 	})
+}
+
+func shareWishListForProfile(
+	settings models.UserSettings,
+	user *models.User,
+) []models.WishListCountry {
+	if !settings.Sharing.ShareWishList {
+		return nil
+	}
+	return models.NormalizeWishList(user.EffectiveWishList())
+}
+
+// GetWishListHandler handles GET /wishlist for the authenticated user.
+func (s *Server) GetWishListHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "GetWishListHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("GET /wishlist: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+
+	dbUser, err := s.db.GetUserByID(ctx, user.ID)
+	if err != nil {
+		log.Error("GET /wishlist: GetUserByID failed", logging.UserID, user.ID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch wish list"})
+		return
+	}
+	if dbUser == nil {
+		log.Warn("GET /wishlist: user not found", logging.UserID, user.ID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.WishListToResponse(dbUser.EffectiveWishList()))
+}
+
+// PutWishListHandler handles PUT /wishlist for the authenticated user.
+func (s *Server) PutWishListHandler(ctx context.Context, c *gin.Context) {
+	ctx, span := tracing.New(ctx, "PutWishListHandler")
+	defer span.End()
+
+	log := logging.FromContext(ctx)
+	user, _ := ctx.Value(ctxkeys.CurrentUserKey).(*models.User)
+	if user == nil {
+		log.Warn("PUT /wishlist: user not in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required"})
+		return
+	}
+
+	var raw map[string]json.RawMessage
+	if err := c.ShouldBindJSON(&raw); err != nil {
+		log.Warn("Invalid PUT /wishlist body", logging.Error, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	wishListRaw, ok := raw["wishList"]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wishList is required"})
+		return
+	}
+	var entries []models.WishListCountry
+	if err := json.Unmarshal(wishListRaw, &entries); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wishList"})
+		return
+	}
+	normalized := models.NormalizeWishList(entries)
+	if err := models.ValidateWishList(normalized, data.IsListedCountry); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := s.db.UpdateUserWishList(ctx, user.ID, normalized); err != nil {
+		if errors.Is(err, database.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found; complete login first"})
+			return
+		}
+		log.Error("PUT /wishlist: UpdateUserWishList failed", logging.UserID, user.ID, logging.Error, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update wish list"})
+		return
+	}
+
+	log.Info("Updated user wish list", logging.UserID, user.ID)
+	c.JSON(http.StatusOK, models.WishListToResponse(normalized))
 }
 
 // GetListHandler handles GET /visits.
@@ -651,5 +756,6 @@ func (s *Server) GetFriendsHandler(ctx context.Context, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, models.LoginResponse{Friends: friends})
 }
+
 
 
