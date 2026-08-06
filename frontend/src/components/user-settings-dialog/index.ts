@@ -1,4 +1,5 @@
 import { openModal } from "Components/modal";
+import { createModalStickyFooter } from "Components/modal-sticky-footer";
 import { errorToast } from "Components/toast";
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createCharCountLabel } from "Components/char-count-label";
@@ -256,24 +257,25 @@ export function openUserSettingsDialog(
     cb.addEventListener("change", () => updateSaveEnabled());
   }
 
-  const footer = document.createElement("div");
-  footer.className = "app-confirm__actions user-settings-dialog__footer";
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "user-settings-dialog__save-btn primary";
-  saveBtn.textContent = "Save settings";
-  saveBtn.disabled = true;
-  footer.appendChild(saveBtn);
-
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "app-confirm__btn secondary";
-  closeBtn.textContent = "Close without saving";
-  closeBtn.setAttribute("aria-label", "Close without saving");
-  footer.appendChild(closeBtn);
-
   let closeModal: (() => void) | null = null;
+  let closeFromFooter: (() => void) | null = null;
+  let saveSettings: () => Promise<void> = async () => {};
+
+  const stickyFooter = createModalStickyFooter({
+    primary: {
+      label: "Save settings",
+      disabled: true,
+      onClick: () => {
+        void saveSettings();
+      },
+    },
+    secondary: {
+      label: "Close without saving",
+      onClick: () => closeFromFooter?.(),
+    },
+  });
+  const footer = stickyFooter.element;
+  const saveBtn = stickyFooter.primaryButton;
   let saving = false;
   let loaded = false;
   let initial: SettingsDraft = {
@@ -345,9 +347,9 @@ export function openUserSettingsDialog(
     closeOnOutsideClick: true,
   });
   closeModal = () => close("programmatic");
-  closeBtn.addEventListener("click", () => close("closeButton"));
+  closeFromFooter = () => close("closeButton");
 
-  saveBtn.addEventListener("click", async () => {
+  saveSettings = async () => {
     if (saving || !loaded || draftsEqual(readDraft(), initial)) return;
     saving = true;
     clearIgError();
@@ -389,7 +391,7 @@ export function openUserSettingsDialog(
       saving = false;
       setControlsEnabled(true);
     }
-  });
+  };
 
   void (async () => {
     try {

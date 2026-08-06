@@ -74,7 +74,7 @@ Similar listing to what Tab 1 describes but the countries are listed under 'subt
 
 Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](components/country-visit-info-tooltip.md).
 
-While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](components/country-visit-editor.md). It shall be presented as a "popup dialog" via `Components/modal` (same shell as Wish List / Settings): centered, dark overlay, page behind does not scroll, bordered form scrolls inside the panel, title outside the border. Clicking outside closes it. Standard appear/disappear animations apply. Sticky footer: **Save visit** (primary, left) and **Close without saving** (secondary, right) on one row, each content-width (label + padding), same as Wish List / Settings.
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](components/country-visit-editor.md). It shall be presented as a "popup dialog" via `Components/modal` (same shell as Wish List / Settings): centered, dark overlay, page behind does not scroll, bordered form scrolls inside the panel, title outside the border. Clicking outside closes it. Standard appear/disappear animations apply. Sticky footer via [modal sticky footer](components/modal-sticky-footer.md): **Save visit** (primary, left) and **Close without saving** (secondary, right).
 
 **Tab 3:** Countries plotted on map
 

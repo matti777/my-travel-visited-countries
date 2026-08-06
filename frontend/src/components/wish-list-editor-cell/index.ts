@@ -1,6 +1,7 @@
 import { createCountryDropdown } from "Components/country-dropdown";
 import { createCharCountLabel } from "Components/char-count-label";
 import { createDeleteButton } from "Components/delete-button";
+import { attachTooltip } from "Components/tooltip";
 import type { Country } from "../../types/country";
 import type { WishListCountry } from "../../types/visit";
 
@@ -43,7 +44,7 @@ export interface WishListEditorCellHandle {
   element: HTMLElement;
   getValue(): WishListCountry;
   setDisabled(disabled: boolean): void;
-  /** Clears country + description (add mode after successful Add). */
+  /** Clears country + description (add mode after successful +). */
   clear(): void;
 }
 
@@ -110,7 +111,15 @@ export function createWishListEditorCell(
     },
   });
   dropdown.element.classList.add("wish-list-editor-cell__country");
-  main.appendChild(dropdown.element);
+
+  const topRow = document.createElement("div");
+  topRow.className = "wish-list-editor-cell__top";
+  topRow.appendChild(dropdown.element);
+
+  const actions = document.createElement("div");
+  actions.className = "wish-list-editor-cell__actions";
+  topRow.appendChild(actions);
+  main.appendChild(topRow);
 
   const descFieldId = `wish-list-desc-${Math.random().toString(36).slice(2, 9)}`;
   const descCount = createCharCountLabel({
@@ -142,9 +151,6 @@ export function createWishListEditorCell(
 
   root.appendChild(main);
 
-  const actions = document.createElement("div");
-  actions.className = "wish-list-editor-cell__actions";
-
   let deleteBtn: HTMLButtonElement | null = null;
   let addBtn: HTMLButtonElement | null = null;
 
@@ -159,9 +165,11 @@ export function createWishListEditorCell(
   } else {
     addBtn = document.createElement("button");
     addBtn.type = "button";
-    addBtn.className = "wish-list-editor-cell__add-btn primary";
-    addBtn.textContent = "Add";
+    addBtn.className = "wish-list-editor-cell__add-btn";
+    addBtn.textContent = "+";
+    addBtn.setAttribute("aria-label", "Add wish list country entry");
     addBtn.disabled = true;
+    attachTooltip(addBtn, "A new wish list country entry will be added");
     addBtn.addEventListener("click", () => {
       if (!countryCode) return;
       onAdd?.({
@@ -171,8 +179,6 @@ export function createWishListEditorCell(
     });
     actions.appendChild(addBtn);
   }
-
-  root.appendChild(actions);
 
   const emitChange = (): void => {
     if (mode !== "item") return;

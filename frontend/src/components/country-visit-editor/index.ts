@@ -99,12 +99,14 @@ export interface CountryVisitEditorOptions {
   onFormNotesChange: (value: string) => void;
   initialTags?: string[];
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
+  /** Notified when Add/Save becomes enabled or disabled (validation). */
+  onCanSubmitChange?: (canSubmit: boolean) => void;
 }
 
 export interface CountryVisitEditorHandle {
   element: HTMLElement;
-  /** Primary submit control (Add visit / Save visit). */
-  submitButton: HTMLButtonElement;
+  /** Run the same path as clicking Add visit / Save visit. */
+  requestSubmit: () => void;
 }
 
 /**
@@ -132,6 +134,7 @@ export function createCountryVisitEditor(
     onFormNotesChange,
     initialTags,
     onSubmit,
+    onCanSubmitChange,
   } = options;
   /** Mutable; flatpickr updates this. Do not use stale `formVisitDate` from options after init. */
   let currentVisitDate: string | null = null;
@@ -271,7 +274,11 @@ export function createCountryVisitEditor(
       "invalid",
       mediaUrlInput.value.trim() !== "" && !mediaUrlValid,
     );
-    addBtn.disabled = !(selectedCountryCode && dateValid && mediaUrlValid && notesValid);
+    const canSubmit = !!(
+      selectedCountryCode && dateValid && mediaUrlValid && notesValid
+    );
+    addBtn.disabled = !canSubmit;
+    onCanSubmitChange?.(canSubmit);
   }
 
   mediaUrlInput.addEventListener("input", () => {
@@ -338,7 +345,7 @@ export function createCountryVisitEditor(
 
   updateValidationUI();
 
-  addBtn.addEventListener("click", async () => {
+  async function requestSubmit(): Promise<void> {
     if (!selectedCountryCode) {
       errorToast("Please select a country");
       return;
@@ -361,10 +368,19 @@ export function createCountryVisitEditor(
       notes,
       tags: tagEditor.getTags(),
     });
+  }
+
+  addBtn.addEventListener("click", () => {
+    void requestSubmit();
   });
 
   addSection.appendChild(form);
-  return { element: addSection, submitButton: addBtn };
+  return {
+    element: addSection,
+    requestSubmit: () => {
+      void requestSubmit();
+    },
+  };
 }
 
 

@@ -5,6 +5,7 @@ import {
 import { errorToast } from "Components/toast";
 import { renderAuthHeader } from "Components/auth";
 import { openUserSettingsDialog } from "Components/user-settings-dialog";
+import { createModalStickyFooter } from "Components/modal-sticky-footer";
 import { openWishListEditor } from "Components/wish-list-editor";
 import { createUserProfile } from "Components/user-profile";
 import { createCountryCell } from "Components/country-cell";
@@ -1106,7 +1107,23 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           const editorTags = visit.tags ?? [];
 
           let closeModal: (() => void) | null = null;
-          const editor = createCountryVisitEditor({
+          let closeFromFooter: (() => void) | null = null;
+          let editorHandle: ReturnType<typeof createCountryVisitEditor> | null =
+            null;
+
+          const stickyFooter = createModalStickyFooter({
+            primary: {
+              label: "Save visit",
+              disabled: true,
+              onClick: () => editorHandle?.requestSubmit(),
+            },
+            secondary: {
+              label: "Close without saving",
+              onClick: () => closeFromFooter?.(),
+            },
+          });
+
+          editorHandle = createCountryVisitEditor({
             mode: "edit",
             showTitle: false,
             showSubmitButton: false,
@@ -1130,6 +1147,9 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
               editorNotes = v;
             },
             initialTags: editorTags,
+            onCanSubmitChange: (canSubmit) => {
+              stickyFooter.primaryButton.disabled = !canSubmit;
+            },
             onSubmit: async (payload) => {
               if (!visit.id) return;
               try {
@@ -1158,30 +1178,16 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
             },
           });
 
-          const footer = document.createElement("div");
-          footer.className = "app-confirm__actions country-visit-editor__footer";
-          const saveBtn = editor.submitButton;
-          saveBtn.type = "button";
-          saveBtn.classList.add("country-visit-editor__save-btn");
-          saveBtn.classList.remove("add-visit-form__add-btn");
-          footer.appendChild(saveBtn);
-          const closeBtn = document.createElement("button");
-          closeBtn.type = "button";
-          closeBtn.className = "app-confirm__btn secondary";
-          closeBtn.textContent = "Close without saving";
-          closeBtn.setAttribute("aria-label", "Close without saving");
-          footer.appendChild(closeBtn);
-
           const { close } = openModal({
             title: `Edit your visit to ${name}`,
-            body: editor.element,
-            footer,
+            body: editorHandle.element,
+            footer: stickyFooter.element,
             showCloseButton: false,
             footerPlain: true,
             closeOnOutsideClick: true,
           });
           closeModal = () => close("programmatic");
-          closeBtn.addEventListener("click", () => close("closeButton"));
+          closeFromFooter = () => close("closeButton");
         });
       } else {
         const tooltipHtml = buildCountryVisitInfoTooltipHtml(visit);

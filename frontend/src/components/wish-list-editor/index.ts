@@ -1,4 +1,5 @@
 import { openModal } from "Components/modal";
+import { createModalStickyFooter } from "Components/modal-sticky-footer";
 import { errorToast, successToast } from "Components/toast";
 import {
   createWishListEditorCell,
@@ -106,24 +107,25 @@ export function openWishListEditor(options: OpenWishListEditorOptions): void {
   listEl.className = "wish-list-editor__list";
   body.appendChild(listEl);
 
-  const footer = document.createElement("div");
-  footer.className = "app-confirm__actions wish-list-editor__footer";
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "wish-list-editor__save-btn primary";
-  saveBtn.textContent = "Save changes";
-  saveBtn.disabled = true;
-  footer.appendChild(saveBtn);
-
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "app-confirm__btn secondary";
-  closeBtn.textContent = "Close without saving";
-  closeBtn.setAttribute("aria-label", "Close without saving");
-  footer.appendChild(closeBtn);
-
   let closeModal: (() => void) | null = null;
+  let closeFromFooter: (() => void) | null = null;
+  let saveWishList: () => Promise<void> = async () => {};
+
+  const stickyFooter = createModalStickyFooter({
+    primary: {
+      label: "Save changes",
+      disabled: true,
+      onClick: () => {
+        void saveWishList();
+      },
+    },
+    secondary: {
+      label: "Close without saving",
+      onClick: () => closeFromFooter?.(),
+    },
+  });
+  const footer = stickyFooter.element;
+  const saveBtn = stickyFooter.primaryButton;
   let initial: WishListCountry[] = [];
   let draft: WishListCountry[] = [];
   let saving = false;
@@ -442,9 +444,9 @@ export function openWishListEditor(options: OpenWishListEditorOptions): void {
     closeOnOutsideClick: true,
   });
   closeModal = () => close("programmatic");
-  closeBtn.addEventListener("click", () => close("closeButton"));
+  closeFromFooter = () => close("closeButton");
 
-  saveBtn.addEventListener("click", async () => {
+  saveWishList = async () => {
     if (saving || listsEqual(draft, initial)) return;
     const errMsg = validateDraft(draft);
     if (errMsg) {
@@ -468,7 +470,7 @@ export function openWishListEditor(options: OpenWishListEditorOptions): void {
       errorToast(err instanceof Error ? err.message : "Failed to save wish list");
       setBusy(false);
     }
-  });
+  };
 
   void (async () => {
     try {

@@ -362,11 +362,9 @@ body.app-modal-open {
 }
 
 
-/* Keep Save left / Close right on one row even on narrow viewports. */
+/* Sticky editor footers: keep primary left / secondary right on one row. */
 @media (max-width: 520px) {
-  .app-confirm__actions.user-settings-dialog__footer,
-  .app-confirm__actions.wish-list-editor__footer,
-  .app-confirm__actions.country-visit-editor__footer {
+  .app-confirm__actions.modal-sticky-footer {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -375,12 +373,7 @@ body.app-modal-open {
     width: 100%;
   }
 
-  .app-confirm__actions.user-settings-dialog__footer .app-confirm__btn,
-  .app-confirm__actions.user-settings-dialog__footer .user-settings-dialog__save-btn,
-  .app-confirm__actions.wish-list-editor__footer .app-confirm__btn,
-  .app-confirm__actions.wish-list-editor__footer .wish-list-editor__save-btn,
-  .app-confirm__actions.country-visit-editor__footer .app-confirm__btn,
-  .app-confirm__actions.country-visit-editor__footer .country-visit-editor__save-btn {
+  .app-confirm__actions.modal-sticky-footer .modal-sticky-footer__btn {
     flex: 0 0 auto;
     width: fit-content;
     max-width: none;
@@ -388,9 +381,7 @@ body.app-modal-open {
 }
 
 @media (max-width: 380px) {
-  .app-confirm__actions.user-settings-dialog__footer,
-  .app-confirm__actions.wish-list-editor__footer,
-  .app-confirm__actions.country-visit-editor__footer {
+  .app-confirm__actions.modal-sticky-footer {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -399,12 +390,7 @@ body.app-modal-open {
     width: 100%;
   }
 
-  .app-confirm__actions.user-settings-dialog__footer .app-confirm__btn,
-  .app-confirm__actions.user-settings-dialog__footer .user-settings-dialog__save-btn,
-  .app-confirm__actions.wish-list-editor__footer .app-confirm__btn,
-  .app-confirm__actions.wish-list-editor__footer .wish-list-editor__save-btn,
-  .app-confirm__actions.country-visit-editor__footer .app-confirm__btn,
-  .app-confirm__actions.country-visit-editor__footer .country-visit-editor__save-btn {
+  .app-confirm__actions.modal-sticky-footer .modal-sticky-footer__btn {
     flex: 0 0 auto;
     width: fit-content;
     max-width: none;
@@ -846,7 +832,7 @@ main.about-page {
   -webkit-overflow-scrolling: touch;
 }
 
-.country-visit-editor__footer {
+.modal-sticky-footer {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -858,8 +844,7 @@ main.about-page {
 }
 
 /* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
-.country-visit-editor__footer .app-confirm__btn,
-.country-visit-editor__footer .country-visit-editor__save-btn {
+.modal-sticky-footer .modal-sticky-footer__btn {
   flex: 0 0 auto;
   width: fit-content;
   max-width: none;
@@ -875,16 +860,7 @@ main.about-page {
   white-space: nowrap;
 }
 
-.country-visit-editor__save-btn {
-  border-radius: 6px;
-  border: 1px solid var(--color-turquoise);
-  background: var(--color-turquoise-light);
-  font-family: inherit;
-  cursor: pointer;
-  color: #222;
-}
-
-.country-visit-editor__save-btn:disabled {
+.modal-sticky-footer .modal-sticky-footer__btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -2503,45 +2479,6 @@ body.visits-globe-immersive-open {
   cursor: not-allowed;
 }
 
-.user-settings-dialog__footer {
-  flex-direction: row;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-}
-
-/* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
-.user-settings-dialog__footer .app-confirm__btn,
-.user-settings-dialog__footer .user-settings-dialog__save-btn {
-  flex: 0 0 auto;
-  width: auto;
-  max-width: none;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.85rem;
-  font-size: 1rem;
-  line-height: 1.2;
-}
-
-.user-settings-dialog__save-btn {
-  border-radius: 6px;
-  border: 1px solid var(--color-turquoise);
-  background: var(--color-turquoise-light);
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.user-settings-dialog__save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* Match edit-visit spacing above "Close without saving" (footerPlain zeros this). */
 .app-modal-body:has(.user-settings-dialog) + .app-modal-footer--plain {
   margin-top: 0.9rem;
@@ -2567,10 +2504,6 @@ body.visits-globe-immersive-open {
 
   .user-settings-dialog {
     padding: 0.85rem 1rem;
-  }
-
-  .user-settings-dialog__save-btn {
-    max-width: 100%;
   }
 }
 
@@ -3419,50 +3352,10 @@ body.visits-globe-immersive-open {
   padding-top: 0.85rem;
 }
 
-.wish-list-editor__footer {
-  flex-direction: row;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-}
-
-/* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
-.wish-list-editor__footer .app-confirm__btn,
-.wish-list-editor__footer .wish-list-editor__save-btn {
-  flex: 0 0 auto;
-  width: auto;
-  max-width: none;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.85rem;
-  font-size: 1rem;
-  line-height: 1.2;
-}
-
-.wish-list-editor__save-btn {
-  border-radius: 6px;
-  border: 1px solid var(--color-turquoise);
-  background: var(--color-turquoise-light);
-  font-family: inherit;
-  cursor: pointer;
-  color: #222;
-}
-
-.wish-list-editor__save-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .wish-list-editor-cell {
   position: relative;
   display: block;
-  padding: 0.65rem 2.75rem 0.65rem 0.75rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid #c8d8d8;
   border-radius: 8px;
   background: #fafefe;
@@ -3508,8 +3401,20 @@ body.visits-globe-immersive-open {
   gap: 0.35rem;
 }
 
+.wish-list-editor-cell__top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
 .wish-list-editor-cell__country {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  margin-bottom: 0;
 }
 
 .wish-list-editor-cell__desc-label {
@@ -3534,33 +3439,41 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-editor-cell__actions {
-  position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
+  flex-shrink: 0;
   gap: 0.35rem;
-  z-index: 1;
 }
 
 .wish-list-editor-cell__delete {
   /* layout hook; visuals from .delete-button */
 }
 
+/* Exact same box as .delete-button (28×28); turquoise add affordance. */
 .wish-list-editor-cell__add-btn {
-  font-family: inherit;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 4px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
-  color: #222;
+  color: #0d4a44;
   cursor: pointer;
-  white-space: nowrap;
-  line-height: 1.2;
-  min-height: 28px;
+  font-family: inherit;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.wish-list-editor-cell__add-btn:hover:not(:disabled) {
+  background: #a8ebe4;
 }
 
 .wish-list-editor-cell__add-btn:disabled {

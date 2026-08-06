@@ -19,6 +19,6 @@ A thin border exists around the component.
 - [Tag editor component](tag-editor.md)
 
 - "Add visit" (when creating new visit) — under (left-aligned) the other controls when used as the page add form.
-- "Save visit" (when editing in the modal) — primary button in the sticky modal footer (left), matching Wish List / Settings; the editor can omit the inline submit via `showSubmitButton: false`. Modal title is supplied by the host (`showTitle: false`). Footer keeps **Save visit** and **Close without saving** on one row; each button is only as wide as its label plus padding.
+- "Save visit" (when editing in the modal) — primary action in the shared [modal sticky footer](modal-sticky-footer.md) (left); omit the inline submit via `showSubmitButton: false`. Host supplies modal title (`showTitle: false`) and wires `requestSubmit` / `onCanSubmitChange` to the footer.
 
 - When a visit is successfully added via an API call, the frontend shall not issue a new GET /visits API call, but instead modify the in-memory list and update the UI. The new visits should appear with a alpha 0->1 animation in the list of country cells.
