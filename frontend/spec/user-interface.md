@@ -74,7 +74,7 @@ Similar listing to what Tab 1 describes but the countries are listed under 'subt
 
 Hovering over a visit card (not in edit mode) shows the [country visit info tooltip](components/country-visit-info-tooltip.md).
 
-While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](components/country-visit-editor.md). It shall be presented as a "popup dialog" via `Components/modal` (same shell as Wish List / Settings): centered, dark overlay, page behind does not scroll, bordered form scrolls inside the panel, title outside the border. Clicking outside closes it. Standard appear/disappear animations apply. Sticky footer via [modal sticky footer](components/modal-sticky-footer.md): **Save visit** (primary, left) and **Close without saving** (secondary, right).
+While in edit mode, the tooltip shall show "Click to edit this visit". This will bring up a "edit visit" component, reusing [the visit editor component](components/country-visit-editor.md). It shall be presented as a "popup dialog" via `Components/modal` (same shell as Wish List / Settings): centered, dark overlay, page behind does not scroll, bordered form scrolls inside the panel, title outside the border. Clicking outside closes it. Standard appear/disappear animations apply. Sticky footer via [modal sticky footer](components/modal-sticky-footer.md): **Save visit** (primary, left; disabled until the form is valid and dirty) and **Close without saving** (secondary, right).
 
 **Tab 3:** Countries plotted on map
 
@@ -134,7 +134,7 @@ On **By continent** and **Timeline** tabs (logged-in, not shared view), a floati
 
 On **narrow viewports** (mobile), this component is fixed to the **bottom** of the screen, **horizontally centered**, so it does not cover the visit list.
 
-It has a thin border, slightly rounded corners and a visible drop shadow. It fades in when it becomes relevant and fades out when switching to a tab that does not use it (or when logging out). The page under the component remains interactable.
+It has a thin border, slightly rounded corners and a visible drop shadow. It fades in when it becomes relevant and fades out when switching to a tab that does not use it, navigating to Profile / share, or logging out. Leaving those surfaces also clears edit mode (Done state) so the float does not linger. The page under the component remains interactable.
 
 While a confirmation dialog is open (for example delete visit or remove friend), the same full-screen dark overlay used by that dialog shall stack above this floating component so the float appears dimmed behind the overlay and cannot receive clicks until the dialog is dismissed.
 

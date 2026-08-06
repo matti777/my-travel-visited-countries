@@ -1912,9 +1912,14 @@ export async function main(): Promise<void> {
     const shouldShow =
       !!currentUser &&
       !getShareTokenFromPath() &&
+      !isOwnProfilePath() &&
       (visitListTab === "byContinent" || visitListTab === "timeline");
 
     if (!shouldShow) {
+      // Leaving visit-list edit surfaces (Profile, other tabs, share, logout).
+      if (isEditMode) {
+        isEditMode = false;
+      }
       queueVisitListEditFloatExit();
       return;
     }

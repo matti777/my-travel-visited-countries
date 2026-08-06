@@ -99,7 +99,7 @@ export interface CountryVisitEditorOptions {
   onFormNotesChange: (value: string) => void;
   initialTags?: string[];
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
-  /** Notified when Add/Save becomes enabled or disabled (validation). */
+  /** Notified when Add/Save becomes enabled or disabled (validation; edit also requires dirty). */
   onCanSubmitChange?: (canSubmit: boolean) => void;
 }
 
@@ -244,7 +244,37 @@ export function createCountryVisitEditor(
 
   updateNotesCounter();
 
-  const tagEditor = createTagEditor();
+  const initialSnapshot = {
+    isoDate: formVisitDate,
+    mediaUrl: formMediaUrl.trim(),
+    notes: formNotes.trim(),
+    tags: [...(initialTags ?? [])],
+  };
+
+  function tagsEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sa = [...a].sort();
+    const sb = [...b].sort();
+    return sa.every((tag, i) => tag === sb[i]);
+  }
+
+  function isEditDirty(): boolean {
+    const currDate = currentVisitDate;
+    const currMedia = mediaUrlInput.value.trim();
+    const currNotes = notesInput.value.trim();
+    const currTags = tagEditor.getTags();
+    if ((currDate ?? null) !== (initialSnapshot.isoDate ?? null)) return true;
+    if (currMedia !== initialSnapshot.mediaUrl) return true;
+    if (currNotes !== initialSnapshot.notes) return true;
+    if (!tagsEqual(currTags, initialSnapshot.tags)) return true;
+    return false;
+  }
+
+  let updateValidationUI: () => void = () => {};
+
+  const tagEditor = createTagEditor({
+    onChange: () => updateValidationUI(),
+  });
   const tagEditorWrap = document.createElement("div");
   tagEditorWrap.className = "add-visit-form__tag-editor-wrap";
   tagEditorWrap.appendChild(tagEditor.element);
@@ -265,7 +295,7 @@ export function createCountryVisitEditor(
     form.appendChild(addBtnRow);
   }
 
-  function updateValidationUI(): void {
+  updateValidationUI = (): void => {
     const dateValid = isVisitDateValid(currentVisitDate);
     const mediaUrlValid = isMediaUrlValid(mediaUrlInput.value);
     const notesValid = notesInput.value.length <= MAX_NOTES_LENGTH;
@@ -274,12 +304,14 @@ export function createCountryVisitEditor(
       "invalid",
       mediaUrlInput.value.trim() !== "" && !mediaUrlValid,
     );
-    const canSubmit = !!(
+    const fieldsValid = !!(
       selectedCountryCode && dateValid && mediaUrlValid && notesValid
     );
+    const canSubmit =
+      mode === "edit" ? fieldsValid && isEditDirty() : fieldsValid;
     addBtn.disabled = !canSubmit;
     onCanSubmitChange?.(canSubmit);
-  }
+  };
 
   mediaUrlInput.addEventListener("input", () => {
     onFormMediaUrlChange(mediaUrlInput.value);

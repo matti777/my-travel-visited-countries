@@ -84,8 +84,18 @@ function isValidTagToken(s: string): boolean {
   return s.length >= MIN_TAG_LENGTH && /^[a-z]+$/.test(s);
 }
 
-export function createTagEditor(): TagEditorControl {
+export interface TagEditorOptions {
+  /** Called whenever the tag list changes (add / remove / setTags). */
+  onChange?: (tags: string[]) => void;
+}
+
+export function createTagEditor(options: TagEditorOptions = {}): TagEditorControl {
+  const { onChange } = options;
   const tags: string[] = [];
+
+  const notifyChange = (): void => {
+    onChange?.([...tags]);
+  };
 
   const root = document.createElement("div");
   root.className = "tag-editor";
@@ -201,6 +211,9 @@ export function createTagEditor(): TagEditorControl {
           if (j >= 0) {
             tags.splice(j, 1);
             logAnalyticsEvent("delete_tag", {});
+            syncUi();
+            notifyChange();
+            return;
           }
           syncUi();
         }
@@ -296,6 +309,7 @@ export function createTagEditor(): TagEditorControl {
     input.value = "";
     input.blur();
     syncUi();
+    notifyChange();
     return true;
   }
 
@@ -366,6 +380,7 @@ export function createTagEditor(): TagEditorControl {
         tags.push(raw);
       }
       syncUi();
+      notifyChange();
     },
   };
 }
