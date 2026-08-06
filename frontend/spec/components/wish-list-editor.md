@@ -4,7 +4,7 @@ Modal for editing the logged-in user's wish list (`GET` / `PUT /wishlist`). Open
 
 ## Presentation
 
-Centered popup over a dark overlay using `Components/modal` (same appear/disappear animations as settings). Title: **Wish list**. Panel max height **90%** of the viewport. Intro + list sit in a bordered content panel (same border/padding language as settings); that panel scrolls when needed. Title and footer actions stay outside the border and remain visible. Fits desktop and mobile viewports.
+Centered popup over a dark overlay using `Components/modal` (same appear/disappear animations as settings). Title: **Wish list**. Panel max height **90%** of the viewport. Intro + list sit in a bordered content panel (same border/padding language as settings); that panel scrolls when needed. Title and footer actions stay outside the border and remain visible. Fits desktop and mobile viewports. Page behind the dialog does not scroll.
 
 ## Opening
 

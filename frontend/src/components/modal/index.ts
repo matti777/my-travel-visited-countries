@@ -20,9 +20,47 @@ export interface OpenModalResult {
   close: (reason?: ModalCloseReason) => void;
 }
 
+/** Nested openModal/confirmDialog count; lock page only while > 0. */
+let openModalCount = 0;
+let lockedScrollY = 0;
+
+/**
+ * Lock document scroll behind modals. Dialog content stays scrollable.
+ * iOS-safe: position fixed + restored scrollY on unlock.
+ */
+function lockPageScroll(): void {
+  if (openModalCount === 0) {
+    lockedScrollY = window.scrollY;
+    document.documentElement.classList.add("app-modal-open");
+    document.body.classList.add("app-modal-open");
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${lockedScrollY}px`;
+    document.body.style.width = "100%";
+  }
+  openModalCount += 1;
+}
+
+function unlockPageScroll(): void {
+  if (openModalCount <= 0) {
+    return;
+  }
+  openModalCount -= 1;
+  if (openModalCount > 0) {
+    return;
+  }
+  document.documentElement.classList.remove("app-modal-open");
+  document.body.classList.remove("app-modal-open");
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
+  window.scrollTo(0, lockedScrollY);
+}
+
 function revealOverlay(overlay: HTMLDivElement): void {
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => overlay.classList.add("app-modal-overlay--visible"));
+    requestAnimationFrame(() =>
+      overlay.classList.add("app-modal-overlay--visible"),
+    );
   });
 }
 
@@ -36,6 +74,7 @@ function closeOverlay(overlay: HTMLDivElement, reason: ModalCloseReason): void {
     if (done) return;
     done = true;
     overlay.remove();
+    unlockPageScroll();
   };
   overlay.addEventListener(
     "transitionend",
@@ -46,7 +85,9 @@ function closeOverlay(overlay: HTMLDivElement, reason: ModalCloseReason): void {
     { once: true },
   );
   window.setTimeout(finish, 380);
-  overlay.dispatchEvent(new CustomEvent("app-modal:close", { detail: { reason } }));
+  overlay.dispatchEvent(
+    new CustomEvent("app-modal:close", { detail: { reason } }),
+  );
 }
 
 export function openModal(options: OpenModalOptions): OpenModalResult {
@@ -101,7 +142,9 @@ export function openModal(options: OpenModalOptions): OpenModalResult {
 
   if (footer) {
     const footerWrap = document.createElement("div");
-    footerWrap.className = footerPlain ? "app-modal-footer app-modal-footer--plain" : "app-modal-footer";
+    footerWrap.className = footerPlain
+      ? "app-modal-footer app-modal-footer--plain"
+      : "app-modal-footer";
     footerWrap.appendChild(footer);
     panel.appendChild(footerWrap);
   }
@@ -119,6 +162,7 @@ export function openModal(options: OpenModalOptions): OpenModalResult {
     });
   }
 
+  lockPageScroll();
   document.body.appendChild(overlay);
   revealOverlay(overlay);
   return { overlay, close };
@@ -179,7 +223,8 @@ export async function confirmDialog(options: {
       (options.danger ? yesBtn : noBtn).focus();
     });
 
-    overlay.addEventListener("app-modal:close", () => resolve(false), { once: true });
+    overlay.addEventListener("app-modal:close", () => resolve(false), {
+      once: true,
+    });
   });
 }
-

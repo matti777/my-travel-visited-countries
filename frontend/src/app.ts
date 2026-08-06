@@ -1105,11 +1105,11 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           let editorNotes = visit.notes ?? "";
           const editorTags = visit.tags ?? [];
 
-          const body = document.createElement("div");
           let closeModal: (() => void) | null = null;
           const editor = createCountryVisitEditor({
             mode: "edit",
-            title: `Edit your visit to ${name}`,
+            showTitle: false,
+            showSubmitButton: false,
             countryNameForEditMode: name,
             countries: countriesList,
             baseUrl,
@@ -1150,15 +1150,21 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
                   signOut();
                   errorToast("Session expired");
                 } else {
-                  errorToast(err instanceof Error ? err.message : "Failed to update visit");
+                  errorToast(
+                    err instanceof Error ? err.message : "Failed to update visit",
+                  );
                 }
               }
             },
           });
-          body.appendChild(editor);
 
           const footer = document.createElement("div");
-          footer.className = "app-confirm__actions";
+          footer.className = "app-confirm__actions country-visit-editor__footer";
+          const saveBtn = editor.submitButton;
+          saveBtn.type = "button";
+          saveBtn.classList.add("country-visit-editor__save-btn");
+          saveBtn.classList.remove("add-visit-form__add-btn");
+          footer.appendChild(saveBtn);
           const closeBtn = document.createElement("button");
           closeBtn.type = "button";
           closeBtn.className = "app-confirm__btn secondary";
@@ -1167,11 +1173,12 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
           footer.appendChild(closeBtn);
 
           const { close } = openModal({
-            ariaLabel: `Edit visit to ${name}`,
-            body,
+            title: `Edit your visit to ${name}`,
+            body: editor.element,
             footer,
             showCloseButton: false,
             footerPlain: true,
+            closeOnOutsideClick: true,
           });
           closeModal = () => close("programmatic");
           closeBtn.addEventListener("click", () => close("closeButton"));
@@ -1619,7 +1626,7 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       formNotes: options.formNotes,
       onFormNotesChange: options.onFormNotesChange,
       onSubmit: options.onCountryVisitEditorSubmit,
-    }),
+    }).element,
   );
   addShareWrapper.appendChild(createShareSection(options.shareToken));
   container.appendChild(addShareWrapper);
@@ -2109,7 +2116,7 @@ export async function main(): Promise<void> {
         formNotes: opts.formNotes,
         onFormNotesChange: opts.onFormNotesChange,
         onSubmit: opts.onCountryVisitEditorSubmit,
-      }),
+      }).element,
     );
     addShareWrapper.appendChild(createShareSection(shareToken));
     window.scrollTo(scrollX, scrollY);

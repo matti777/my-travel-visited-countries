@@ -83,6 +83,10 @@ export interface CountryVisitEditorOptions {
   /** Section heading; default "Add a visit to a country". */
   title?: string;
   mode?: "add" | "edit";
+  /** When false, omit the section heading (e.g. modal supplies the title). Default true. */
+  showTitle?: boolean;
+  /** When false, omit the submit button from the form (host places it in a sticky footer). Default true. */
+  showSubmitButton?: boolean;
   /** When mode is "edit", the country selection is locked and this is shown. */
   countryNameForEditMode?: string;
   selectedCountryCode: string;
@@ -97,16 +101,26 @@ export interface CountryVisitEditorOptions {
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
 }
 
+export interface CountryVisitEditorHandle {
+  element: HTMLElement;
+  /** Primary submit control (Add visit / Save visit). */
+  submitButton: HTMLButtonElement;
+}
+
 /**
  * Country visit editor: country dropdown, visit date (flatpickr), optional media URL,
  * free-form notes, tags, submit. Use a thin border via `.country-visit-editor` in CSS.
  */
-export function createCountryVisitEditor(options: CountryVisitEditorOptions): HTMLElement {
+export function createCountryVisitEditor(
+  options: CountryVisitEditorOptions,
+): CountryVisitEditorHandle {
   const {
     countries: countriesList,
     baseUrl,
     mode = "add",
     title = mode === "edit" ? "Edit your visit" : "Add a visit to a country",
+    showTitle = true,
+    showSubmitButton = true,
     countryNameForEditMode,
     selectedCountryCode,
     onSelectCountry,
@@ -125,9 +139,11 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
 
   const addSection = document.createElement("section");
   addSection.className = "app-section country-visit-editor";
-  const addTitle = document.createElement("h2");
-  addTitle.textContent = title;
-  addSection.appendChild(addTitle);
+  if (showTitle) {
+    const addTitle = document.createElement("h2");
+    addTitle.textContent = title;
+    addSection.appendChild(addTitle);
+  }
 
   const form = document.createElement("form");
   form.className =
@@ -242,7 +258,9 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   addBtn.className = "add-visit-form__add-btn primary";
   addBtn.disabled = true;
   addBtnRow.appendChild(addBtn);
-  form.appendChild(addBtnRow);
+  if (showSubmitButton) {
+    form.appendChild(addBtnRow);
+  }
 
   function updateValidationUI(): void {
     const dateValid = isVisitDateValid(currentVisitDate);
@@ -346,7 +364,7 @@ export function createCountryVisitEditor(options: CountryVisitEditorOptions): HT
   });
 
   addSection.appendChild(form);
-  return addSection;
+  return { element: addSection, submitButton: addBtn };
 }
 
 

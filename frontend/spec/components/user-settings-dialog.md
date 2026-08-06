@@ -4,7 +4,7 @@ Modal for editing the logged-in user's settings (`Settings` in data-models.md): 
 
 ## Presentation
 
-Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Form controls sit in a bordered content panel (same border/padding language as the [country visit editor](country-visit-editor.md) / wish list editor). Title and footer actions stay outside the border and remain visible; the bordered panel scrolls if needed. Fits desktop and mobile (including safe areas). Layout must not collapse or overflow horizontally.
+Centered popup over a dark overlay, using the shared modal shell (`Components/modal`) so show/hide uses the same appear/disappear animations as other dialogs (e.g. edit visit). Form controls sit in a bordered content panel (same border/padding language as the [country visit editor](country-visit-editor.md) / wish list editor). Title and footer actions stay outside the border and remain visible; the bordered panel scrolls if needed. Fits desktop and mobile (including safe areas); page behind the dialog does not scroll. Layout must not collapse or overflow horizontally.
 
 ## Opening
 

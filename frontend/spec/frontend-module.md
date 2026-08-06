@@ -98,5 +98,5 @@ Implement Typescript types that adhere to the models defined in [data-models.md]
 
 The user interface for the application is defined in [user-interface.md](user-interface.md).
 
-Modal confirmation dialogs (`Components/modal`) use a full-screen overlay whose stacking order sits above the edit-mode floating “Done” hint so overlays block interaction with controls behind them, including that float (see [user-interface.md](user-interface.md)).
+Modal dialogs (`Components/modal`) use a full-screen overlay whose stacking order sits above the edit-mode floating “Done” hint so overlays block interaction with controls behind them, including that float (see [user-interface.md](user-interface.md)). While any modal is open, the page behind does not scroll and is not interactive; scroll inside the dialog content remains available. Nested modals keep the lock until the last overlay closes.
 

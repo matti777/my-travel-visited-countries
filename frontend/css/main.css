@@ -221,6 +221,12 @@ body {
   cursor: pointer;
 }
 
+/* Page behind modals must not scroll; dialog content stays scrollable. */
+html.app-modal-open,
+body.app-modal-open {
+  overflow: hidden;
+}
+
 .app-modal-overlay {
   position: fixed;
   inset: 0;
@@ -233,6 +239,7 @@ body {
   background: rgba(0, 0, 0, 0.52);
   opacity: 0;
   visibility: hidden;
+  overscroll-behavior: none;
   transition:
     opacity var(--animation-duration) ease,
     visibility 0s linear var(--animation-duration);
@@ -353,6 +360,57 @@ body {
     width: 100%;
   }
 }
+
+
+/* Keep Save left / Close right on one row even on narrow viewports. */
+@media (max-width: 520px) {
+  .app-confirm__actions.user-settings-dialog__footer,
+  .app-confirm__actions.wish-list-editor__footer,
+  .app-confirm__actions.country-visit-editor__footer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .app-confirm__actions.user-settings-dialog__footer .app-confirm__btn,
+  .app-confirm__actions.user-settings-dialog__footer .user-settings-dialog__save-btn,
+  .app-confirm__actions.wish-list-editor__footer .app-confirm__btn,
+  .app-confirm__actions.wish-list-editor__footer .wish-list-editor__save-btn,
+  .app-confirm__actions.country-visit-editor__footer .app-confirm__btn,
+  .app-confirm__actions.country-visit-editor__footer .country-visit-editor__save-btn {
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-confirm__actions.user-settings-dialog__footer,
+  .app-confirm__actions.wish-list-editor__footer,
+  .app-confirm__actions.country-visit-editor__footer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .app-confirm__actions.user-settings-dialog__footer .app-confirm__btn,
+  .app-confirm__actions.user-settings-dialog__footer .user-settings-dialog__save-btn,
+  .app-confirm__actions.wish-list-editor__footer .app-confirm__btn,
+  .app-confirm__actions.wish-list-editor__footer .wish-list-editor__save-btn,
+  .app-confirm__actions.country-visit-editor__footer .app-confirm__btn,
+  .app-confirm__actions.country-visit-editor__footer .country-visit-editor__save-btn {
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: none;
+  }
+}
+
 
 .app-confirm__message {
   margin: 0;
@@ -744,10 +802,91 @@ main.about-page {
   min-width: 0;
 }
 
+/* Edit-visit modal: title + sticky footer outside; bordered panel scrolls */
+.app-modal-panel:has(.country-visit-editor) {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: min(90vh, 90dvh);
+  overflow: hidden;
+}
+
+.app-modal-panel:has(.country-visit-editor) .app-modal-title,
+.app-modal-panel:has(.country-visit-editor) .app-modal-footer {
+  flex-shrink: 0;
+}
+
+.app-modal-panel:has(.country-visit-editor) .app-modal-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-modal-body:has(.country-visit-editor) + .app-modal-footer--plain {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+}
+
 .country-visit-editor {
   border: 1px solid rgba(0, 80, 90, 0.25);
   border-radius: 6px;
   padding: 1rem 1.25rem;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.app-modal-body > .country-visit-editor {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.country-visit-editor__footer {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
+.country-visit-editor__footer .app-confirm__btn,
+.country-visit-editor__footer .country-visit-editor__save-btn {
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 1rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.country-visit-editor__save-btn {
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  font-family: inherit;
+  cursor: pointer;
+  color: #222;
+}
+
+.country-visit-editor__save-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .app-section__title-row {
@@ -2365,25 +2504,37 @@ body.visits-globe-immersive-open {
 }
 
 .user-settings-dialog__footer {
+  flex-direction: row;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.6rem;
+  width: 100%;
+}
+
+/* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
+.user-settings-dialog__footer .app-confirm__btn,
+.user-settings-dialog__footer .user-settings-dialog__save-btn {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
 .user-settings-dialog__save-btn {
   border-radius: 6px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
-  padding: 0.35rem 0.75rem;
   font-family: inherit;
   cursor: pointer;
-  height: 2.25rem;
-  min-height: 2.25rem;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .user-settings-dialog__save-btn:disabled {
@@ -2402,6 +2553,14 @@ body.visits-globe-immersive-open {
     width: min(100%, calc(100vw - 1rem));
     max-height: min(
       calc(100vh - 1rem),
+      calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+    );
+  }
+
+  .app-modal-panel:has(.country-visit-editor) {
+    width: min(100%, calc(100vw - 1rem));
+    max-height: min(
+      90dvh,
       calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
     );
   }
@@ -3066,14 +3225,19 @@ body.visits-globe-immersive-open {
 
 .user-profile__wish-list-ol {
   margin: 0;
-  padding-left: 1.35rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  padding-left: 1.5rem;
+  list-style-position: outside;
 }
 
 .user-profile__wish-list-item {
-  padding-left: 0.15rem;
+  display: list-item;
+  list-style: decimal outside;
+  margin: 0 0 0.55rem;
+  padding-left: 0.25rem;
+}
+
+.user-profile__wish-list-item:last-child {
+  margin-bottom: 0;
 }
 
 .wish-list-cell {
@@ -3256,19 +3420,36 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-editor__footer {
+  flex-direction: row;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.6rem;
+  width: 100%;
+}
+
+/* Do not stretch footer actions (mobile .app-confirm__btn flex rules). */
+.wish-list-editor__footer .app-confirm__btn,
+.wish-list-editor__footer .wish-list-editor__save-btn {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
 .wish-list-editor__save-btn {
   border-radius: 6px;
   border: 1px solid var(--color-turquoise);
   background: var(--color-turquoise-light);
-  padding: 0.35rem 0.85rem;
   font-family: inherit;
-  font-size: 1rem;
   cursor: pointer;
   color: #222;
 }

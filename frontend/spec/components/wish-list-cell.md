@@ -4,7 +4,7 @@ Read-only display of one wish-list country. Used in the [user profile](user-prof
 
 ## Presentation
 
-- **Country:** flag image + country name (same flag size/layout language as the profile **Home country** row).
+- **Country:** flag image + country name (same flag size/layout language as the profile **Home country** row). When shown in a profile ordered list, the list marker aligns with this name row.
 - **Description** (optional): Markdown rendered to sanitized HTML (`marked` + DOMPurify). Omitted when empty.
 
 No edit, delete, or drag controls. Distinct from [WishListEditorCell](wish-list-editor-cell.md).
