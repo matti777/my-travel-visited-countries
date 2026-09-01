@@ -61,10 +61,11 @@ A country on the user's wish list (places they want to visit).
 - `MediaURL`: Media URL to photos etc. related to the visit. Optional.
 - `Notes`: A free-form string field. Max length 1000 characters. Optional (can be empty). When displayed, supports Markdown formatting.
 - `Tags`: A list of string tags added to the visit. Optional (can be empty).
+- `Score`: Integer rating of the visit from **1** (poor) to **100** (excellent). Mandatory on create. Missing/zero in Firestore is treated as unset and defaults to **50** on read/API responses.
 
 The CountryVisit collection in Firestore shall be nested under the corresponding User object.
 
-**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date. `MediaURL` must be a well-formed URL that can be used as a hyperlink on a web page.
+**Validation:** `CountryCode` should be a valid ISO 3166-1 alpha-2 code. `VisitTime` must be between Jan 1, 1900 and the current date. `MediaURL` must be a well-formed URL that can be used as a hyperlink on a web page. `Score` must be an integer between **1** and **100** inclusive.
 
 ### Friend model
 

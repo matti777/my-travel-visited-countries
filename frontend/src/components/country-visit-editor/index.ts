@@ -5,11 +5,18 @@ import { createCountryDropdown } from "Components/country-dropdown";
 import { createCharCountLabel } from "Components/char-count-label";
 import { createTagEditor } from "Components/tag-editor";
 import { createCountryCell } from "Components/country-cell";
+import { attachTooltip } from "Components/tooltip";
 import type { Country } from "../../types/country";
 
 const VISIT_DATE_MIN = "1900-01-01";
 const MIN_DATE = new Date(1900, 0, 1);
 const MAX_NOTES_LENGTH = 1000;
+const MIN_SCORE = 1;
+const MAX_SCORE = 100;
+const DEFAULT_SCORE = 50;
+
+const SCORE_INFO_TOOLTIP =
+  "Rates this visit from 1 (poor) to 100 (excellent). Default is 50.";
 
 const NOTES_PLACEHOLDER =
   "Optional trip notes; itinerary, best sights, people met, et cetera. " +
@@ -75,6 +82,7 @@ export interface CountryVisitEditorSubmitPayload {
   mediaUrl?: string;
   notes?: string;
   tags: string[];
+  score: number;
 }
 
 export interface CountryVisitEditorOptions {
@@ -97,6 +105,9 @@ export interface CountryVisitEditorOptions {
   onFormMediaUrlChange: (value: string) => void;
   formNotes: string;
   onFormNotesChange: (value: string) => void;
+  /** Visit score 1–100; default 50 when omitted. */
+  formScore?: number;
+  onFormScoreChange?: (value: number) => void;
   initialTags?: string[];
   onSubmit: (payload: CountryVisitEditorSubmitPayload) => Promise<void>;
   /** Notified when Add/Save becomes enabled or disabled (validation; edit also requires dirty). */
@@ -111,7 +122,8 @@ export interface CountryVisitEditorHandle {
 
 /**
  * Country visit editor: country dropdown, visit date (flatpickr), optional media URL,
- * free-form notes, tags, submit. Use a thin border via `.country-visit-editor` in CSS.
+ * free-form notes, visit score slider, tags, submit. Use a thin border via
+ * `.country-visit-editor` in CSS.
  */
 export function createCountryVisitEditor(
   options: CountryVisitEditorOptions,
@@ -132,6 +144,8 @@ export function createCountryVisitEditor(
     onFormMediaUrlChange,
     formNotes,
     onFormNotesChange,
+    formScore = DEFAULT_SCORE,
+    onFormScoreChange,
     initialTags,
     onSubmit,
     onCanSubmitChange,
@@ -244,11 +258,62 @@ export function createCountryVisitEditor(
 
   updateNotesCounter();
 
+  const scoreWrap = document.createElement("div");
+  scoreWrap.className = "add-visit-form__score-wrap";
+  const scoreTitleRow = document.createElement("div");
+  scoreTitleRow.className = "add-visit-form__score-title-row";
+  const scoreTitle = document.createElement("span");
+  scoreTitle.className = "add-visit-form__score-title";
+  scoreTitle.textContent = "Rate your visit";
+  const scoreInfoBtn = document.createElement("button");
+  scoreInfoBtn.type = "button";
+  scoreInfoBtn.className = "add-visit-form__score-info-btn";
+  scoreInfoBtn.setAttribute("aria-label", "About visit score");
+  scoreInfoBtn.textContent = "i";
+  attachTooltip(scoreInfoBtn, SCORE_INFO_TOOLTIP, { allowTouchTap: true });
+  scoreTitleRow.appendChild(scoreTitle);
+  scoreTitleRow.appendChild(scoreInfoBtn);
+
+  const scoreControls = document.createElement("div");
+  scoreControls.className = "add-visit-form__score-controls";
+  const scoreSlider = document.createElement("input");
+  scoreSlider.type = "range";
+  scoreSlider.min = String(MIN_SCORE);
+  scoreSlider.max = String(MAX_SCORE);
+  scoreSlider.step = "1";
+  scoreSlider.name = "score";
+  scoreSlider.className = "add-visit-form__score-slider";
+  const initialScore = Math.max(
+    MIN_SCORE,
+    Math.min(MAX_SCORE, Math.round(formScore)),
+  );
+  scoreSlider.value = String(initialScore);
+  const scoreValue = document.createElement("span");
+  scoreValue.className = "add-visit-form__score-value";
+  scoreValue.textContent = String(initialScore);
+  scoreControls.appendChild(scoreSlider);
+  scoreControls.appendChild(scoreValue);
+  scoreWrap.appendChild(scoreTitleRow);
+  scoreWrap.appendChild(scoreControls);
+  form.appendChild(scoreWrap);
+
+  function currentScore(): number {
+    return Number(scoreSlider.value);
+  }
+
+  scoreSlider.addEventListener("input", () => {
+    const v = currentScore();
+    scoreValue.textContent = String(v);
+    onFormScoreChange?.(v);
+    updateValidationUI();
+  });
+
   const initialSnapshot = {
     isoDate: formVisitDate,
     mediaUrl: formMediaUrl.trim(),
     notes: formNotes.trim(),
     tags: [...(initialTags ?? [])],
+    score: initialScore,
   };
 
   function tagsEqual(a: string[], b: string[]): boolean {
@@ -267,6 +332,7 @@ export function createCountryVisitEditor(
     if (currMedia !== initialSnapshot.mediaUrl) return true;
     if (currNotes !== initialSnapshot.notes) return true;
     if (!tagsEqual(currTags, initialSnapshot.tags)) return true;
+    if (currentScore() !== initialSnapshot.score) return true;
     return false;
   }
 
@@ -399,6 +465,7 @@ export function createCountryVisitEditor(
       mediaUrl,
       notes,
       tags: tagEditor.getTags(),
+      score: currentScore(),
     });
   }
 

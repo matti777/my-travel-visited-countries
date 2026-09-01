@@ -16,6 +16,8 @@ A thin border exists around the component.
 
 - Free-form trip notes - a textarea between Media URL and Tags. Title above the field uses the [character count label](char-count-label.md) with title `Free-form trip notes` and `maxLength` **1000**. Placeholder: `Optional trip notes; itinerary, best sights, people met, et cetera. Markdown formatting supported!`. Default height is 4 rows; vertically resizable up to 10 rows of text (layout grows/shrinks with the textarea); not resizable on mobile. Hard limit 1000 characters (truncate on paste/input); Add/Save stays disabled if length somehow exceeds 1000. Saved notes also appear (as Markdown) in the [country visit info tooltip](country-visit-info-tooltip.md) when hovering a visit card.
 
+- **Rate your visit** — after notes, before tags. Title row with label **Rate your visit** and a circular turquoise info button showing lowercase **i**; tooltip (hover on desktop; tap on touch) explains that the score rates the visit from 1 (poor) to 100 (excellent), default 50. Native range slider `min=1` `max=100` `step=1`, default **50**, with the current numeric value shown beside it. Included in dirty detection and submit payload as `score`.
+
 - [Tag editor component](tag-editor.md)
 
 - "Add visit" (when creating new visit) — under (left-aligned) the other controls when used as the page add form.

@@ -212,6 +212,7 @@ export default class Api {
     mediaUrl?: string,
     tags?: string[],
     notes?: string,
+    score?: number,
   ): Promise<CountryVisit> {
     const token = this.getAuthToken();
     if (!token) {
@@ -220,10 +221,11 @@ export default class Api {
     const body: {
       countryCode: string;
       visitedTime: number;
+      score: number;
       mediaUrl?: string;
       tags?: string[];
       notes?: string;
-    } = { countryCode, visitedTime };
+    } = { countryCode, visitedTime, score: score ?? 50 };
     if (mediaUrl != null && mediaUrl !== "") {
       body.mediaUrl = mediaUrl;
     }
@@ -252,6 +254,7 @@ export default class Api {
       tags?: string[];
       mediaUrl?: string;
       notes?: string;
+      score?: number;
     },
   ): Promise<CountryVisit> {
     const token = this.getAuthToken();
@@ -270,6 +273,9 @@ export default class Api {
     }
     if (patch.notes !== undefined) {
       body.notes = patch.notes;
+    }
+    if (patch.score !== undefined) {
+      body.score = patch.score;
     }
     const response = (await this.performRequest(
       `/visits/${encodeURIComponent(visitId)}`,

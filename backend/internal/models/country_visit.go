@@ -16,6 +16,13 @@ const MaxTagsPerVisit = 10
 // MaxNotesLength is the maximum number of Unicode characters allowed in Notes.
 const MaxNotesLength = 1000
 
+// Visit score bounds and read-time default for unset legacy documents.
+const (
+	MinScore     = 1
+	MaxScore     = 100
+	DefaultScore = 50
+)
+
 var tagTokenPattern = regexp.MustCompile(`^[a-z]{2,}$`)
 
 // CountryVisit represents a visit to a country by a user, as defined in data-models.md.
@@ -35,6 +42,10 @@ type CountryVisit struct {
 
 	// Tags are optional lowercase [a-z] strings (min length 2); stored in Firestore as Tags.
 	Tags []string `firestore:"Tags" json:"tags"`
+
+	// Score rates the visit from MinScore to MaxScore. Zero/missing in Firestore means unset;
+	// ApplyScoreDefault sets DefaultScore before JSON responses.
+	Score int `firestore:"Score" json:"score"`
 
 	// UserID is the ID of the user who created this object. Set when loading; not stored in Firestore (user implied by path).
 	UserID string `firestore:"-" json:"userId"`
@@ -99,6 +110,24 @@ func ValidateNotes(notes string) error {
 		return fmt.Errorf("notes must be at most %d characters", MaxNotesLength)
 	}
 	return nil
+}
+
+// ValidateScore returns an error if score is outside MinScore..MaxScore inclusive.
+func ValidateScore(score int) error {
+	if score < MinScore || score > MaxScore {
+		return fmt.Errorf("score must be between %d and %d", MinScore, MaxScore)
+	}
+	return nil
+}
+
+// ApplyScoreDefault sets Score to DefaultScore when unset (zero / missing in Firestore).
+func ApplyScoreDefault(visit *CountryVisit) {
+	if visit == nil {
+		return
+	}
+	if visit.Score == 0 {
+		visit.Score = DefaultScore
+	}
 }
 
 // CountryVisitResponse is the response wrapper for GET /visits.

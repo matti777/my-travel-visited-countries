@@ -19,6 +19,8 @@ export interface CountryVisit {
   mediaUrl?: string;
   notes?: string;
   tags?: string[];
+  /** Visit rating 1–100; API defaults unset legacy values to 50. */
+  score?: number;
   userId: string;
 }
 

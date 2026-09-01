@@ -571,8 +571,20 @@ function tagsEqual(a: string[], b: string[]): boolean {
 function buildVisitUpdatePatch(
   visit: CountryVisit,
   payload: CountryVisitEditorSubmitPayload,
-): { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string } {
-  const patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string } = {};
+): {
+  visitedTime?: number;
+  tags?: string[];
+  mediaUrl?: string;
+  notes?: string;
+  score?: number;
+} {
+  const patch: {
+    visitedTime?: number;
+    tags?: string[];
+    mediaUrl?: string;
+    notes?: string;
+    score?: number;
+  } = {};
   const newUnix = isoDateToUnixSeconds(payload.isoDate);
   const oldUnix = visit.visitedTime
     ? Math.floor(new Date(visit.visitedTime).getTime() / 1000)
@@ -595,6 +607,11 @@ function buildVisitUpdatePatch(
   if (newNotes !== oldNotes) {
     patch.notes = newNotes;
   }
+  const newScore = payload.score;
+  const oldScore = visit.score ?? 50;
+  if (newScore !== oldScore) {
+    patch.score = newScore;
+  }
   return patch;
 }
 
@@ -605,12 +622,19 @@ function buildVisitUpdatePatch(
 function mergeVisitAfterPut(
   prev: CountryVisit,
   put: CountryVisit,
-  patch: { visitedTime?: number; tags?: string[]; mediaUrl?: string; notes?: string },
+  patch: {
+    visitedTime?: number;
+    tags?: string[];
+    mediaUrl?: string;
+    notes?: string;
+    score?: number;
+  },
 ): CountryVisit {
   const base: CountryVisit = {
     ...prev,
     visitedTime: put.visitedTime ?? prev.visitedTime,
     tags: put.tags ?? [],
+    score: put.score ?? patch.score ?? prev.score ?? 50,
     userId: put.userId || prev.userId,
     id: prev.id ?? put.id,
     countryCode: prev.countryCode,
@@ -645,12 +669,24 @@ function mergeVisitAfterPut(
  * Returns list of visits unique by country code (first occurrence each). Used for non-edit display.
  */
 function uniqueVisitsByCountry(list: CountryVisit[]): CountryVisit[] {
+  const byCode = new Map<string, CountryVisit[]>();
+  for (const v of list) {
+    const group = byCode.get(v.countryCode);
+    if (group) group.push(v);
+    else byCode.set(v.countryCode, [v]);
+  }
   const seen = new Set<string>();
-  return list.filter((v) => {
-    if (seen.has(v.countryCode)) return false;
+  const out: CountryVisit[] = [];
+  for (const v of list) {
+    if (seen.has(v.countryCode)) continue;
     seen.add(v.countryCode);
-    return true;
-  });
+    const group = byCode.get(v.countryCode)!;
+    const avg = Math.round(
+      group.reduce((sum, x) => sum + (x.score ?? 50), 0) / group.length,
+    );
+    out.push({ ...v, score: avg });
+  }
+  return out;
 }
 
 /**
@@ -737,6 +773,8 @@ export interface RenderOptions {
   onFormMediaUrlChange: (value: string) => void;
   formNotes: string;
   onFormNotesChange: (value: string) => void;
+  formScore: number;
+  onFormScoreChange: (value: number) => void;
   shareToken: string | null;
   isSharedMode: boolean;
   isOwnProfileMode: boolean;
@@ -1064,9 +1102,18 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     name: string,
     withEdit: boolean,
     showVisitTimeAlways?: boolean,
+    scoreIsAverage?: boolean,
   ): void {
     const cellRef: { current: HTMLElement | null } = { current: null };
     const showVisitTime = showVisitTimeAlways || (withEdit && visit.id && onRefresh);
+    const showScore = !withEdit && !isEditMode;
+    const scoreOpts =
+      showScore
+        ? {
+            score: visit.score ?? 50,
+            scoreIsAverage: scoreIsAverage === true,
+          }
+        : {};
     const cellOptions = showVisitTime
       ? {
           visitTimeLabel: formatVisitTime(visit.visitedTime),
@@ -1086,8 +1133,11 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
                   })();
                 }
               : undefined,
+          ...scoreOpts,
         }
-      : undefined;
+      : showScore
+        ? scoreOpts
+        : undefined;
     const cell = createCountryCell(visit.countryCode, name, baseUrl, cellOptions);
     cellRef.current = cell;
     if (showVisitTimeAlways && isEditMode) {
@@ -1097,13 +1147,16 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
       if (isEditMode) {
         attachTooltip(cell, "Click to edit this visit");
         cell.addEventListener("click", (e) => {
-          if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
+          if ((e.target as HTMLElement).closest?.(
+            ".country-cell__delete, .country-cell__score",
+          )) return;
           if (!visit.id) return;
 
           let editorCountry = visit.countryCode;
           let editorIsoDate = unixSecondsToIsoDate(visit.visitedTime) ?? new Date().toISOString().slice(0, 10);
           let editorMediaUrl = visit.mediaUrl ?? "";
           let editorNotes = visit.notes ?? "";
+          let editorScore = visit.score ?? 50;
           const editorTags = visit.tags ?? [];
 
           let closeModal: (() => void) | null = null;
@@ -1145,6 +1198,10 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
             formNotes: editorNotes,
             onFormNotesChange: (v) => {
               editorNotes = v;
+            },
+            formScore: editorScore,
+            onFormScoreChange: (v) => {
+              editorScore = v;
             },
             initialTags: editorTags,
             onCanSubmitChange: (canSubmit) => {
@@ -1202,7 +1259,9 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     if (visit.mediaUrl && showVisitTimeAlways && !isEditMode) {
       cell.classList.add("country-cell--has-media");
       cell.addEventListener("click", (e) => {
-        if ((e.target as HTMLElement).closest?.(".country-cell__delete")) return;
+        if ((e.target as HTMLElement).closest?.(
+          ".country-cell__delete, .country-cell__score",
+        )) return;
         const d = parseVisitDateToYMD(visit.visitedTime);
         logAnalyticsEvent("view_media_url", {
           country_code: visit.countryCode,
@@ -1231,7 +1290,7 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     requestAnimationFrame(() => grid.classList.add("visible"));
     for (const visit of sortedList) {
       const name = countriesList.find((c) => c.countryCode === visit.countryCode)?.name ?? visit.countryCode;
-      addCellToGrid(grid, visit, name, false);
+      addCellToGrid(grid, visit, name, false, undefined, true);
     }
     contentArea.appendChild(grid);
     return;
@@ -1631,6 +1690,8 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       onFormMediaUrlChange: options.onFormMediaUrlChange,
       formNotes: options.formNotes,
       onFormNotesChange: options.onFormNotesChange,
+      formScore: options.formScore,
+      onFormScoreChange: options.onFormScoreChange,
       onSubmit: options.onCountryVisitEditorSubmit,
     }).element,
   );
@@ -1732,6 +1793,7 @@ export async function main(): Promise<void> {
   let formVisitDate: string | null = null;
   let formMediaUrl = "";
   let formNotes = "";
+  let formScore = 50;
 
   async function applyRoute(): Promise<void> {
     const token = getShareTokenFromPath();
@@ -1987,6 +2049,10 @@ export async function main(): Promise<void> {
       onFormNotesChange: (value: string) => {
         formNotes = value;
       },
+      formScore,
+      onFormScoreChange: (value: number) => {
+        formScore = value;
+      },
       shareToken,
       isSharedMode: !!getShareTokenFromPath(),
       isOwnProfileMode: isOwnProfilePath(),
@@ -2069,7 +2135,7 @@ export async function main(): Promise<void> {
         });
       },
       onCountryVisitEditorSubmit: async (payload: CountryVisitEditorSubmitPayload) => {
-        const { countryCode, isoDate, mediaUrl, tags, notes } = payload;
+        const { countryCode, isoDate, mediaUrl, tags, notes, score } = payload;
         const visitedTime = isoDateToUnixSeconds(isoDate);
         try {
           const created = await api.postVisit(
@@ -2078,6 +2144,7 @@ export async function main(): Promise<void> {
             mediaUrl,
             tags,
             notes,
+            score,
           );
           visits = [...visits, created];
           if (created.id) newVisitIds.add(created.id);
@@ -2092,6 +2159,7 @@ export async function main(): Promise<void> {
           formVisitDate = null;
           formMediaUrl = "";
           formNotes = "";
+          formScore = 50;
           refreshAppContent();
         } catch (err) {
           console.error("Add visit failed:", err);
@@ -2126,6 +2194,8 @@ export async function main(): Promise<void> {
         onFormMediaUrlChange: opts.onFormMediaUrlChange,
         formNotes: opts.formNotes,
         onFormNotesChange: opts.onFormNotesChange,
+        formScore: opts.formScore,
+        onFormScoreChange: opts.onFormScoreChange,
         onSubmit: opts.onCountryVisitEditorSubmit,
       }).element,
     );

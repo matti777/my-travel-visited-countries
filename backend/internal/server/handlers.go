@@ -446,6 +446,7 @@ func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
 		MediaURL    *string  `json:"mediaUrl,omitempty"`
 		Notes       *string  `json:"notes,omitempty"`
 		Tags        []string `json:"tags,omitempty"`
+		Score       *int     `json:"score"` // required; 1–100
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid POST /visits body", logging.Error, err)
@@ -494,12 +495,22 @@ func (s *Server) PostVisitsHandler(ctx context.Context, c *gin.Context) {
 		return
 	}
 
+	if body.Score == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "score is required"})
+		return
+	}
+	if err := models.ValidateScore(*body.Score); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	visit := &models.CountryVisit{
 		CountryCode: countryCode,
 		VisitedTime: t,
 		MediaURL:    body.MediaURL,
 		Notes:       notes,
 		Tags:        tags,
+		Score:       *body.Score,
 		UserID:      user.ID,
 	}
 
@@ -536,15 +547,17 @@ func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
 		Tags        *[]string `json:"tags"`
 		MediaURL    *string   `json:"mediaUrl"`
 		Notes       *string   `json:"notes"`
+		Score       *int      `json:"score"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Warn("Invalid PUT /visits/:id body", logging.Error, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	if body.VisitedTime == nil && body.Tags == nil && body.MediaURL == nil && body.Notes == nil {
+	if body.VisitedTime == nil && body.Tags == nil && body.MediaURL == nil &&
+		body.Notes == nil && body.Score == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "at least one of visitedTime, tags, mediaUrl, notes is required",
+			"error": "at least one of visitedTime, tags, mediaUrl, notes, score is required",
 		})
 		return
 	}
@@ -602,6 +615,14 @@ func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
 			return
 		}
 		merged.Notes = *body.Notes
+	}
+
+	if body.Score != nil {
+		if err := models.ValidateScore(*body.Score); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		merged.Score = *body.Score
 	}
 
 	if err := s.db.ReplaceCountryVisit(ctx, &merged); err != nil {

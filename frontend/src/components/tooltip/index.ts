@@ -184,10 +184,14 @@ function hideImmediately(): void {
 /**
  * Attaches a custom tooltip to an anchor element. Prefers placement above;
  * if it does not fit in the viewport, places below or on the side.
- * Show after 1s delay on hover/focus, hide on leave/blur or pointerdown/click on the anchor
- * (avoids a stuck tooltip when the anchor triggers navigation). Fades in (opacity 0->1).
+ * On devices with hover: show after 1s delay on hover/focus; hide on leave/blur or
+ * pointerdown/click on the anchor (avoids a stuck tooltip when navigating).
+ * On `(hover: none)` (touch): no-op unless `allowTouchTap` is true, then tap toggles
+ * the tooltip (tap again or elsewhere to hide).
+ * Fades in (opacity 0->1).
  * @param options.useHtml - when true, content is set as HTML instead of plain text
  * @param options.afterContent - called after content is set, before positioning
+ * @param options.allowTouchTap - enable tap-to-toggle on touch devices
  */
 export function attachTooltip(
   anchor: HTMLElement,
@@ -195,13 +199,52 @@ export function attachTooltip(
   options?: {
     useHtml?: boolean;
     afterContent?: (tooltip: HTMLElement) => void;
+    /** When true, tap toggles the tooltip on `(hover: none)` devices. */
+    allowTouchTap?: boolean;
   },
 ): () => void {
-  if (window.matchMedia("(hover: none)").matches) {
-    return () => {};
-  }
   const useHtml = options?.useHtml ?? false;
   const afterContent = options?.afterContent;
+  const touchOnly = window.matchMedia("(hover: none)").matches;
+
+  if (touchOnly && !options?.allowTouchTap) {
+    return () => {};
+  }
+
+  if (touchOnly) {
+    const onTap = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (currentAnchor === anchor) {
+        const tipEl = getTooltipElement();
+        if (!tipEl.hidden) {
+          hideImmediately();
+          return;
+        }
+      }
+      show(anchor, text, useHtml, afterContent);
+    };
+    const onDocPointer = (e: Event) => {
+      if (currentAnchor !== anchor) return;
+      const tipEl = getTooltipElement();
+      if (tipEl.hidden) return;
+      const target = e.target as Node | null;
+      if (target && (anchor.contains(target) || tipEl.contains(target))) return;
+      hideImmediately();
+    };
+    anchor.addEventListener("click", onTap);
+    document.addEventListener("pointerdown", onDocPointer, true);
+    return () => {
+      clearShowTimeout();
+      clearHideTimeout();
+      if (currentAnchor === anchor) {
+        hideImmediately();
+      }
+      anchor.removeEventListener("click", onTap);
+      document.removeEventListener("pointerdown", onDocPointer, true);
+    };
+  }
+
   const scheduleShow = () => {
     clearShowTimeout();
     showTimeout = setTimeout(() => {

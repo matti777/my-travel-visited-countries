@@ -43,6 +43,7 @@ func (c *Client) GetCountryVisitsByUser(ctx context.Context, userID string) ([]m
 		if visit.Tags == nil {
 			visit.Tags = []string{}
 		}
+		models.ApplyScoreDefault(&visit)
 		visit.ID = doc.Ref.ID
 		visit.UserID = userID
 		visits = append(visits, visit)
@@ -75,6 +76,7 @@ func (c *Client) GetCountryVisit(ctx context.Context, visitID, userID string) (*
 	if visit.Tags == nil {
 		visit.Tags = []string{}
 	}
+	models.ApplyScoreDefault(&visit)
 	visit.ID = snap.Ref.ID
 	visit.UserID = userID
 	return &visit, nil
@@ -93,6 +95,7 @@ func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryV
 		"CountryCode": visit.CountryCode,
 		"VisitTime":   visit.VisitedTime,
 		"Tags":        tags,
+		"Score":       visit.Score,
 	}
 	if visit.MediaURL != nil && *visit.MediaURL != "" {
 		doc["MediaURL"] = *visit.MediaURL
@@ -258,6 +261,7 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 		"CountryCode": visit.CountryCode,
 		"VisitTime":   visit.VisitedTime,
 		"Tags":        tags,
+		"Score":       visit.Score,
 	}
 	if visit.MediaURL != nil && *visit.MediaURL != "" {
 		doc["MediaURL"] = *visit.MediaURL
@@ -272,6 +276,7 @@ func (c *Client) CreateCountryVisit(ctx context.Context, visit *models.CountryVi
 	out := *visit
 	out.Tags = tags
 	out.ID = ref.ID
+	models.ApplyScoreDefault(&out)
 	return &out, nil
 }
 
