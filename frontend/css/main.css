@@ -1067,7 +1067,7 @@ main.about-page {
   white-space: nowrap;
 }
 
-.country-cell .country-cell__score {
+.country-cell__score {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -1078,7 +1078,14 @@ main.about-page {
   cursor: help;
 }
 
-.country-cell .country-cell__score-star {
+.country-cell > .country-cell__score,
+.country-cell > span.country-cell__score {
+  /* Beat .country-cell span { flex: 1 } so score stays at the cell's right edge */
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.country-cell__score-star {
   width: 0.95rem;
   height: 0.95rem;
   flex-shrink: 0;
@@ -1086,6 +1093,7 @@ main.about-page {
   margin-right: calc(-0.95rem * 2.5 / 24);
 }
 
+.country-cell__score-value,
 .country-cell .country-cell__score-value {
   flex: 0 0 auto;
   overflow: visible;
@@ -1095,8 +1103,7 @@ main.about-page {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  min-width: 1.5em;
-  text-align: right;
+  text-align: left;
 }
 
 
@@ -3241,32 +3248,37 @@ body.visits-globe-immersive-open {
 }
 
 
-.user-profile__wish-list {
+.user-profile__wish-list,
+.user-profile__top-countries {
   grid-column: 1 / -1;
   margin-top: 1rem;
 }
 
-.user-profile__wish-list-title {
+.user-profile__wish-list-title,
+.user-profile__top-countries-title {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
   font-weight: 700;
   color: #222;
 }
 
-.user-profile__wish-list-ol {
+.user-profile__wish-list-ol,
+.user-profile__top-countries-ol {
   margin: 0;
   padding-left: 1.5rem;
   list-style-position: outside;
 }
 
-.user-profile__wish-list-item {
+.user-profile__wish-list-item,
+.user-profile__top-countries-item {
   display: list-item;
   list-style: decimal outside;
   margin: 0 0 0.55rem;
   padding-left: 0.25rem;
 }
 
-.user-profile__wish-list-item:last-child {
+.user-profile__wish-list-item:last-child,
+.user-profile__top-countries-item:last-child {
   margin-bottom: 0;
 }
 
@@ -3277,12 +3289,24 @@ body.visits-globe-immersive-open {
 }
 
 .wish-list-cell__name {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
   font-weight: 600;
   color: #222;
   font-size: 0.98rem;
+}
+
+.wish-list-cell__name-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.wish-list-cell__name .country-cell__score {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .wish-list-cell__flag {

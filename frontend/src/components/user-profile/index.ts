@@ -3,7 +3,8 @@ import { marked } from "marked";
 import { attachTooltip } from "Components/tooltip";
 import { createWishListCell } from "Components/wish-list-cell";
 import type { Country } from "../../types/country";
-import type { WishListCountry } from "../../types/visit";
+import type { CountryVisit, WishListCountry } from "../../types/visit";
+import { topCountriesByAverageScore } from "../../utils/visit-averages";
 
 export interface UserProfileData {
   name: string;
@@ -18,6 +19,8 @@ export interface UserProfileData {
 export interface CreateUserProfileOptions extends UserProfileData {
   countries: Country[];
   baseUrl: string;
+  /** Visit list used for Top countries ranking (own or shared). */
+  visits?: CountryVisit[];
 }
 
 export interface UserProfileHandle {
@@ -92,6 +95,7 @@ export function createUserProfile(
   options: CreateUserProfileOptions,
 ): UserProfileHandle {
   const { countries, baseUrl } = options;
+  const visits = options.visits ?? [];
   let state: UserProfileData = {
     name: options.name,
     imageUrl: options.imageUrl,
@@ -183,6 +187,18 @@ export function createUserProfile(
   wishListSection.appendChild(wishListOl);
   fields.appendChild(wishListSection);
 
+  const topCountriesSection = document.createElement("div");
+  topCountriesSection.className = "user-profile__top-countries";
+  topCountriesSection.hidden = true;
+  const topCountriesTitle = document.createElement("h2");
+  topCountriesTitle.className = "user-profile__top-countries-title";
+  topCountriesTitle.textContent = '"Top countries" by average visit score';
+  topCountriesSection.appendChild(topCountriesTitle);
+  const topCountriesOl = document.createElement("ol");
+  topCountriesOl.className = "user-profile__top-countries-ol";
+  topCountriesSection.appendChild(topCountriesOl);
+  fields.appendChild(topCountriesSection);
+
   root.appendChild(fields);
 
   function countryNameFor(code: string): string {
@@ -214,6 +230,30 @@ export function createUserProfile(
       wishListOl.appendChild(li);
     }
     wishListSection.hidden = false;
+  }
+
+  function renderTopCountries(): void {
+    topCountriesOl.replaceChildren();
+    const ranked = topCountriesByAverageScore(visits, countryNameFor);
+    if (ranked.length === 0) {
+      topCountriesSection.hidden = true;
+      return;
+    }
+    for (const visit of ranked) {
+      const li = document.createElement("li");
+      li.className = "user-profile__top-countries-item";
+      li.appendChild(
+        createWishListCell({
+          countryCode: visit.countryCode,
+          countryName: countryNameFor(visit.countryCode),
+          baseUrl,
+          score: visit.score,
+          scoreIsAverage: true,
+        }),
+      );
+      topCountriesOl.appendChild(li);
+    }
+    topCountriesSection.hidden = false;
   }
 
   function render(): void {
@@ -282,6 +322,7 @@ export function createUserProfile(
     }
 
     renderWishList();
+    renderTopCountries();
   }
 
   render();

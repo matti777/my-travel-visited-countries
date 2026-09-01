@@ -35,6 +35,7 @@ import { api, ApiError } from "./api";
 import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
 import type { CountryVisit, WishListCountry } from "./types/visit";
+import { averageVisitsByCountry } from "./utils/visit-averages";
 import type firebase from "firebase/compat/app";
 import firebaseApp from "firebase/compat/app";
 import "firebase/compat/auth";
@@ -669,24 +670,7 @@ function mergeVisitAfterPut(
  * Returns list of visits unique by country code (first occurrence each). Used for non-edit display.
  */
 function uniqueVisitsByCountry(list: CountryVisit[]): CountryVisit[] {
-  const byCode = new Map<string, CountryVisit[]>();
-  for (const v of list) {
-    const group = byCode.get(v.countryCode);
-    if (group) group.push(v);
-    else byCode.set(v.countryCode, [v]);
-  }
-  const seen = new Set<string>();
-  const out: CountryVisit[] = [];
-  for (const v of list) {
-    if (seen.has(v.countryCode)) continue;
-    seen.add(v.countryCode);
-    const group = byCode.get(v.countryCode)!;
-    const avg = Math.round(
-      group.reduce((sum, x) => sum + (x.score ?? 50), 0) / group.length,
-    );
-    out.push({ ...v, score: avg });
-  }
-  return out;
+  return averageVisitsByCountry(list);
 }
 
 /**
@@ -1367,6 +1351,7 @@ function renderSharedVisitSection(container: HTMLElement, options: RenderOptions
     countriesVisited: visitedCountryTitleCount(sharedVisitsList),
     countries: countriesList,
     baseUrl,
+    visits: sharedVisitsList,
   });
   container.appendChild(profile.element);
 
@@ -1625,6 +1610,7 @@ function renderOwnProfileSection(container: HTMLElement, options: RenderOptions)
     countriesVisited: visitedCountryTitleCount(options.visits),
     countries: options.countries,
     baseUrl,
+    visits: options.visits,
   });
   container.appendChild(profile.element);
 

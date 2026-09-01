@@ -23,6 +23,12 @@ export interface CountryCellOptions {
   scoreIsAverage?: boolean;
 }
 
+export interface VisitScoreDisplayOptions {
+  score: number;
+  /** When true, tooltip/aria use average-rating copy. */
+  scoreIsAverage?: boolean;
+}
+
 /** RGB lerp: 1 red → 50 yellow → 100 green (alpha 0.4). */
 export function scoreToColor(score: number): string {
   const s = Math.max(1, Math.min(100, Math.round(score)));
@@ -59,6 +65,38 @@ function createScoreStarIcon(): SVGSVGElement {
   path.setAttribute("fill", "currentColor");
   svg.appendChild(path);
   return svg;
+}
+
+/**
+ * Yellow star + color-coded score with tooltip (shared by visit cards and profile).
+ */
+export function createVisitScoreDisplay(
+  options: VisitScoreDisplayOptions,
+): HTMLElement {
+  const rounded = Math.round(options.score);
+  const scoreEl = document.createElement("span");
+  scoreEl.className = "country-cell__score";
+  scoreEl.setAttribute("tabindex", "0");
+  scoreEl.setAttribute(
+    "aria-label",
+    options.scoreIsAverage
+      ? `Average visit score ${rounded}`
+      : `Visit score ${rounded}`,
+  );
+  const starEl = createScoreStarIcon();
+  starEl.style.color = "rgba(230, 194, 0, 0.4)";
+  scoreEl.appendChild(starEl);
+  const valueEl = document.createElement("span");
+  valueEl.className = "country-cell__score-value";
+  valueEl.textContent = String(rounded);
+  valueEl.style.color = scoreToColor(options.score);
+  scoreEl.appendChild(valueEl);
+  const tip = options.scoreIsAverage ? SCORE_TOOLTIP_AVERAGE : SCORE_TOOLTIP_VISIT;
+  attachTooltip(scoreEl, tip, { allowTouchTap: true });
+  scoreEl.addEventListener("mouseenter", (e) => e.stopPropagation());
+  scoreEl.addEventListener("mouseleave", (e) => e.stopPropagation());
+  scoreEl.addEventListener("click", (e) => e.stopPropagation());
+  return scoreEl;
 }
 
 /**
@@ -107,29 +145,12 @@ export function createCountryCell(
   }
 
   if (!isCompact && options?.onDelete == null && options?.score != null) {
-    const scoreEl = document.createElement("span");
-    scoreEl.className = "country-cell__score";
-    scoreEl.setAttribute("tabindex", "0");
-    scoreEl.setAttribute(
-      "aria-label",
-      options.scoreIsAverage
-        ? `Average visit score ${Math.round(options.score)}`
-        : `Visit score ${Math.round(options.score)}`,
+    cell.appendChild(
+      createVisitScoreDisplay({
+        score: options.score,
+        scoreIsAverage: options.scoreIsAverage,
+      }),
     );
-    const starEl = createScoreStarIcon();
-    starEl.style.color = "rgba(230, 194, 0, 0.4)";
-    scoreEl.appendChild(starEl);
-    const valueEl = document.createElement("span");
-    valueEl.className = "country-cell__score-value";
-    valueEl.textContent = String(Math.round(options.score));
-    valueEl.style.color = scoreToColor(options.score);
-    scoreEl.appendChild(valueEl);
-    const tip = options.scoreIsAverage ? SCORE_TOOLTIP_AVERAGE : SCORE_TOOLTIP_VISIT;
-    attachTooltip(scoreEl, tip, { allowTouchTap: true });
-    scoreEl.addEventListener("mouseenter", (e) => e.stopPropagation());
-    scoreEl.addEventListener("mouseleave", (e) => e.stopPropagation());
-    scoreEl.addEventListener("click", (e) => e.stopPropagation());
-    cell.appendChild(scoreEl);
   }
 
   if (!isCompact && options?.onDelete != null) {
@@ -144,4 +165,3 @@ export function createCountryCell(
 
   return cell;
 }
-

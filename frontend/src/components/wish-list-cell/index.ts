@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { createVisitScoreDisplay } from "Components/country-cell";
 
 export interface WishListCellOptions {
   countryCode: string;
@@ -7,6 +8,10 @@ export interface WishListCellOptions {
   baseUrl: string;
   description?: string;
   className?: string;
+  /** Optional trailing score (e.g. Top countries on profile). */
+  score?: number;
+  /** When true, score tooltip uses average-rating copy. */
+  scoreIsAverage?: boolean;
 }
 
 function renderMarkdownHtml(markdown: string): string {
@@ -16,6 +21,7 @@ function renderMarkdownHtml(markdown: string): string {
 
 /**
  * Read-only wish-list entry: flag + country name + optional Markdown description.
+ * Optional score slot reuses the shared visit score display.
  * See frontend/spec/components/wish-list-cell.md.
  */
 export function createWishListCell(options: WishListCellOptions): HTMLElement {
@@ -38,8 +44,19 @@ export function createWishListCell(options: WishListCellOptions): HTMLElement {
   }
 
   const nameSpan = document.createElement("span");
+  nameSpan.className = "wish-list-cell__name-text";
   nameSpan.textContent = options.countryName;
   nameRow.appendChild(nameSpan);
+
+  if (options.score != null) {
+    nameRow.appendChild(
+      createVisitScoreDisplay({
+        score: options.score,
+        scoreIsAverage: options.scoreIsAverage,
+      }),
+    );
+  }
+
   root.appendChild(nameRow);
 
   const desc = (options.description ?? "").trim();

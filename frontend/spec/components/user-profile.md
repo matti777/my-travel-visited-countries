@@ -12,14 +12,15 @@ Reusable read-only traveller profile. Used on the own `/profile` page and at the
   - **Countries visited:** unique country count
   - **Description:** free-form Markdown (sanitized HTML). When set, shown in a box with a dashed border, rounded corners, and a slightly different background from the app background. Empty when unset.
   - **Wish list:** under the description. Title: `"Wish List" of countries I would like to visit`. Ordered list of [WishListCell](wish-list-cell.md) entries (flag + country name + optional Markdown description). List numbers align with the flag + country name row (not vertically centered on the full cell). Entire block omitted when `wishList` is missing or empty (e.g. shared profile with wish-list sharing off).
+  - **Top countries:** under Wish List (Wish List may be omitted while this still shows). Title: `"Top countries" by average visit score`. Shown only when ≥5 distinct countries have average visit score **> 50** (`score ?? 50` per visit, rounded mean — same as Alphabetical). Then lists the top 5 of those (score desc, name `localeCompare` tie-break) as numbered [WishListCell](wish-list-cell.md) rows with flag, name, and average score (shared star + `scoreToColor`). Unknown codes show the code as name. No tag filtering. Entire block omitted when the ranking is empty.
 
 ## Props
 
-`name`, optional `imageUrl`, optional `homeCountryCode`, optional `instagramUserName`, `countriesVisited`, optional `wishList`, `countries` (for name/flag lookup), `baseUrl`.
+`name`, optional `imageUrl`, optional `homeCountryCode`, optional `instagramUserName`, `countriesVisited`, optional `wishList`, optional `visits` (for Top countries), `countries` (for name/flag lookup), `baseUrl`.
 
 ## Host actions
 
-Own-profile host (`app.ts`) places **Edit Wish List** and **Edit settings** under this component (both `button.primary`), horizontally centered as a pair with gap (**Edit Wish List** on the left). Shared-profile host does not.
+Own-profile host (`app.ts`) places **Edit Wish List** and **Edit settings** under this component (both `button.primary`), horizontally centered as a pair with gap (**Edit Wish List** on the left). Shared-profile host does not. Both hosts pass the relevant visit list as `visits`.
 
 ## Component
 
