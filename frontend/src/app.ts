@@ -36,6 +36,10 @@ import type { Country } from "./types/country";
 import type { Friend } from "./types/friend";
 import type { CountryVisit, WishListCountry } from "./types/visit";
 import { averageVisitsByCountry } from "./utils/visit-averages";
+import {
+  computeVisitStatistics,
+  getRegionName,
+} from "./utils/visit-statistics";
 import type firebase from "firebase/compat/app";
 import firebaseApp from "firebase/compat/app";
 import "firebase/compat/auth";
@@ -514,31 +518,6 @@ const newVisitIds = new Set<string>();
 /** Firebase Auth error codes that mean user cancelled or closed the sign-in popup. */
 const CANCELLED_AUTH_CODES = new Set(["auth/cancelled-popup-request", "auth/popup-closed-by-user"]);
 
-const REGION_CODE_TO_NAME: Record<string, string> = {
-  AF: "Africa",
-  AN: "Antarctica",
-  AS: "Asia",
-  EU: "Europe",
-  NA: "North America",
-  OC: "Oceania",
-  SA: "South America",
-};
-
-/** Fill colors per continent for statistics circle graph (same as map tab, user-interface.md). */
-const REGION_CODE_TO_FILL_COLOR: Record<string, string> = {
-  EU: "#add8e6",
-  NA: "#e0ffff",
-  SA: "#90ee90",
-  AF: "#f08080",
-  AS: "#fffacd",
-  OC: "#40e0d0",
-};
-const STATISTICS_DEFAULT_FILL_COLOR = "#40e0d0";
-
-function getRegionName(regionCode: string): string {
-  return REGION_CODE_TO_NAME[regionCode] ?? regionCode;
-}
-
 function formatVisitTime(visitedTime?: string): string {
   if (!visitedTime) return "—";
   const d = new Date(visitedTime);
@@ -1002,53 +981,25 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
     return;
   }
   if (visitListTab === "statistics") {
-    const listedCodeSet = new Set(countriesList.map((c) => c.countryCode.toUpperCase()));
-    const visitsForStatistics = statisticsSourceVisits.filter((v) =>
-      listedCodeSet.has(v.countryCode.toUpperCase())
+    const { uniqueVisitedCodes, areas } = computeVisitStatistics(
+      statisticsSourceVisits,
+      countriesList,
     );
-    const countryCodeToRegion = new Map<string, string>();
-    const regionTotals = new Map<string, number>();
-    for (const c of countriesList) {
-      const code = c.countryCode.toUpperCase();
-      countryCodeToRegion.set(code, c.regionCode);
-      regionTotals.set(c.regionCode, (regionTotals.get(c.regionCode) ?? 0) + 1);
-    }
-    const worldTotal = countriesList.length;
-    const uniqueCodes = new Set(visitsForStatistics.map((v) => v.countryCode.toUpperCase()));
-    const visitedByRegion = new Map<string, number>();
-    for (const code of uniqueCodes) {
-      const region = countryCodeToRegion.get(code) ?? "ZZ";
-      visitedByRegion.set(region, (visitedByRegion.get(region) ?? 0) + 1);
-    }
-    const worldVisited = uniqueCodes.size;
-    const STATISTICS_REGION_ORDER = ["AF", "AS", "EU", "NA", "OC", "SA"] as const;
     const wrapper = document.createElement("div");
     wrapper.className = "statistics-section";
-    const areas: { key: string; name: string; visited: number; total: number }[] = [
-      ...STATISTICS_REGION_ORDER.map((regionCode) => ({
-        key: regionCode,
-        name: getRegionName(regionCode),
-        visited: visitedByRegion.get(regionCode) ?? 0,
-        total: regionTotals.get(regionCode) ?? 0,
-      })),
-      { key: "world", name: "The World", visited: worldVisited, total: worldTotal },
-    ];
     for (const area of areas) {
-      const percentage = area.total > 0 ? Math.round((area.visited / area.total) * 100) : 0;
-      const fillColor =
-        area.key === "world"
-          ? STATISTICS_DEFAULT_FILL_COLOR
-          : REGION_CODE_TO_FILL_COLOR[area.key] ?? STATISTICS_DEFAULT_FILL_COLOR;
       const cell = createCircleGraphCell({
-        percentage,
-        fillColor,
+        percentage: area.percentage,
+        fillColor: area.fillColor,
         label: area.name,
       });
       const notVisitedCountries =
         area.key === "world"
-          ? countriesList.filter((c) => !uniqueCodes.has(c.countryCode.toUpperCase()))
+          ? countriesList.filter((c) => !uniqueVisitedCodes.has(c.countryCode.toUpperCase()))
           : countriesList.filter(
-              (c) => c.regionCode === area.key && !uniqueCodes.has(c.countryCode.toUpperCase()),
+              (c) =>
+                c.regionCode === area.key &&
+                !uniqueVisitedCodes.has(c.countryCode.toUpperCase()),
             );
       const notVisitedNames = notVisitedCountries.map((c) => c.name).sort();
       const escapeHtml = (s: string) =>
@@ -1681,7 +1632,13 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       onSubmit: options.onCountryVisitEditorSubmit,
     }).element,
   );
-  addShareWrapper.appendChild(createShareSection(options.shareToken));
+  addShareWrapper.appendChild(
+    createShareSection({
+      shareToken: options.shareToken,
+      visits: options.visits,
+      countries: options.countries,
+    }),
+  );
   container.appendChild(addShareWrapper);
 
   renderFriendsListSection(container, options);
@@ -2166,26 +2123,41 @@ export async function main(): Promise<void> {
     if (!addShareWrapper) return;
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
-    addShareWrapper.replaceChildren();
     const opts = getRenderOptions();
-    addShareWrapper.appendChild(
-      createCountryVisitEditor({
-        countries: opts.countries,
-        baseUrl,
-        selectedCountryCode: opts.selectedCountryCode,
-        onSelectCountry: opts.onSelectCountry,
-        formVisitDate: opts.formVisitDate,
-        onFormVisitDateChange: opts.onFormVisitDateChange,
-        formMediaUrl: opts.formMediaUrl,
-        onFormMediaUrlChange: opts.onFormMediaUrlChange,
-        formNotes: opts.formNotes,
-        onFormNotesChange: opts.onFormNotesChange,
-        formScore: opts.formScore,
-        onFormScoreChange: opts.onFormScoreChange,
-        onSubmit: opts.onCountryVisitEditorSubmit,
-      }).element,
-    );
-    addShareWrapper.appendChild(createShareSection(shareToken));
+    const editor = createCountryVisitEditor({
+      countries: opts.countries,
+      baseUrl,
+      selectedCountryCode: opts.selectedCountryCode,
+      onSelectCountry: opts.onSelectCountry,
+      formVisitDate: opts.formVisitDate,
+      onFormVisitDateChange: opts.onFormVisitDateChange,
+      formMediaUrl: opts.formMediaUrl,
+      onFormMediaUrlChange: opts.onFormMediaUrlChange,
+      formNotes: opts.formNotes,
+      onFormNotesChange: opts.onFormNotesChange,
+      formScore: opts.formScore,
+      onFormScoreChange: opts.onFormScoreChange,
+      onSubmit: opts.onCountryVisitEditorSubmit,
+    }).element;
+    const shareEl = addShareWrapper.querySelector("[data-share-section]");
+    const existingEditor = shareEl
+      ? [...addShareWrapper.children].find((el) => el !== shareEl)
+      : addShareWrapper.firstElementChild;
+    if (existingEditor) {
+      existingEditor.replaceWith(editor);
+    } else {
+      addShareWrapper.prepend(editor);
+    }
+    // Keep share section (and any generated Instagram image) mounted.
+    if (!addShareWrapper.querySelector("[data-share-section]")) {
+      addShareWrapper.appendChild(
+        createShareSection({
+          shareToken,
+          visits: opts.visits,
+          countries: opts.countries,
+        }),
+      );
+    }
     window.scrollTo(scrollX, scrollY);
   }
 

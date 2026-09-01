@@ -2426,6 +2426,82 @@ body.visits-globe-immersive-open {
   line-height: 1.5;
 }
 
+.share-section__ig {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.share-section__ig-text {
+  width: 100%;
+  text-align: left;
+}
+
+.share-section__ig-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.share-section__ig-desc {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.share-section__ig-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.share-section__ig-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--color-turquoise);
+  background: var(--color-turquoise-light);
+  padding: 0.45rem 1.1rem;
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.share-section__ig-create-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.share-section__ig-frame {
+  display: block;
+  max-width: min(100%, 360px);
+  padding: 0.55rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.share-section__ig-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+.share-section__ig-copy-btn {
+  margin: 0 auto;
+}
+
 .share-home-wrap {
   margin-top: 1rem;
   text-align: center;

@@ -44,7 +44,7 @@ Some territories drawn by the world map libraries are **not** sovereign countrie
 
 On the **Map** tab, disputed / non-listed territories without a parent visit source use **darker gray** than unvisited sovereign countries; territories that mirror a sovereign code use that code’s colors when visited, otherwise the same darker gray.
 
-The **Statistics** tab counts **only** visits whose `countryCode` exists in the canonical country list from the backend. Map-only codes never appear as stored visit codes (visits attach to sovereign parents such as `DK`, `US`, `GB`, `FR`).
+The **Statistics** tab counts **only** visits whose `countryCode` exists in the canonical country list from the backend. Map-only codes never appear as stored visit codes (visits attach to sovereign parents such as `DK`, `US`, `GB`, `FR`). Shared helper: `src/utils/visit-statistics.ts` (`computeVisitStatistics`) — also used by the Instagram share image in [share-section](components/share-section.md).
 
 ## Tech Stack
 
