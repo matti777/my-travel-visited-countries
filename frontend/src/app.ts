@@ -1143,7 +1143,13 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
               stickyFooter.primaryButton.disabled = !canSubmit;
             },
             onSubmit: async (payload) => {
-              if (!visit.id) return;
+              // Edit mode must only PUT the existing visit — never create.
+              const visitId = visit.id;
+              if (!visitId) {
+                console.error("edit visit submit missing visit id");
+                errorToast("Cannot update visit: missing id");
+                return;
+              }
               try {
                 const patch = buildVisitUpdatePatch(visit, payload);
                 const patchKeys = Object.keys(patch) as (keyof typeof patch)[];
@@ -1151,13 +1157,14 @@ function fillVisitListContent(params: FillVisitListContentParams): void {
                   closeModal?.();
                   return;
                 }
-                const updated = await api.updateVisit(visit.id, patch);
+                const updated = await api.updateVisit(visitId, patch);
                 visits = visits.map((v) =>
-                  v.id === visit.id ? mergeVisitAfterPut(v, updated, patch) : v,
+                  v.id === visitId ? mergeVisitAfterPut(v, updated, patch) : v,
                 );
                 onRefresh?.();
                 closeModal?.();
               } catch (err) {
+                console.error("Update visit failed:", err);
                 if (err instanceof ApiError && err.responseCode === 401) {
                   signOut();
                   errorToast("Session expired");
@@ -1737,6 +1744,7 @@ export async function main(): Promise<void> {
   let formMediaUrl = "";
   let formNotes = "";
   let formScore = 50;
+  let addFriendInFlight = false;
 
   async function applyRoute(): Promise<void> {
     const token = getShareTokenFromPath();
@@ -2036,6 +2044,8 @@ export async function main(): Promise<void> {
       onAddFriend: async () => {
         const token = getShareTokenFromPath();
         if (!token || sharedUserName == null) return;
+        if (addFriendInFlight) return;
+        addFriendInFlight = true;
         try {
           await api.postFriend(token, sharedUserName, sharedUserImageUrl ?? undefined);
           logAnalyticsEvent("add_friend", { share_token: token });
@@ -2051,6 +2061,8 @@ export async function main(): Promise<void> {
           } else {
             errorToast(err instanceof Error ? err.message : "Failed to add friend");
           }
+        } finally {
+          addFriendInFlight = false;
         }
       },
       onDeleteFriend: async (shareTokenToDelete: string) => {

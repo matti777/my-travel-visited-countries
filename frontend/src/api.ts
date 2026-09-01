@@ -340,16 +340,28 @@ export default class Api {
   }
 
   private async performRequest(endpoint: string, options: RequestInit): Promise<any> {
+    const method = (options.method ?? "GET").toUpperCase();
+    // Only retry safe/idempotent reads. Retrying POST (e.g. create visit/friend) can
+    // duplicate server-side work if the first request committed but the response was lost.
+    const mayRetry = method === "GET" || method === "HEAD" || method === "OPTIONS";
+
     let response: Response;
     try {
       response = await fetchWithTimeout(endpoint, options, REQUEST_TIMEOUT_MS);
     } catch (firstError) {
-      if (!isRetryableNetworkError(firstError)) {
+      if (!mayRetry || !isRetryableNetworkError(firstError)) {
         console.error("fetch failed with error: ", firstError);
         errorToast(`${firstError}`);
         throw new ApiError({ message: `${firstError}`, cause: firstError });
       }
-      console.warn("API request failed (e.g. connection closed), retrying in", RETRY_DELAY_MS / 1000, "s:", endpoint, firstError);
+      console.warn(
+        "API request failed (e.g. connection closed), retrying in",
+        RETRY_DELAY_MS / 1000,
+        "s:",
+        method,
+        endpoint,
+        firstError,
+      );
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       try {
         response = await fetchWithTimeout(endpoint, options, REQUEST_TIMEOUT_MS);

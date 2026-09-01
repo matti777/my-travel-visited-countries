@@ -83,6 +83,7 @@ func (c *Client) GetCountryVisit(ctx context.Context, visitID, userID string) (*
 }
 
 // ReplaceCountryVisit writes the full country visit document at users/{userID}/country_visits/{visit.ID}.
+// The document must already exist; this never allocates a new visit ID (avoids create-on-update).
 func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryVisit) error {
 	if visit == nil || visit.ID == "" || visit.UserID == "" {
 		return fmt.Errorf("visit with id and userID is required")
@@ -104,7 +105,17 @@ func (c *Client) ReplaceCountryVisit(ctx context.Context, visit *models.CountryV
 		doc["Notes"] = visit.Notes
 	}
 	ref := c.Collection("users").Doc(visit.UserID).Collection("country_visits").Doc(visit.ID)
-	_, err := ref.Set(ctx, doc)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return ErrVisitNotFound
+		}
+		return fmt.Errorf("failed to load country visit for update: %w", err)
+	}
+	if !snap.Exists() {
+		return ErrVisitNotFound
+	}
+	_, err = ref.Set(ctx, doc)
 	if err != nil {
 		return fmt.Errorf("failed to update country visit: %w", err)
 	}

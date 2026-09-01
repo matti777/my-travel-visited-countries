@@ -443,7 +443,12 @@ export function createCountryVisitEditor(
 
   updateValidationUI();
 
+  let submitInFlight = false;
+
   async function requestSubmit(): Promise<void> {
+    if (submitInFlight) {
+      return;
+    }
     if (!selectedCountryCode) {
       errorToast("Please select a country");
       return;
@@ -459,14 +464,22 @@ export function createCountryVisitEditor(
     }
     const mediaUrl = mediaUrlInput.value.trim() || undefined;
     const notes = notesInput.value.trim() || undefined;
-    await onSubmit({
-      countryCode: selectedCountryCode,
-      isoDate,
-      mediaUrl,
-      notes,
-      tags: tagEditor.getTags(),
-      score: currentScore(),
-    });
+    submitInFlight = true;
+    addBtn.disabled = true;
+    onCanSubmitChange?.(false);
+    try {
+      await onSubmit({
+        countryCode: selectedCountryCode,
+        isoDate,
+        mediaUrl,
+        notes,
+        tags: tagEditor.getTags(),
+        score: currentScore(),
+      });
+    } finally {
+      submitInFlight = false;
+      updateValidationUI();
+    }
   }
 
   addBtn.addEventListener("click", () => {

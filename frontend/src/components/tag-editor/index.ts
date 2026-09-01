@@ -14,6 +14,7 @@ export const SUGGESTED_TAGS: readonly string[] = [
   "beach",
   "brewery",
   "camping",
+  "cheese",
   "cruise",
   "culture",
   "desert",
@@ -29,6 +30,7 @@ export const SUGGESTED_TAGS: readonly string[] = [
   "jungle",
   "kayaking",
   "lakes",
+  "meat",
   "meditation",
   "monastery",
   "mountains",
@@ -58,6 +60,7 @@ export const SUGGESTED_TAGS: readonly string[] = [
   "wellness",
   "wildlife",
   "windsurfing",
+  "wine",
   "winter",
 ];
 

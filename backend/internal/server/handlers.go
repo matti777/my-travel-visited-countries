@@ -626,6 +626,10 @@ func (s *Server) PutVisitHandler(ctx context.Context, c *gin.Context) {
 	}
 
 	if err := s.db.ReplaceCountryVisit(ctx, &merged); err != nil {
+		if errors.Is(err, database.ErrVisitNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		log.Error("ReplaceCountryVisit failed", logging.Error, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update visit"})
 		return

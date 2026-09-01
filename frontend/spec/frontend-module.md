@@ -78,6 +78,8 @@ The app sends Firebase Analytics events about the most important actions:
 
 All errors must be logged to console error log. All errors must by default show an errorToast() with a descriptive message.
 
+Network retries in `api.ts` apply only to safe methods (`GET` / `HEAD` / `OPTIONS`). Mutating requests (`POST` / `PUT` / `DELETE`) are never auto-retried, so a lost response cannot create a duplicate visit/friend. Visit create/update UI also ignores overlapping submits while one is in flight. Visit edits always use `PUT /visits/:id` (never `POST /visits`).
+
 ## App logging
 
 All major operations (network etc) should be logged to console log upon success (errors get logged via console errors) and a descriptive message should be displayed.
