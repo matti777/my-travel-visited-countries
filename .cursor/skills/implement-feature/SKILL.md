@@ -16,10 +16,10 @@ the next workflow step.
 
 Delegate to the project subagents under `.cursor/agents/`:
 
-| Step | Subagent     | Role                                         |
-| ---- | ------------ | -------------------------------------------- |
-| 1    | `architect`  | Plan the feature (read-only)                 |
-| 2    | `programmer` | Implement the plan / fix findings            |
+| Step | Subagent     | Role                                    |
+| ---- | ------------ | --------------------------------------- |
+| 1    | `architect`  | Plan the feature (read-only)            |
+| 2    | `programmer` | Implement the plan / fix findings       |
 | 3    | `tester`     | Verify + write tests; critical findings |
 
 Prefer explicit Task / `/architect`, `/programmer`, `/tester` invocation.
@@ -170,7 +170,7 @@ model pinned in each `.cursor/agents/*.md` file (`architect`, `programmer`,
 whether you will fix-loop or finish). Do not mark the feature done without
 tester evidence (commands + pass/fail).
 
-### 4. Fix loop (max N, default 3)
+### 4. Fix loop (max N, default 5)
 
 If FindingsArtifact has **Critical** or **High** findings, failed acceptance,
 or failing tests:
@@ -200,7 +200,7 @@ After the pipeline stops, report:
 2. **Plan highlights** — short
 3. **Changes** — key files / behavior
 4. **Tests** — what ran, pass/fail
-5. **Fix loops used** — e.g. `1 / 3`
+5. **Fix loops used** — e.g. `1 / N`
 6. **Remaining risks** — open findings or skipped Medium/Low items
 7. **Models** — note subagent models if visible on Task cards
 8. **Suggested next step** — only if something is still blocked
