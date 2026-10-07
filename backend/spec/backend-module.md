@@ -118,6 +118,8 @@ The backend is deployed to **GCP Cloud Run** as a container. The following must 
 1. **Prerequisites**
    - Create or select a GCP project and enable billing.
    - Install and initialize the gcloud CLI: `gcloud init`. Set default project: `gcloud config set project PROJECT_ID`.
+   - Docker installed with the daemon running (required for `make deploy` local image build/push).
+   - Active gcloud account must be able to access the project, upload to Artifact Registry, and deploy Cloud Run; `make deploy` verifies this and prints account-switch instructions on failure.
 
 2. **Enable APIs**
    - Cloud Run: `gcloud services enable run.googleapis.com`

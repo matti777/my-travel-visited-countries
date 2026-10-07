@@ -87,12 +87,13 @@ Returns country visits for the current user.
 
 The backend runs as a container on GCP Cloud Run. The image is built with the included Dockerfile (multi-stage, scratch base with root CA certs). Follow these steps to deploy.
 
-**Makefile:** From the `backend/` directory, `make deploy` runs `npm run build:and-copy` in `../frontend` first (updates `backend/static`), then builds the image with Docker, pushes to Artifact Registry, and deploys to Cloud Run (the GCP project id is set in the Makefile). Run `make list` for other targets (`build`, `test`, `vet`, `clean`).
+**Makefile:** From the `backend/` directory, `make deploy` checks that Docker is installed and the daemon is running, and that the active gcloud account can access the project (Artifact Registry upload + Cloud Run deploy). It then runs `npm run build:and-copy` in `../frontend` (updates `backend/static`), builds/pushes the image, and deploys to Cloud Run (project id is set in the Makefile). On auth/permission failure it prints the current account and how to switch (`gcloud auth login` / `gcloud config set account`). Run `make list` for other targets (`build`, `test`, `vet`, `clean`).
 
 ### 1. Prerequisites
 
 - A GCP project with billing enabled.
-- [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed and logged in.
+- Docker installed and the Docker daemon running.
+- [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed and logged in with access to the project (enough to push images and deploy Cloud Run).
 
 Set your project and region (use your own values):
 
