@@ -9,6 +9,9 @@ import {
   computeVisitStatistics,
   getMostRecentVisitedCountries,
   getRegionName,
+  mostVisitedCountries,
+  mostVisitedShareModeAvailable,
+  visitsPerContinent,
 } from "./visit-statistics";
 
 function country(code: string, name: string, regionCode: string): Country {
@@ -159,5 +162,90 @@ describe("getMostRecentVisitedCountries", () => {
       recent.map((c) => c.countryCode),
       ["FI"],
     );
+  });
+});
+
+describe("mostVisitedCountries", () => {
+  it("returns only countries with at least two listed visits", () => {
+    const rows = mostVisitedCountries(
+      [
+        visit("FI", "fi-1"),
+        visit("FI", "fi-2"),
+        visit("US", "us-1"),
+        visit("DE", "de-1"),
+        visit("DE", "de-2"),
+        visit("DE", "de-3"),
+      ],
+      sampleCountries,
+    );
+    assert.deepEqual(
+      rows.map((r) => r.countryCode),
+      ["DE", "FI"],
+    );
+    assert.equal(rows[0]?.count, 3);
+  });
+
+  it("sorts by count then recency then name", () => {
+    const rows = mostVisitedCountries(
+      [
+        visit("FI", "fi-1", "2020-01-01T00:00:00.000Z"),
+        visit("FI", "fi-2", "2024-01-01T00:00:00.000Z"),
+        visit("US", "us-1", "2023-01-01T00:00:00.000Z"),
+        visit("US", "us-2", "2022-01-01T00:00:00.000Z"),
+        visit("BR", "br-1", "2025-01-01T00:00:00.000Z"),
+        visit("BR", "br-2", "2021-01-01T00:00:00.000Z"),
+      ],
+      sampleCountries,
+      5,
+    );
+    assert.deepEqual(
+      rows.map((r) => r.countryCode),
+      ["BR", "FI", "US"],
+    );
+  });
+});
+
+describe("mostVisitedShareModeAvailable", () => {
+  it("requires three distinct countries with two or more visits", () => {
+    assert.equal(
+      mostVisitedShareModeAvailable(
+        [visit("FI"), visit("FI", "fi-2"), visit("US"), visit("US", "us-2")],
+        sampleCountries,
+      ),
+      false,
+    );
+    assert.equal(
+      mostVisitedShareModeAvailable(
+        [
+          visit("FI"),
+          visit("FI", "fi-2"),
+          visit("US"),
+          visit("US", "us-2"),
+          visit("DE"),
+          visit("DE", "de-2"),
+        ],
+        sampleCountries,
+      ),
+      true,
+    );
+  });
+});
+
+describe("visitsPerContinent", () => {
+  it("counts visit rows per continent", () => {
+    const rows = visitsPerContinent(
+      [
+        visit("FI"),
+        visit("FI", "fi-2"),
+        visit("US"),
+        visit("BR"),
+      ],
+      sampleCountries,
+    );
+    const eu = rows.find((r) => r.regionCode === "EU");
+    const na = rows.find((r) => r.regionCode === "NA");
+    assert.equal(eu?.count, 2);
+    assert.equal(na?.count, 1);
+    assert.equal(rows[0]?.count, 2);
   });
 });

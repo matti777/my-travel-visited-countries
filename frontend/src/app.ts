@@ -10,7 +10,10 @@ import { openWishListEditor } from "Components/wish-list-editor";
 import { createUserProfile } from "Components/user-profile";
 import { createCountryCell } from "Components/country-cell";
 import { createDeleteButton } from "Components/delete-button";
-import { createShareSection } from "Components/share-section";
+import {
+  createShareSection,
+  getShareSectionHandle,
+} from "Components/share-section";
 import { createCircleGraphCell } from "Components/circle-graph-cell";
 import { sanitizeTagInput } from "Components/tag-editor";
 import {
@@ -1644,7 +1647,8 @@ function renderAppContent(container: HTMLElement, options: RenderOptions): void 
       shareToken: options.shareToken,
       visits: options.visits,
       countries: options.countries,
-    }),
+      wishList: options.profileWishList,
+    }).element,
   );
   container.appendChild(addShareWrapper);
 
@@ -1746,6 +1750,15 @@ export async function main(): Promise<void> {
   let formScore = 50;
   let addFriendInFlight = false;
 
+
+  function updateShareSectionWishList(): void {
+    if (!appEl) return;
+    const shareEl = appEl.querySelector("[data-share-section]");
+    if (shareEl instanceof HTMLElement) {
+      getShareSectionHandle(shareEl)?.updateWishList(profileWishList);
+    }
+  }
+
   async function applyRoute(): Promise<void> {
     const token = getShareTokenFromPath();
     if (token) {
@@ -1778,6 +1791,15 @@ export async function main(): Promise<void> {
       sharedInstagramUserName = null;
       sharedDescription = null;
       sharedWishList = null;
+    }
+
+    if (currentUser && !token && !isOwnProfilePath()) {
+      try {
+        profileWishList = await api.getWishList();
+      } catch (err) {
+        console.error("Failed to load wish list for share section", err);
+        profileWishList = [];
+      }
     }
 
     if (isOwnProfilePath() && currentUser) {
@@ -1815,6 +1837,7 @@ export async function main(): Promise<void> {
       );
     }
     refreshAppContent();
+    updateShareSectionWishList();
   }
 
   function navigateHome(): void {
@@ -2160,14 +2183,20 @@ export async function main(): Promise<void> {
     } else {
       addShareWrapper.prepend(editor);
     }
-    // Keep share section (and any generated Instagram image) mounted.
-    if (!addShareWrapper.querySelector("[data-share-section]")) {
+    if (shareEl instanceof HTMLElement) {
+      getShareSectionHandle(shareEl)?.updateData({
+        visits: opts.visits,
+        countries: opts.countries,
+        shareToken,
+      });
+    } else {
       addShareWrapper.appendChild(
         createShareSection({
           shareToken,
           visits: opts.visits,
           countries: opts.countries,
-        }),
+          wishList: profileWishList,
+        }).element,
       );
     }
     window.scrollTo(scrollX, scrollY);

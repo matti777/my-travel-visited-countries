@@ -2481,26 +2481,109 @@ body.visits-globe-immersive-open {
 }
 
 .share-section__ig-frame {
+  --share-section-ig-frame-padding: 0.55rem;
+  position: relative;
   display: block;
-  max-width: min(100%, 360px);
-  padding: 0.55rem;
+  width: min(100%, 360px);
+  aspect-ratio: 1080 / 1350;
+  padding: var(--share-section-ig-frame-padding);
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .share-section__ig-image {
+  position: absolute;
+  inset: var(--share-section-ig-frame-padding);
   display: block;
-  width: 100%;
-  height: auto;
+  width: calc(100% - 2 * var(--share-section-ig-frame-padding));
+  height: calc(100% - 2 * var(--share-section-ig-frame-padding));
+  object-fit: contain;
   border-radius: 6px;
-  vertical-align: middle;
+}
+
+.share-section__ig-image[hidden],
+.share-section__ig-error[hidden],
+.share-section__ig-placeholder[hidden],
+.share-section__ig-progress[hidden] {
+  display: none;
+}
+
+.share-section__ig-progress {
+  position: absolute;
+  inset: var(--share-section-ig-frame-padding);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity var(--animation-duration) ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.share-section__ig-progress--visible {
+  opacity: 1;
+}
+
+.share-section__ig-progress-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: share-section-ig-spin 0.85s linear infinite;
 }
 
 .share-section__ig-copy-btn {
   margin: 0 auto;
 }
+.share-section__ig-tablist {
+  position: static;
+  align-self: center;
+  margin: 0.25rem 0 0.5rem;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.share-section__ig-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -1.25rem 0 0 -1.25rem;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 80, 90, 0.2);
+  border-top-color: var(--color-turquoise);
+  animation: share-section-ig-spin 0.85s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes share-section-ig-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.share-section__ig-error {
+  position: absolute;
+  inset: 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #a33;
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
 
 .share-home-wrap {
   margin-top: 1rem;
